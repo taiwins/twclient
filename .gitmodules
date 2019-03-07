@@ -1,0 +1,6 @@
+[submodule "ctypes"]
+	path = ctypes
+	url = https://github.com/xeechou/ctypes
+[submodule "nk_backends/nuklear"]
+	path = nk_backends/nuklear
+	url = https://github.com/vurtun/nuklear
