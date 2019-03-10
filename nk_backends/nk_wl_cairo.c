@@ -765,6 +765,7 @@ nk_cairo_create_bkend(void)
 {
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
 	b->base.theme_hash = 0;
+	b->base.L = NULL;
 
 	nk_init_fixed(&b->base.ctx, b->base.ctx_buffer, NK_MAX_CTX_MEM, &b->user_font.nk_font);
 	nk_cairo_font_init(&b->user_font, NULL, NULL);

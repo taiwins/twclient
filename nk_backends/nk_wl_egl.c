@@ -501,6 +501,7 @@ nk_egl_create_backend(const struct wl_display *display, const struct egl_env *sh
 		egl_env_init(&bkend->env, display);
 	//let us assign a default row size
 	bkend->base.row_size = 16;
+	bkend->base.L = NULL;
 	bkend->font_size = 0;
 	bkend->font_tex = 0;
 
