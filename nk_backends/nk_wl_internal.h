@@ -14,7 +14,8 @@
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <wayland-client.h>
-
+#include <lua.h>
+#include <lauxlib.h>
 
 /* we include this so we do not need to deal with namespace collision, in the
  * mean time, for the sake private implementation, all the function declared
@@ -66,6 +67,7 @@ struct nk_wl_backend {
 	//consistant size
 	struct nk_context ctx;
 	struct nk_buffer cmds;
+	lua_State *L;
 	//theme size
 	struct nk_colorf main_color;
 	//we now use this to determine if we are using the same theme
@@ -77,7 +79,6 @@ struct nk_wl_backend {
 	struct app_surface *app_surface;
 	nk_wl_drawcall_t frame;
 	nk_wl_postcall_t post_cb;
-
 
 	struct {
 		xkb_keysym_t ckey; //cleaned up every frame
