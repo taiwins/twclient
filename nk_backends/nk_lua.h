@@ -8,7 +8,8 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-
+#include "../ui.h"
+#include "../client.h"
 #include "nk_wl_internal.h"
 
 //how do you want to use the lua bindings

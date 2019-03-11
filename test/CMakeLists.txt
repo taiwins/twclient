@@ -35,3 +35,16 @@ target_link_libraries(test_nk_egl
   nk_egl_backend
   ${TWCLIENT_TRD_LIB}
   )
+
+
+add_executable(test_multi_lua
+  test_multi_lua.c
+  )
+
+target_include_directories(test_multi_lua PUBLIC
+  ${LUA_INCLUDE_DIR}
+  )
+
+target_link_libraries(test_multi_lua
+  ${LUA_LIBRARIES}
+  )
