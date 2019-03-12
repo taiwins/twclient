@@ -48,3 +48,15 @@ target_include_directories(test_multi_lua PUBLIC
 target_link_libraries(test_multi_lua
   ${LUA_LIBRARIES}
   )
+
+
+add_executable(test_lua_wrapper
+  test_lua_backend.c)
+
+target_include_directories(test_lua_wrapper PUBLIC
+  ${LUA_INCLUDE_DIR}
+  )
+
+target_link_libraries(test_lua_wrapper
+  nk_cairo_backend
+  ${LUA_LIBRARIES})

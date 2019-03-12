@@ -19,6 +19,7 @@
 #define NK_EGL_CMD_SIZE 4096
 #define MAX_VERTEX_BUFFER 512 * 128
 #define MAX_ELEMENT_BUFFER 128 * 128
+#define NK_EGL_BACKEND
 
 #define NK_SHADER_VERSION "#version 330 core\n"
 
