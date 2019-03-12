@@ -34,20 +34,20 @@ int main(int argc, char *argv[])
 	lua_State *L;
 	int err;
 
-
-	//you need to have multiple tables to load the multiple files
+	//this works for now, but it seems you can create tables to sandbox it
 
 	L = luaL_newstate();
 	luaL_openlibs(L);
-	assert( (err = luaL_dostring(L, test_string0)) == LUA_OK);
+
+	assert( (err = luaL_dostring(L, test_string0)) == 0);
 	lua_getglobal(L, "random_function");
 	lua_setfield(L, LUA_REGISTRYINDEX, "r0");
 
-	assert( (err = luaL_dostring(L, test_string1)) == LUA_OK);
+	assert( (err = luaL_dostring(L, test_string1)) == 0);
 	lua_getglobal(L, "random_function");
 	lua_setfield(L, LUA_REGISTRYINDEX, "r1");
 
-	assert( (err = luaL_dostring(L, test_string2)) == LUA_OK);
+	assert( (err = luaL_dostring(L, test_string2)) == 0);
 	lua_getglobal(L, "random_function");
 	lua_setfield(L, LUA_REGISTRYINDEX, "r2");
 

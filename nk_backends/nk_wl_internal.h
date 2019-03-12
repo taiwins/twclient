@@ -90,6 +90,7 @@ struct nk_wl_backend {
 	unsigned char ctx_buffer[NK_MAX_CTX_MEM];
 };
 
+
 /******************************** render *******************************************/
 static void nk_wl_render(struct nk_wl_backend *bkend);
 
