@@ -5,9 +5,9 @@
 #include <assert.h>
 #include <strings.h>
 
-#include <luajit-2.1/lua.h>
-#include <luajit-2.1/lauxlib.h>
-#include <luajit-2.1/lualib.h>
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
 
 #include "../client.h"
 #include "../ui.h"
@@ -86,6 +86,91 @@ nk_lua_assert_type(lua_State *L, int pass)
 	return nk_lua_assert(L, pass, "wrong type of lua data \'%s\'");
 }
 
+
+static bool
+nk_lua_is_hex(char c)
+{
+	return (c >= '0' && c <= '9')
+		|| (c >= 'a' && c <= 'f')
+		|| (c >= 'A' && c <= 'F');
+}
+
+static bool
+nk_lua_is_color(int index)
+{
+	if (index < 0)
+		index += lua_gettop(L) + 1;
+	if (lua_isstring(L, index)) {
+		size_t len;
+		const char *color_string = lua_tolstring(L, index, &len);
+		if ((len == 7 || len == 9) && color_string[0] == '#') {
+			int i;
+			for (i = 1; i < len; ++i) {
+				if (!nk_lua_is_hex(color_string[i]))
+					return false;
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+static struct nk_color
+nk_lua_tocolor(int index)
+{
+	if (index < 0)
+		index += lua_gettop(L) + 1;
+	size_t len;
+	const char *color_string = lua_tolstring(L, index, &len);
+	int r, g, b, a = 255;
+	sscanf(color_string, "#%02x%02x%02x", &r, &g, &b);
+	if (len == 9) {
+		sscanf(color_string + 7, "%02x", &a);
+	}
+	struct nk_color color = {r, g, b, a};
+	return color;
+}
+
+
+static enum nk_symbol_type nk_lua_tosymbol(int index)
+{
+	if (index < 0)
+		index += lua_gettop(L) + 1;
+	const char *s = luaL_checkstring(L, index);
+	if (!strcmp(s, "none")) {
+		return NK_SYMBOL_NONE;
+	} else if (!strcmp(s, "x")) {
+		return NK_SYMBOL_X;
+	} else if (!strcmp(s, "underscore")) {
+		return NK_SYMBOL_UNDERSCORE;
+	} else if (!strcmp(s, "circle solid")) {
+		return NK_SYMBOL_CIRCLE_SOLID;
+	} else if (!strcmp(s, "circle outline")) {
+		return NK_SYMBOL_CIRCLE_OUTLINE;
+	} else if (!strcmp(s, "rect solid")) {
+		return NK_SYMBOL_RECT_SOLID;
+	} else if (!strcmp(s, "rect outline")) {
+		return NK_SYMBOL_RECT_OUTLINE;
+	} else if (!strcmp(s, "triangle up")) {
+		return NK_SYMBOL_TRIANGLE_UP;
+	} else if (!strcmp(s, "triangle down")) {
+		return NK_SYMBOL_TRIANGLE_DOWN;
+	} else if (!strcmp(s, "triangle left")) {
+		return NK_SYMBOL_TRIANGLE_LEFT;
+	} else if (!strcmp(s, "triangle right")) {
+		return NK_SYMBOL_TRIANGLE_RIGHT;
+	} else if (!strcmp(s, "plus")) {
+		return NK_SYMBOL_PLUS;
+	} else if (!strcmp(s, "minus")) {
+		return NK_SYMBOL_MINUS;
+	} else if (!strcmp(s, "max")) {
+		return NK_SYMBOL_MAX;
+	} else {
+		const char *msg = lua_pushfstring(L, "unrecognized symbol type '%s'", s);
+		return luaL_argerror(L, index, msg);
+	}
+}
+
 static int
 nk_lua_layout_row(lua_State *L)
 {
@@ -148,9 +233,12 @@ nk_lua_layout_row(lua_State *L)
 	return 0;
 }
 
+/////////////////////// button ////////////////////
+
 static int
 nk_lua_button_label(lua_State *L)
 {
+	//TODO support symbol and alignment
 	int argc = lua_gettop(L);
 
 	if (!nk_lua_assert_argc(L, argc == 2))
@@ -167,6 +255,63 @@ nk_lua_button_label(lua_State *L)
 err_button:
 	return 0;
 }
+
+static int
+nk_lua_button_color(lua_State *L)
+{
+	int pressed = false;
+	struct nk_color color;
+	struct lua_user_data *user_data;
+	int argc = lua_gettop(L);
+	if (!nk_lua_assert_argc(L, argc == 2))
+		goto err_button;
+	if (!nk_lua_assert_type(L, lua_isuserdata(L, 1)))
+		goto err_button;
+	user_data = (struct lua_user_data *)lua_touserdata(L, 1);
+	if (!nk_lua_assert_type(L, lua_isstring(L, 2)))
+		goto err_button;
+	if (!nk_lua_is_color(2))
+		goto err_button;
+	color = nk_lua_tocolor(2);
+
+	pressed = nk_button_color(user_data->c, color);
+	lua_pushinteger(L, pressed);
+
+	return 1;
+err_button:
+	return 0;
+}
+
+////////////////////// checkbox ////////////////////
+static int
+nk_lua_checkbox(lua_State *L)
+{
+	bool pressed = false;
+	int argc = lua_gettop(L);
+	struct lua_user_data *user_data;
+	const char *string;
+
+	if (!nk_lua_assert_argc(L, argc == 3))
+		goto err_checkbox;
+	if (!nk_lua_assert_type(L, lua_isuserdata(L, 1)))
+		goto err_checkbox;
+	if (!nk_lua_assert_type(L, lua_isstring(L, 2)))
+		goto err_checkbox;
+	if (!nk_lua_assert_type(L, lua_isboolean(L, 3)))
+		goto err_checkbox;
+
+	user_data = (struct lua_user_data *)lua_touserdata(L, 1);
+	string = lua_tostring(L, 2);
+	pressed = lua_toboolean(L, 3);
+
+	pressed = nk_check_label(user_data->c, string, pressed);
+	lua_pushboolean(L, pressed);
+	return 1;
+err_checkbox:
+	return 0;
+}
+
+/////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -225,8 +370,10 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	lua_pushvalue(L, -1);
 	lua_setfield(L, -2, "__index");
 	//TODO register all the methods methods for the context
-	REGISTER_METHOD(L, "button_label", nk_lua_button_label);
 	REGISTER_METHOD(L, "layout_row", nk_lua_layout_row);
+	REGISTER_METHOD(L, "button_label", nk_lua_button_label);
+	REGISTER_METHOD(L, "button_color", nk_lua_button_color);
+	REGISTER_METHOD(L, "checkbox", nk_lua_checkbox);
 
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
