@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <assert.h>
-#include <luajit-2.1/lua.h>
-#include <luajit-2.1/lualib.h>
-#include <luajit-2.1/lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 
 static const char *test_string0 =
 	"\
@@ -39,15 +39,15 @@ int main(int argc, char *argv[])
 	L = luaL_newstate();
 	luaL_openlibs(L);
 
-	assert( (err = luaL_dostring(L, test_string0)) == LUA_OK);
+	assert( (err = luaL_dostring(L, test_string0)) == 0);
 	lua_getglobal(L, "random_function");
 	lua_setfield(L, LUA_REGISTRYINDEX, "r0");
 
-	assert( (err = luaL_dostring(L, test_string1)) == LUA_OK);
+	assert( (err = luaL_dostring(L, test_string1)) == 0);
 	lua_getglobal(L, "random_function");
 	lua_setfield(L, LUA_REGISTRYINDEX, "r1");
 
-	assert( (err = luaL_dostring(L, test_string2)) == LUA_OK);
+	assert( (err = luaL_dostring(L, test_string2)) == 0);
 	lua_getglobal(L, "random_function");
 	lua_setfield(L, LUA_REGISTRYINDEX, "r2");
 
