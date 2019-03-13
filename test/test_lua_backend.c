@@ -90,15 +90,17 @@ nk_lua_layout_row(lua_State *L)
 	assert(argc <= 5 && argc >= 4);
 	//get data
 	struct lua_user_data *user_data = (struct lua_user_data *)lua_touserdata(L, 1);
-	const char *type = lua_tostring(L, 2);
-	const int height = lua_tointeger(L, 3);
+	const char *type = luaL_checkstring(L, 2);
+	const int height = luaL_checkint(L, 3);
 	enum nk_layout_format layout_format = NK_STATIC;
-	int ncols = 0;
+	int ncols = 0; int span = 0;
 
 	if (strcasecmp(type, "static")) {
 		layout_format = NK_STATIC;
-		if (argc == 5)
-			ncols = lua_tointeger(L, 5);
+		if (argc == 5) {
+			ncols = luaL_checkint(L, 5);
+			span = luaL_checkint(L, 4);
+		}
 		else {
 			//get the table
 		}
