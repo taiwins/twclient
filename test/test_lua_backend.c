@@ -5,9 +5,9 @@
 #include <assert.h>
 #include <strings.h>
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
+#include <luajit-2.1/lua.h>
+#include <luajit-2.1/lauxlib.h>
+#include <luajit-2.1/lualib.h>
 
 #include "../client.h"
 #include "../ui.h"
@@ -18,14 +18,14 @@
 #define NK_CAIRO_BACKEND
 #endif
 
+#define NK_LUA_MAX_LAYOUT 1024
+
 static lua_State *L = NULL;
 
 struct lua_user_data {
 	struct nk_wl_backend *bkend;
 	struct nk_context *c;
-
-	int width;
-	int height;
+	//we will need a layout count for every frame.
 };
 
 static struct application {
@@ -37,6 +37,148 @@ static struct application {
 	bool done;
 } App;
 
+
+/**
+ * think about a sample nuklear lua script, you will have this
+ *
+ * function draw_frame(nk, w, h):
+ *     nk:layout_row_static(30, 80, 2)
+ *     if nk:button_label("button") then
+ *         then print("sample")
+ *     nk:label("another")
+ *
+ * end
+ *
+ * we can totally have the nk defined as predefined userdata userdata
+ *
+ **/
+///////////////////////////////// nuklear bindings ///////////////////////////////////////
+static bool
+nk_lua_assert(lua_State *L, int pass, const char *msg)
+{
+	if (!pass) {
+		lua_Debug ar;
+		ar.name = NULL;
+		if (lua_getstack(L, 0, &ar))
+			lua_getinfo(L, "n", &ar);
+		if (ar.name == NULL)
+			ar.name = "?";
+		luaL_error(L, msg, ar.name);
+	}
+	return pass;
+}
+
+static inline bool
+nk_lua_assert_argc(lua_State *L, int pass)
+{
+	return nk_lua_assert(L, pass, "wrong number of argument with \'%s\'");
+}
+
+static inline bool
+nk_lua_assert_alloc(lua_State *L, void *mem)
+{
+	return nk_lua_assert(L, mem != NULL, "out of memory with with \'%s\'");
+}
+
+static inline bool
+nk_lua_assert_type(lua_State *L, int pass)
+{
+	return nk_lua_assert(L, pass, "wrong type of lua data \'%s\'");
+}
+
+static int
+nk_lua_layout_row(lua_State *L)
+{
+	/**
+	 * nk:layout_row('static', 30, 80, 2)
+	 * nk:layout_row('dynamic', 30, 2)
+	 * nk:layout_row('dynamic', 30, {0.5, 0.5})
+	 * nk:layout_row('static', 30, {40, 40})
+	 **/
+
+	int argc = lua_gettop(L);
+	assert(argc <= 5 && argc >= 4);
+	//get data
+	struct lua_user_data *user_data = (struct lua_user_data *)lua_touserdata(L, 1);
+	const char *type = luaL_checkstring(L, 2);
+	const float height = luaL_checkint(L, 3);
+	enum nk_layout_format layout_format = NK_STATIC;
+	int ncols = 0; bool use_ratio = 0; int ratio_param = -1;
+
+	if (strcasecmp(type, "static") == 0) {
+		layout_format = NK_STATIC;
+		if (argc == 5) {
+			ncols = luaL_checkint(L, 5);
+			use_ratio = false;
+			ratio_param = 4;
+		}
+		else {
+			ncols = lua_objlen(L, 4);
+			use_ratio = true;
+			ratio_param = 4;
+		}
+	} else if (strcasecmp(type, "dynamic") == 0) {
+		layout_format = NK_DYNAMIC;
+		assert(argc == 4);
+		if (lua_isnumber(L, 4)) {
+			use_ratio = false;
+			ncols = luaL_checkint(L, 4);
+
+		} else if (lua_istable(L, 4)) {
+			ncols = lua_objlen(L, 4);
+			use_ratio = true;
+			ratio_param = 4;
+		}
+	}
+	float spans[ncols+1];
+	for (int i = 0; i < ncols; i++) {
+		if (use_ratio) {
+			lua_rawgeti(L, ratio_param, i);
+			float ratio = (float)lua_tonumber(L, -1);
+			lua_pop(L, 1);
+			spans[i] = ratio;
+		} else {
+			float ratio = (layout_format == NK_STATIC) ? (float)lua_tonumber(L, ratio_param) : 1.0 / ncols;
+			spans[i] = ratio;
+		}
+	}
+	//TODO this won't work because the spans has to be present util the frame is done
+	nk_layout_row_dynamic(user_data->c, height, ncols);
+
+	return 0;
+}
+
+static int
+nk_lua_button_label(lua_State *L)
+{
+	int argc = lua_gettop(L);
+
+	if (!nk_lua_assert_argc(L, argc == 2))
+		goto err_button;
+	struct lua_user_data *user_data = (struct lua_user_data *)lua_touserdata(L, 1);
+	if (!nk_lua_assert_type(L, lua_isstring(L, 2)))
+		goto err_button;
+	const char *string = lua_tostring(L, 2);
+
+	int pressed = nk_button_label(user_data->c, string);
+	lua_pushinteger(L, pressed);
+
+	return 1;
+err_button:
+	return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+extern void
+nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
+			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
+			  uint32_t w, uint32_t h, uint32_t x, uint32_t y,
+			  int32_t s);
+
+/* cairo_backend */
+struct nk_wl_backend *nk_cairo_create_bkend(void);
+void nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
 
 #define REGISTER_METHOD(l, name, func)		\
 	({lua_pushcfunction(l, func);		\
@@ -57,89 +199,13 @@ _nk_lua_drawcb(struct nk_context *c, float width, float height,
 	lua_pushnumber(L, app->w);
 	lua_pushnumber(L, app->h);
 
-	lua_pcall(L, 3, 0, 0);
-}
-
-
-/**
- * think about a sample nuklear lua script, you will have this
- *
- * function draw_frame(nk, w, h):
- *     nk:layout_row_static(30, 80, 2)
- *     if nk:button_label("button") then
- *         then print("sample")
- *     nk:label("another")
- *
- * end
- *
- * we can totally have the nk defined as predefined userdata userdata
- *
- **/
-///////////////////////////////// nuklear bindings ///////////////////////////////////////
-static int
-nk_lua_layout_row(lua_State *L)
-{
-	/**
-	 * nk:layout_row('static', 30, 80, 2)
-	 * nk:layout_row('dynamic', 30, 2)
-	 * nk:layout_row('dynamic', 30, {0.5, 0.5})
-	 * nk:layout_row('static', 30, {40, 40})
-	 **/
-
-	int argc = lua_gettop(L);
-	assert(argc <= 5 && argc >= 4);
-	//get data
-	struct lua_user_data *user_data = (struct lua_user_data *)lua_touserdata(L, 1);
-	const char *type = luaL_checkstring(L, 2);
-	const int height = luaL_checkint(L, 3);
-	enum nk_layout_format layout_format = NK_STATIC;
-	int ncols = 0; int span = 0;
-
-	if (strcasecmp(type, "static")) {
-		layout_format = NK_STATIC;
-		if (argc == 5) {
-			ncols = luaL_checkint(L, 5);
-			span = luaL_checkint(L, 4);
-		}
-		else {
-			//get the table
-		}
-
-	} else if (strcasecmp(type, "dynamic")) {
-		layout_format = NK_DYNAMIC;
-		assert(argc == 4);
+	if (lua_pcall(L, 3, 0, 0)) {
+		const char *err_str = lua_tostring(L, -1);
+		fprintf(stderr, "-- lua runtime err: %s\n", err_str);
+		lua_pop(L, 1);
+		nk_clear(c);
 	}
 }
-
-static int
-nk_lua_button_label(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	//TODO properly handle the error, we should not crash the app because of lua side
-	assert(argc == 2);
-	struct lua_user_data *user_data = (struct lua_user_data *)lua_touserdata(L, 1);
-	const char *string = lua_tostring(L, 2);
-
-	int pressed = nk_button_label(user_data->c, string);
-	lua_pushinteger(L, pressed);
-	return 1;
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
-
-extern void
-nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
-			  uint32_t w, uint32_t h, uint32_t x, uint32_t y,
-			  int32_t s);
-
-/* cairo_backend */
-struct nk_wl_backend *nk_cairo_create_bkend(void);
-void nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
-
-
-
 
 //the last parameter is only useful for cairo_backend
 void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
@@ -160,6 +226,7 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	lua_setfield(L, -2, "__index");
 	//TODO register all the methods methods for the context
 	REGISTER_METHOD(L, "button_label", nk_lua_button_label);
+	REGISTER_METHOD(L, "layout_row", nk_lua_layout_row);
 
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
