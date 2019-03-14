@@ -312,6 +312,41 @@ err_checkbox:
 }
 
 /////////////////////
+static int
+nk_lua_radio(lua_State *L)
+{
+	struct lua_user_data *user_data;
+	const char *string;
+	bool is_active;
+
+	int argc = lua_gettop(L);
+	if (!nk_lua_assert_argc(L, argc == 3))
+		goto err_radio;
+	if (!nk_lua_assert_type(L, lua_isuserdata(L, 1)))
+		goto err_radio;
+	if (!nk_lua_assert_type(L, lua_isstring(L, 2)))
+		goto err_radio;
+	if (!nk_lua_assert_type(L, lua_isboolean(L, 3)))
+		goto err_radio;
+
+	user_data = (struct lua_user_data *)lua_touserdata(L, 1);
+	string = lua_tostring(L, 2);
+	is_active = lua_toboolean(L, 3);
+	is_active = nk_option_label(user_data->c, string, is_active);
+err_radio:
+	return 0;
+}
+
+static int
+nk_lua_selectable(lua_State *L)
+{
+}
+
+static int
+nk_lua_slider(lua_State *L) {}
+
+static int
+nk_lua_progress(lua_State *L){}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -374,6 +409,7 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	REGISTER_METHOD(L, "button_label", nk_lua_button_label);
 	REGISTER_METHOD(L, "button_color", nk_lua_button_color);
 	REGISTER_METHOD(L, "checkbox", nk_lua_checkbox);
+	REGISTER_METHOD(L, "radio_label", nk_lua_radio);
 
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
