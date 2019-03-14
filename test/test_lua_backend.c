@@ -132,7 +132,7 @@ nk_lua_tocolor(int index)
 }
 
 
-static enum nk_symbol_type nk_lua_tosymbol(int index)
+static enum nk_symbol_type nk_lua_tosymbol(lua_State *L, int index)
 {
 	if (index < 0)
 		index += lua_gettop(L) + 1;
@@ -170,6 +170,36 @@ static enum nk_symbol_type nk_lua_tosymbol(int index)
 		return luaL_argerror(L, index, msg);
 	}
 }
+
+static nk_flags nk_lua_toalign(lua_State *L, int index)
+{
+	if (index < 0)
+		index += lua_gettop(L) + 1;
+	const char *s = luaL_checkstring(L, index);
+	if (!strcmp(s, "left")) {
+		return NK_TEXT_LEFT;
+	} else if (!strcmp(s, "centered")) {
+		return NK_TEXT_CENTERED;
+	} else if (!strcmp(s, "right")) {
+		return NK_TEXT_RIGHT;
+	} else if (!strcmp(s, "top left")) {
+		return NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_LEFT;
+	} else if (!strcmp(s, "top centered")) {
+		return NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_CENTERED;
+	} else if (!strcmp(s, "top right")) {
+		return NK_TEXT_ALIGN_TOP | NK_TEXT_ALIGN_RIGHT;
+	} else if (!strcmp(s, "bottom left")) {
+		return NK_TEXT_ALIGN_BOTTOM | NK_TEXT_ALIGN_LEFT;
+	} else if (!strcmp(s, "bottom centered")) {
+		return NK_TEXT_ALIGN_BOTTOM | NK_TEXT_ALIGN_CENTERED;
+	} else if (!strcmp(s, "bottom right")) {
+		return NK_TEXT_ALIGN_BOTTOM | NK_TEXT_ALIGN_RIGHT;
+	} else {
+		const char *msg = lua_pushfstring(L, "unrecognized alignment '%s'", s);
+		return luaL_argerror(L, index, msg);
+	}
+}
+
 
 static int
 nk_lua_layout_row(lua_State *L)
@@ -233,7 +263,7 @@ nk_lua_layout_row(lua_State *L)
 	return 0;
 }
 
-/////////////////////// button ////////////////////
+/////////////////////// simple widgets /////////////////////////
 
 static int
 nk_lua_button_label(lua_State *L)
@@ -282,7 +312,6 @@ err_button:
 	return 0;
 }
 
-////////////////////// checkbox ////////////////////
 static int
 nk_lua_checkbox(lua_State *L)
 {
@@ -311,7 +340,6 @@ err_checkbox:
 	return 0;
 }
 
-/////////////////////
 static int
 nk_lua_radio(lua_State *L)
 {
@@ -340,13 +368,107 @@ err_radio:
 static int
 nk_lua_selectable(lua_State *L)
 {
+	/**
+	 * selected = nk:selectable(text, align, selected)
+	 * selected = nk:selectable(text, symbol, align, selected)
+	 */
+	//we would like to allow symbol this time
+	const char *string;
+	bool selected = false;
+	struct lua_user_data *user_data;
+
+	int argc = lua_gettop(L);
+	if (!nk_lua_assert_argc(L, argc == 4 || argc == 5))
+		goto err_select;
+	if (!nk_lua_assert_type(L, lua_isuserdata(L, 1)))
+		goto err_select;
+	if (!nk_lua_assert_type(L, lua_isstring(L, 2)))
+		goto err_select;
+
+	user_data = (struct lua_user_data *)lua_touserdata(L, 1);
+	string = lua_tostring(L, 2);
+	if (argc == 5) {
+		nk_flags align = NK_TEXT_CENTERED;
+		enum nk_symbol_type symbol;
+		if (!nk_lua_assert_type(L, lua_isstring(L, 3)))
+			goto err_select;
+		if (!nk_lua_assert_type(L, lua_isstring(L, 4)))
+			goto err_select;
+		if (!nk_lua_assert_type(L, lua_isboolean(L, 5)))
+			goto err_select;
+		selected = lua_toboolean(L, 5);
+		align = nk_lua_toalign(L, 4);
+		symbol = nk_lua_tosymbol(L, 3);
+		selected = nk_select_symbol_label(user_data->c, symbol, string, align, selected);
+	} else {
+		nk_flags align = NK_TEXT_CENTERED;
+		if (!nk_lua_assert_type(L, lua_isstring(L, 3)))
+			goto err_select;
+		if (!nk_lua_assert_type(L, lua_isboolean(L, 4)))
+			goto err_select;
+		selected = lua_toboolean(L, 4);
+		align = nk_lua_toalign(L, 3);
+		selected = nk_select_label(user_data->c, string, align, selected);
+	}
+	lua_pushboolean(L, selected);
+	return 1;
+err_select:
+	return 0;
+}
+
+//because we have assert(setjmp and longjmps), those argc is useless.
+static int
+nk_lua_slider(lua_State *L)
+{
+	struct lua_user_data *user_data;
+	float min, max, current, step;
+
+	int argc = lua_gettop(L);
+	nk_lua_assert_argc(L, argc == 5);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	nk_lua_assert_type(L, lua_isnumber(L, 2));
+	nk_lua_assert_type(L, lua_isnumber(L, 3));
+	nk_lua_assert_type(L, lua_isnumber(L, 4));
+	nk_lua_assert_type(L, lua_isnumber(L, 5));
+
+	user_data = (struct lua_user_data *)lua_touserdata(L, 1);
+	min = lua_tonumber(L, 2);
+	max = lua_tonumber(L, 4);
+	current = lua_tonumber(L, 3);
+	step = lua_tonumber(L, 5);
+
+	current = nk_slide_float(user_data->c, min, current, max, step);
+	lua_pushnumber(L, current);
+	return 1;
 }
 
 static int
-nk_lua_slider(lua_State *L) {}
+nk_lua_progress(lua_State *L)
+{
+	struct lua_user_data *user_data;
+	nk_size current, max;
+	bool modifiable = false;
 
-static int
-nk_lua_progress(lua_State *L){}
+	int argc = lua_gettop(L);
+
+	nk_lua_assert_argc(L, argc == 3 || argc == 4);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	nk_lua_assert_type(L, lua_isnumber(L, 2));
+	nk_lua_assert_type(L, lua_isnumber(L, 3));
+	if (argc == 4) {
+		nk_lua_assert_type(L, lua_isboolean(L, 4));
+		modifiable = lua_toboolean(L, 4);
+	}
+	user_data = (struct lua_user_data *)lua_touserdata(L, 1);
+	current = lua_tointeger(L, 2);
+	max = lua_tointeger(L, 3);
+
+	current = nk_prog(user_data->c, current, max, modifiable);
+	lua_pushnumber(L, current);
+	return 1;
+}
+
+/////////////////////// complex widgets /////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -404,12 +526,15 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	luaL_newmetatable(L, "_context");
 	lua_pushvalue(L, -1);
 	lua_setfield(L, -2, "__index");
-	//TODO register all the methods methods for the context
+	//TODO simple widgets
 	REGISTER_METHOD(L, "layout_row", nk_lua_layout_row);
 	REGISTER_METHOD(L, "button_label", nk_lua_button_label);
 	REGISTER_METHOD(L, "button_color", nk_lua_button_color);
 	REGISTER_METHOD(L, "checkbox", nk_lua_checkbox);
 	REGISTER_METHOD(L, "radio_label", nk_lua_radio);
+	REGISTER_METHOD(L, "selectable", nk_lua_selectable);
+	REGISTER_METHOD(L, "slider", nk_lua_slider);
+	REGISTER_METHOD(L, "progress", nk_lua_progress);
 
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
