@@ -171,7 +171,8 @@ static enum nk_symbol_type nk_lua_tosymbol(lua_State *L, int index)
 	}
 }
 
-static nk_flags nk_lua_toalign(lua_State *L, int index)
+static nk_flags
+nk_lua_toalign(lua_State *L, int index)
 {
 	if (index < 0)
 		index += lua_gettop(L) + 1;
@@ -200,6 +201,49 @@ static nk_flags nk_lua_toalign(lua_State *L, int index)
 	}
 }
 
+static nk_flags
+nk_lua_windowflag(lua_State *L, int flags_begin, int flags_end)
+{
+	int i;
+	if (flags_begin == flags_end && lua_istable(L, flags_begin)) {
+		size_t flagCount = lua_objlen(L, flags_begin);
+		nk_lua_assert(L, lua_checkstack(L, flagCount), "%s: failed to allocate stack space");
+		for (i = 1; i <= flagCount; ++i) {
+			lua_rawgeti(L, flags_begin, i);
+		}
+		lua_remove(L, flags_begin);
+		flags_end = flags_begin + flagCount - 1;
+	}
+	nk_flags flags = NK_WINDOW_NO_SCROLLBAR;
+	for (i = flags_begin; i <= flags_end; ++i) {
+		const char *flag = luaL_checkstring(L, i);
+		if (!strcmp(flag, "border"))
+			flags |= NK_WINDOW_BORDER;
+		else if (!strcmp(flag, "movable"))
+			flags |= NK_WINDOW_MOVABLE;
+		else if (!strcmp(flag, "scalable"))
+			flags |= NK_WINDOW_SCALABLE;
+		else if (!strcmp(flag, "closable"))
+			flags |= NK_WINDOW_CLOSABLE;
+		else if (!strcmp(flag, "minimizable"))
+			flags |= NK_WINDOW_MINIMIZABLE;
+		else if (!strcmp(flag, "scrollbar"))
+			flags &= ~NK_WINDOW_NO_SCROLLBAR;
+		else if (!strcmp(flag, "title"))
+			flags |= NK_WINDOW_TITLE;
+		else if (!strcmp(flag, "scroll auto hide"))
+			flags |= NK_WINDOW_SCROLL_AUTO_HIDE;
+		else if (!strcmp(flag, "background"))
+			flags |= NK_WINDOW_BACKGROUND;
+		else {
+			const char *msg = lua_pushfstring(L, "unrecognized window flag '%s'", flag);
+			return luaL_argerror(L, i, msg);
+		}
+	}
+	return flags;
+}
+
+////////////////////////// layout ///////////////////////////////
 
 static int
 nk_lua_layout_row(lua_State *L)
@@ -262,6 +306,40 @@ nk_lua_layout_row(lua_State *L)
 
 	return 0;
 }
+
+/////////////////////// group/tree //////////////////////////////
+static int
+nk_lua_group_begin(lua_State *L)
+{
+	const char *title;
+	struct lua_user_data *ud;
+	nk_flags flags = 0;
+
+	int argc = lua_gettop(L);
+	nk_lua_assert_argc(L, argc >=2);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	nk_lua_assert_type(L, lua_isstring(L, 2));
+	ud = lua_touserdata(L, 1);
+	title = lua_tostring(L, 2);
+	if (argc > 2) {
+		flags = nk_lua_windowflag(L, 3, argc);
+	}
+	int open = nk_group_begin(ud->c, title, flags);
+
+	lua_pushboolean(L, open);
+	return 1;
+}
+
+static int
+nk_lua_group_end(lua_State *L)
+{
+	nk_lua_assert_argc(L, lua_gettop(L) == 1);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	struct lua_user_data *d = lua_touserdata(L, 1);
+	nk_group_end(d->c);
+	return 0;
+}
+
 
 /////////////////////// simple widgets /////////////////////////
 
@@ -505,6 +583,35 @@ nk_lua_color_pick(lua_State *L)
 
 	return 0;
 }
+
+static int
+nk_lua_property(lua_State *L)
+{
+	struct lua_user_data *ud;
+	const char *name;
+	double min, val, max, step, inc;
+
+	int argc = lua_gettop(L);
+	nk_lua_assert_argc(L, argc == 7);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	nk_lua_assert_type(L, lua_isstring(L, 2));
+	nk_lua_assert_type(L, lua_isnumber(L, 3));
+	nk_lua_assert_type(L, lua_isnumber(L, 4));
+	nk_lua_assert_type(L, lua_isnumber(L, 5));
+	nk_lua_assert_type(L, lua_isnumber(L, 6));
+	nk_lua_assert_type(L, lua_isnumber(L, 7));
+	ud = lua_touserdata(L, 1);
+	name = lua_tostring(L, 2);
+	min = lua_tonumber(L, 3);
+	val = lua_tonumber(L, 4);
+	max = lua_tonumber(L, 5);
+	step = lua_tonumber(L, 6);
+	inc = lua_tonumber(L, 7);
+
+	val = nk_propertyd(ud->c, name, min, val, max, step, inc);
+	lua_pushnumber(L, val);
+	return 1;
+}
 /////////////////////// complex widgets /////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -563,6 +670,10 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	luaL_newmetatable(L, "_context");
 	lua_pushvalue(L, -1);
 	lua_setfield(L, -2, "__index");
+
+	//groups
+	REGISTER_METHOD(L, "group_begin", nk_lua_group_begin);
+	REGISTER_METHOD(L, "group_end", nk_lua_group_end);
 	//TODO simple widgets
 	REGISTER_METHOD(L, "layout_row", nk_lua_layout_row);
 	REGISTER_METHOD(L, "button_label", nk_lua_button_label);
@@ -573,6 +684,7 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	REGISTER_METHOD(L, "slider", nk_lua_slider);
 	REGISTER_METHOD(L, "progress", nk_lua_progress);
 	REGISTER_METHOD(L, "color_pick", nk_lua_color_pick);
+	REGISTER_METHOD(L, "property", nk_lua_property);
 
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
