@@ -314,6 +314,18 @@ nk_cairo_set_painter(cairo_t *cr, const struct nk_color *color, unsigned short l
 		cairo_set_line_width(cr, line_width);
 }
 
+static inline void
+nk_cairo_mesh_pattern_set_corner_color(cairo_pattern_t *pat, int idx, struct nk_color color)
+{
+	float r, g, b, a;
+	r = NK_COLOR_TO_FLOAT(color.r);
+	g = NK_COLOR_TO_FLOAT(color.g);
+	b = NK_COLOR_TO_FLOAT(color.b);
+	a = NK_COLOR_TO_FLOAT(color.a);
+	/* nk_cairo_get_color(color, &r, &g, &b, &a); */
+	cairo_mesh_pattern_set_corner_color_rgba(pat, idx, r, g, b, a);
+}
+
 static void
 nk_cairo_noop(cairo_t *cr, const struct nk_command *cmd)
 {
@@ -428,9 +440,27 @@ nk_cairo_rect_filled(cairo_t *cr, const struct nk_command *cmd)
 static void
 nk_cairo_rect_multi_color(cairo_t *cr, const struct nk_command *cmd)
 {
-	/* const struct nk_command_rect_multi_color *r =
-	   (const struct nk_command_rect_multi_color *) cmd; */
-	//TODO?
+	const struct nk_command_rect_multi_color *r =
+	   (const struct nk_command_rect_multi_color *) cmd;
+	cairo_pattern_t *pat = cairo_pattern_create_mesh();
+	if (pat) {
+		cairo_mesh_pattern_begin_patch(pat);
+		cairo_mesh_pattern_move_to(pat, r->x, r->y);
+		cairo_mesh_pattern_line_to(pat, r->x, r->y + r->h);
+		cairo_mesh_pattern_line_to(pat, r->x + r->w, r->y + r->h);
+		cairo_mesh_pattern_line_to(pat, r->x + r->w, r->y);
+		nk_cairo_mesh_pattern_set_corner_color(pat, 0, r->left);
+		nk_cairo_mesh_pattern_set_corner_color(pat, 1, r->bottom);
+		nk_cairo_mesh_pattern_set_corner_color(pat, 2, r->right);
+		nk_cairo_mesh_pattern_set_corner_color(pat, 3, r->top);
+		cairo_mesh_pattern_end_patch(pat);
+
+		cairo_rectangle(cr, r->x, r->y, r->w, r->h);
+		cairo_set_source(cr, pat);
+		cairo_fill(cr);
+
+		cairo_pattern_destroy(pat);
+	}
 }
 
 static void
