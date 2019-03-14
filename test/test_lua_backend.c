@@ -468,6 +468,43 @@ nk_lua_progress(lua_State *L)
 	return 1;
 }
 
+static int
+nk_lua_color_pick(lua_State *L)
+{
+	struct lua_user_data *user_data;
+	struct nk_colorf colorf;
+	float c[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+	const char *rgba[] =  {"r", "g", "b", "a"};
+
+	int argc = lua_gettop(L);
+	nk_lua_assert_argc(L, argc == 2);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	nk_lua_assert_type(L, lua_istable(L, 2));
+
+	user_data = (struct lua_user_data *)lua_touserdata(L, 1);
+
+	for (int i = 0; i < 4; i++) {
+		lua_pushstring(L, rgba[i]);
+		lua_rawget(L, 2);
+		c[i] = lua_tonumber(L, -1);
+		lua_pop(L, 1);
+	}
+	c[3] = (c[3] == 0.0f) ? 1.0f : c[3];
+
+	colorf.r = c[0]; colorf.g = c[1];
+	colorf.b = c[2]; colorf.a = c[3];
+	colorf = nk_color_picker(user_data->c, colorf, NK_RGBA);
+	c[0] = colorf.r; c[1] = colorf.g;
+	c[2] = colorf.b; c[3] = colorf.a;
+
+	for (int i = 0; i < 4; i++) {
+		lua_pushstring(L, rgba[i]);
+		lua_pushnumber(L, c[i]);
+		lua_rawset(L, 2);
+	}
+
+	return 0;
+}
 /////////////////////// complex widgets /////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -535,6 +572,7 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	REGISTER_METHOD(L, "selectable", nk_lua_selectable);
 	REGISTER_METHOD(L, "slider", nk_lua_slider);
 	REGISTER_METHOD(L, "progress", nk_lua_progress);
+	REGISTER_METHOD(L, "color_pick", nk_lua_color_pick);
 
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
