@@ -652,6 +652,7 @@ nk_lua_edit(lua_State *L)
 	string = lua_tostring(L, -1);
 	lua_pop(L, 1);
 	int len = strlen(string) < 1023 ? strlen(string) : 1023;
+	strncpy(edit_buffer, string, len);
 	edit_buffer[len] = '\0';
 
 	nk_flags event =
