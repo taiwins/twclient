@@ -368,6 +368,9 @@ _nk_egl_draw_begin(struct nk_egl_backend *bkend,
 	assert(glGetError() == GL_NO_ERROR);
 	//I guess it is not really a good idea to allocate buffer every frame.
 	//if we already have the glBufferData, we would just mapbuffer
+	glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_BUFFER, NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, MAX_ELEMENT_BUFFER, NULL, GL_STREAM_DRAW);
+
 	vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 	elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
 	{

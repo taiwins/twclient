@@ -94,6 +94,12 @@ struct nk_wl_backend {
 /******************************** render *******************************************/
 static void nk_wl_render(struct nk_wl_backend *bkend);
 
+//we should not implement directly like this, it kills all the freedom for user,
+//you should have widget implement like this. The problem is this call does the
+//rendering as well, suppose you have a background, you want to draw that
+//first. Then you want to draw the widgets, at last, you want to call
+//nk_wl_render and
+
 static void
 nk_wl_new_frame(struct app_surface *surf, uint32_t user_data)
 {
@@ -315,6 +321,8 @@ nk_input_reset(struct nk_context *ctx)
 	nk_input_begin(ctx);
 	nk_input_end(ctx);
 }
+
+//this is so verbose
 
 static void
 nk_keycb(struct app_surface *surf, xkb_keysym_t keysym, uint32_t modifier, int state)

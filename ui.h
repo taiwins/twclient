@@ -10,6 +10,7 @@
 #include <wayland-egl.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <vulkan/vulkan.h>
 
 //doesnt support jpeg in this way, but there is a cairo-jpeg project
 #include <cairo/cairo.h>
@@ -222,6 +223,9 @@ struct app_surface {
 		 */
 		struct app_surface *parent;
 		/* if we have an vulkan surface, it would be the same thing */
+		struct {
+			VkSurfaceKHR vksurf;
+		};
 	};
 	/* callbacks */
 	struct {

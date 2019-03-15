@@ -132,7 +132,8 @@ nk_lua_tocolor(int index)
 }
 
 
-static enum nk_symbol_type nk_lua_tosymbol(lua_State *L, int index)
+static enum nk_symbol_type
+nk_lua_tosymbol(lua_State *L, int index)
 {
 	if (index < 0)
 		index += lua_gettop(L) + 1;
@@ -241,6 +242,24 @@ nk_lua_windowflag(lua_State *L, int flags_begin, int flags_end)
 		}
 	}
 	return flags;
+}
+
+static nk_flags
+nk_lua_toedittype(lua_State *L, int index)
+{
+	if (index < 0)
+		index += lua_gettop(L) + 1;
+	const char *type_string = luaL_checkstring(L, index);
+	if (!strcmp(type_string, "simple")) {
+		return NK_EDIT_SIMPLE;
+	} else if (!strcmp(type_string, "field")) {
+		return NK_EDIT_FIELD;
+	} else if (!strcmp(type_string, "box")) {
+		return NK_EDIT_BOX;
+	} else {
+		const char *msg = lua_pushfstring(L, "unrecognized edit type '%s'", type_string);
+		return luaL_argerror(L, index, msg);
+	}
 }
 
 ////////////////////////// layout ///////////////////////////////
@@ -612,6 +631,73 @@ nk_lua_property(lua_State *L)
 	lua_pushnumber(L, val);
 	return 1;
 }
+
+
+static int
+nk_lua_edit(lua_State *L)
+{
+	struct lua_user_data *ud;
+	const char *string;
+	char edit_buffer[1024];
+
+	int argc = lua_gettop(L);
+	nk_lua_assert_argc(L, argc == 3);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	nk_lua_assert_type(L, lua_isstring(L, 2));
+	nk_lua_assert_type(L, lua_istable(L, 3));
+	ud = lua_touserdata(L, 1);
+	nk_flags flags = nk_lua_toedittype(L, 2);
+
+	lua_getfield(L, 3, "value");
+	string = lua_tostring(L, -1);
+	lua_pop(L, 1);
+	int len = strlen(string) < 1023 ? strlen(string) : 1023;
+	strncpy(edit_buffer, string, len);
+	edit_buffer[len] = '\0';
+
+	nk_flags event =
+		nk_edit_string_zero_terminated(ud->c, flags, edit_buffer, 1023, nk_filter_default);
+	bool changed = !strcmp(edit_buffer, string);
+	lua_pushstring(L, edit_buffer);
+	lua_setfield(L, 3, "value");
+
+	if (event & NK_EDIT_COMMITED)
+		lua_pushstring(L, "commited");
+	else if (event & NK_EDIT_ACTIVATED)
+		lua_pushstring(L, "activated");
+	else if (event & NK_EDIT_DEACTIVATED)
+		lua_pushstring(L, "deactivated");
+	else if (event & NK_EDIT_ACTIVE)
+		lua_pushstring(L, "active");
+	else if (event & NK_EDIT_INACTIVE)
+		lua_pushstring(L, "inactive");
+	else
+		lua_pushnil(L);
+	lua_pushboolean(L, changed);
+	return 2;
+}
+
+static int
+nk_lua_edit_focus(lua_State *L)
+{
+	int argc = lua_gettop(L);
+	nk_lua_assert_argc(L, argc == 1);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	struct lua_user_data *ud = lua_touserdata(L, 1);
+	nk_edit_focus(ud->c, NK_EDIT_DEFAULT);
+	return 0;
+}
+
+static int
+nk_lua_edit_unfocus(lua_State *L)
+{
+	int argc = lua_gettop(L);
+	nk_lua_assert_argc(L, argc == 1);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	struct lua_user_data *ud = lua_touserdata(L, 1);
+	nk_edit_unfocus(ud->c);
+	return 0;
+}
 /////////////////////// complex widgets /////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -685,6 +771,9 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	REGISTER_METHOD(L, "progress", nk_lua_progress);
 	REGISTER_METHOD(L, "color_pick", nk_lua_color_pick);
 	REGISTER_METHOD(L, "property", nk_lua_property);
+	REGISTER_METHOD(L, "edit", nk_lua_edit);
+	REGISTER_METHOD(L, "edit_focus", nk_lua_edit_focus);
+	REGISTER_METHOD(L, "edit_unfocus", nk_lua_edit_unfocus);
 
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
