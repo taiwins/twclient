@@ -676,6 +676,28 @@ nk_lua_edit(lua_State *L)
 	lua_pushboolean(L, changed);
 	return 2;
 }
+
+static int
+nk_lua_edit_focus(lua_State *L)
+{
+	int argc = lua_gettop(L);
+	nk_lua_assert_argc(L, argc == 1);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	struct lua_user_data *ud = lua_touserdata(L, 1);
+	nk_edit_focus(ud->c, NK_EDIT_DEFAULT);
+	return 0;
+}
+
+static int
+nk_lua_edit_unfocus(lua_State *L)
+{
+	int argc = lua_gettop(L);
+	nk_lua_assert_argc(L, argc == 1);
+	nk_lua_assert_type(L, lua_isuserdata(L, 1));
+	struct lua_user_data *ud = lua_touserdata(L, 1);
+	nk_edit_unfocus(ud->c);
+	return 0;
+}
 /////////////////////// complex widgets /////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -750,6 +772,8 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	REGISTER_METHOD(L, "color_pick", nk_lua_color_pick);
 	REGISTER_METHOD(L, "property", nk_lua_property);
 	REGISTER_METHOD(L, "edit", nk_lua_edit);
+	REGISTER_METHOD(L, "edit_focus", nk_lua_edit_focus);
+	REGISTER_METHOD(L, "edit_unfocus", nk_lua_edit_unfocus);
 
 	lua_setmetatable(L, -2);
 	lua_setfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
