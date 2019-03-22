@@ -41,8 +41,15 @@ find_package(Freetype REQUIRED)
 find_package(Vulkan REQUIRED)
 
 ###########################################################
+#we have to slove this
 if(CTYPES_INCLUDE_DIR AND CTYPES_LIBRARIES)
-  message("using exisitng ctypes library")
+  #check whether we include
+  if(CTYPES_INCLUDE_DIR MATCHES "${CMAKE_CURRENT_LIST_DIR}/ctypes/src")
+    message("using self contained ctypes library")
+    add_subdirectory(ctypes)
+  else()
+    message("using external ctypes library")
+  endif()
 else()
   message("using self contained ctypes library")
   add_subdirectory(ctypes)
