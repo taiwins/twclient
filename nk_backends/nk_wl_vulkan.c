@@ -334,7 +334,7 @@ select_phydev(struct nk_vulkan_backend *b, VkSurfaceKHR *surf)
 }
 
 static void
-print_device_name(struct nk_vulkan_backend *b)
+print_devices(struct nk_vulkan_backend *b)
 {
 	uint32_t device_count = 0;
 	vkEnumeratePhysicalDevices(b->instance, &device_count, NULL);
@@ -523,7 +523,6 @@ nk_vulkan_backend_create(void)
 	backend->alloc_callback = NULL;
 	init_instance(backend);
 	//we only initialize the instance here. physical device needs the surface to work
-	print_device_name(backend);
 	//you cannot create devices without a surface though
 	//yeah, creating device, okay, I do not need to
 	return &backend->base;
