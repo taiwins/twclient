@@ -86,6 +86,11 @@ struct nk_vulkan_backend {
 	VkQueue graphics_queue;
 	VkQueue present_queue;
 
+	uint32_t graphics_idx;
+	uint32_t present_idx;
+
+	VkCommandPool cmd_pool;
+
 	VkShaderModule vert_shader;
 	VkShaderModule pixel_shader;
 
@@ -148,29 +153,6 @@ debug_messenger(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 
 #endif
 
-static bool
-check_device_extensions(VkPhysicalDevice dev)
-{
-	uint32_t count;
-	vkEnumerateDeviceExtensionProperties(dev, NULL, //layername
-					     &count, NULL);
-	VkExtensionProperties extensions[count];
-	vkEnumerateDeviceExtensionProperties(dev, NULL, &count,
-					     extensions);
-	for (int i = 0; i < DEV_EXT_COUNT; i++) {
-		bool found = false;
-		for (int j = 0; j < count; j++) {
-			if (strcmp(DEVICE_EXTENSIONS[i],
-				   extensions[j].extensionName) == 0) {
-				found = true;
-				break;
-			}
-		}
-		if (!found)
-			return false;
-	}
-	return true;
-}
 
 static void
 init_instance(struct nk_vulkan_backend *b)
@@ -201,16 +183,17 @@ init_instance(struct nk_vulkan_backend *b)
 		VkLayerProperties available_layers[layer_count];
 		vkEnumerateInstanceLayerProperties(&layer_count,
 						   available_layers);
-		assert(check_validation_layer(available_layers,
-					      layer_count,
-					      VALIDATION_LAYERS,
-					      1));
+		NK_ASSERT(check_validation_layer(available_layers,
+						 layer_count,
+						 VALIDATION_LAYERS,
+						 1));
 
 	}
 #else
 	create_info.enabledLayerCount = VL_COUNT;
 #endif
-	assert(vkCreateInstance(&create_info, b->alloc_callback, &b->instance)
+	//using backend structure here
+	NK_ASSERT(vkCreateInstance(&create_info, b->alloc_callback, &b->instance)
 	       == VK_SUCCESS);
 
 #ifdef __DEBUG
@@ -235,77 +218,150 @@ init_instance(struct nk_vulkan_backend *b)
 
 }
 
+static int32_t
+select_presentation_queue(VkPhysicalDevice dev, VkSurfaceKHR *surface)
+{
+	VkBool32 support_presentation;
+	uint32_t qf_count;
+	int32_t pres_idx = -1;
+	vkGetPhysicalDeviceQueueFamilyProperties(dev, &qf_count, NULL);
+	VkQueueFamilyProperties qf_probs[qf_count];
+	vkGetPhysicalDeviceQueueFamilyProperties(dev, &qf_count, qf_probs);
+	for (int i = 0; i < qf_count; i++) {
+		vkGetPhysicalDeviceSurfaceSupportKHR(dev, i, *surface, &support_presentation);
+		if (support_presentation) {
+			pres_idx = i;
+			break;
+		}
+	}
+	return pres_idx;
+}
+
+static int32_t
+select_graphics_queue(VkPhysicalDevice dev)
+{
+	int32_t dev_graphics_queue = -1;
+	uint32_t nqfamilies;
+
+	vkGetPhysicalDeviceQueueFamilyProperties(dev, &nqfamilies, NULL);
+
+	NK_ASSERT(nqfamilies);
+	VkQueueFamilyProperties qf_probs[nqfamilies];
+	vkGetPhysicalDeviceQueueFamilyProperties(dev, &nqfamilies, qf_probs);
+	for (int j = 0; j < nqfamilies; j++) {
+		if (qf_probs[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			dev_graphics_queue = j;
+			break;
+		}
+	}
+	return dev_graphics_queue;
+}
+
+static bool
+check_phydev_feature(VkPhysicalDevice dev)
+{
+	VkPhysicalDeviceProperties dev_probs;
+	VkPhysicalDeviceFeatures dev_features;
+	vkGetPhysicalDeviceProperties(dev, &dev_probs);
+	vkGetPhysicalDeviceFeatures(dev, &dev_features);
+	fprintf(stderr, "%d, %d, %s\n", dev_probs.deviceID,  dev_probs.vendorID,
+		dev_probs.deviceName);
+
+	return ( (dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
+		  dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) &&
+		 dev_features.geometryShader);
+}
+
+static bool
+check_device_extensions(VkPhysicalDevice dev)
+{
+	uint32_t count;
+	vkEnumerateDeviceExtensionProperties(dev, NULL, //layername
+					     &count, NULL);
+	VkExtensionProperties extensions[count];
+	vkEnumerateDeviceExtensionProperties(dev, NULL, &count,
+					     extensions);
+	for (int i = 0; i < DEV_EXT_COUNT; i++) {
+		bool found = false;
+		for (int j = 0; j < count; j++) {
+			if (strcmp(DEVICE_EXTENSIONS[i],
+				   extensions[j].extensionName) == 0) {
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+			return false;
+	}
+	return true;
+}
+
 static void
-init_device(struct nk_vulkan_backend *b)
+select_phydev(struct nk_vulkan_backend *b, VkSurfaceKHR *surf)
 {
 	uint32_t device_count = 0;
 	int device_idx = -1;
+	int32_t gque = -1;
+	int32_t pque = -1;
 	vkEnumeratePhysicalDevices(b->instance, &device_count, NULL);
-	assert(device_count);
+	NK_ASSERT(device_count);
 
-	int32_t qf_index = -1;
 	VkPhysicalDevice devices[device_count];
 	vkEnumeratePhysicalDevices(b->instance, &device_count, devices);
-	//I should actually check the one that is connecting to the monitor
-	//right now, but it is not really a big deal
 	for (int i = 0; i < device_count; i++) {
-		VkPhysicalDeviceProperties dev_probs;
-		VkPhysicalDeviceFeatures dev_features;
-		vkGetPhysicalDeviceProperties(devices[i], &dev_probs);
-		vkGetPhysicalDeviceFeatures(devices[i], &dev_features);
-#ifdef __DEBUG
-		//anyway
-		fprintf(stderr, "the %d device %s support wide lines.\n", i,
-			(dev_features.wideLines ? "does" : "does not"));
-		fprintf(stderr, "the %d device %s support depth clamp.\n", i,
-			(dev_features.depthClamp ? "does" : "does not"));
-		fprintf(stderr, "the %d device %s support shader storage multisample.\n", i,
-			(dev_features.shaderStorageImageMultisample ? "does" : "does not"));
-#endif
-		//check graphics family
-		int32_t dev_graphics_queue = -1;
-		bool qf_has_graphics = false;
-		uint32_t qf_count = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &qf_count, NULL);
-		assert(qf_count);
-		fprintf(stderr, "this gpu has %d queue%s \n", qf_count,
-			qf_count == 1 ? "" : "s");
-		VkQueueFamilyProperties qf_probs[qf_count];
-		vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &qf_count, qf_probs);
-		for (int j = 0; j < qf_count; j++)
-			if (qf_probs[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-				//you have actually graphics queue, compute queue, transfer queue
-				qf_has_graphics = true;
-				dev_graphics_queue = j;
-				break;
-			}
-		//check the device extensions
-		bool extensions_support = check_device_extensions(devices[i]);
+		bool exts_and_features = check_device_extensions(devices[i]) &&
+			check_phydev_feature(devices[i]);
 
-		if ((dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
-		     dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
-		    dev_features.geometryShader &&
-		    qf_has_graphics && extensions_support) {
+		gque = select_graphics_queue(devices[i]);
+		pque = select_presentation_queue(devices[i], surf);
+
+
+		if (gque >= 0 && pque >= 0 && exts_and_features) {
 			device_idx = i;
-			qf_index = dev_graphics_queue;
+			break;
 		}
 	}
-	assert(device_idx >= 0);
-	//device queue, most likely the graphics queue and presentation queue is
-	//the same, but presentation queue needs a surface.
+	NK_ASSERT(device_idx >= 0);
+	b->phy_device = devices[device_idx];
+	b->graphics_idx = gque;
+	b->present_idx = gque;
+}
+
+static void
+print_device_name(struct nk_vulkan_backend *b)
+{
+	uint32_t device_count = 0;
+	vkEnumeratePhysicalDevices(b->instance, &device_count, NULL);
+	NK_ASSERT(device_count);
+
+	VkPhysicalDevice devices[device_count];
+	vkEnumeratePhysicalDevices(b->instance, &device_count, devices);
+	for (int i = 0; i < device_count; i++) {
+		check_device_extensions(devices[i]) &&
+			check_phydev_feature(devices[i]);
+	}
+}
+
+static void
+create_logical_dev(struct nk_vulkan_backend *b)
+{
 	float que_prio = 1.0;
-	VkDeviceQueueCreateInfo que_info = {};
-	que_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	que_info.queueFamilyIndex = qf_index;
-	que_info.queueCount = 1;
-	que_info.pQueuePriorities = &que_prio;
+	uint32_t que_idx[2] = {b->graphics_idx, b->present_idx};
+
+	VkDeviceQueueCreateInfo infos[2];
+	for (int i = 0; i < 2; i++) {
+		infos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		infos[i].queueFamilyIndex = que_idx[i];
+		infos[i].queueCount = 1;
+		infos[i].pQueuePriorities = &que_prio;
+	}
 
 	//device features
 	VkPhysicalDeviceFeatures dev_features = {};
 	VkDeviceCreateInfo dev_info = {};
 	dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	dev_info.pQueueCreateInfos = &que_info;
-	dev_info.queueCreateInfoCount = 1;
+	dev_info.pQueueCreateInfos = infos;
+	dev_info.queueCreateInfoCount = 2;
 	//TODO: add new features
 	dev_info.pEnabledFeatures = &dev_features;
 	//extensions
@@ -316,36 +372,95 @@ init_device(struct nk_vulkan_backend *b)
 #ifdef __DEBUG //validation layer
 	dev_info.ppEnabledLayerNames = VALIDATION_LAYERS;
 #endif
-	b->phy_device = devices[device_idx];
-	assert(vkCreateDevice(devices[device_idx], &dev_info,
-			      b->alloc_callback, &b->logic_device) == VK_SUCCESS);
-	vkGetDeviceQueue(b->logic_device, qf_index, 0, &b->graphics_queue);
-	//the queue family actually need to support the presentation to the
-	//specific surface, but it is unlikely you will hit a surface without
-	//that support though, we just choose the device for now.
 
+	NK_ASSERT(vkCreateDevice(b->phy_device, &dev_info,
+			      b->alloc_callback, &b->logic_device) == VK_SUCCESS);
+	//get the queues
+	vkGetDeviceQueue(b->logic_device, b->graphics_idx, 0, &b->graphics_queue);
+	vkGetDeviceQueue(b->logic_device, b->present_idx, 0, &b->present_queue);
 }
+
+static VkSurfaceKHR
+create_vk_surface(struct wl_display *wl_display, struct wl_surface *wl_surface, VkInstance inst,
+	const VkAllocationCallbacks *cb)
+{
+	VkSurfaceKHR vksurf;
+	VkWaylandSurfaceCreateInfoKHR create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+	create_info.display = wl_display;
+	create_info.surface = wl_surface;
+
+	NK_ASSERT(vkCreateWaylandSurfaceKHR(inst, &create_info, cb, &vksurf)
+		  == VK_SUCCESS);
+	return vksurf;
+}
+
+
+
 
 static void
-select_presentation_queue(struct nk_vulkan_backend *b, VkSurfaceKHR *surface)
+create_command_pool(struct nk_vulkan_backend *b)
 {
-	VkBool32 support_presentation;
-	uint32_t qf_count;
-	int32_t pres_idx = -1;
-	vkGetPhysicalDeviceQueueFamilyProperties(b->phy_device, &qf_count, NULL);
-	VkQueueFamilyProperties qf_probs[qf_count];
-	vkGetPhysicalDeviceQueueFamilyProperties(b->phy_device, &qf_count, qf_probs);
-	for (int i = 0; i < qf_count; i++) {
-		vkGetPhysicalDeviceSurfaceSupportKHR(b->phy_device, i, *surface, &support_presentation);
-		if (support_presentation) {
-			pres_idx = i;
-			break;
-		}
-	}
-	assert(pres_idx >= 0);
-	vkGetDeviceQueue(b->logic_device, pres_idx, 0,
-			 &b->present_queue);
+	VkCommandPoolCreateInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	//this allows the command buffer to be implicitly reset when
+	//vkbegincommandbuffer is called
+	info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	info.queueFamilyIndex = b->graphics_idx;
+
+	NK_ASSERT(vkCreateCommandPool(b->logic_device, &info, b->alloc_callback,
+				      &b->cmd_pool) == VK_SUCCESS);
 }
+
+static VkSurfaceFormatKHR
+choose_surface_format(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
+{
+	VkSurfaceFormatKHR result;
+	VkSurfaceCapabilitiesKHR caps;
+	uint32_t nformats = 0;
+
+	NK_ASSERT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vb->phy_device, vksurf, &caps) ==
+		  VK_SUCCESS);
+
+	NK_ASSERT(vkGetPhysicalDeviceSurfaceFormatsKHR(vb->phy_device, vksurf, &nformats, NULL) ==
+		  VK_SUCCESS);
+	NK_ASSERT(nformats > 0);
+
+	VkSurfaceFormatKHR formats[nformats];
+	vkGetPhysicalDeviceSurfaceFormatsKHR(vb->phy_device, vksurf, &nformats, formats);
+
+	if (nformats == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
+		result.format = VK_FORMAT_B8G8R8_UNORM;
+		result.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		return result;
+	}
+	for (int i = 0; i < nformats; i++) {
+		if (formats[i].format == VK_FORMAT_B8G8R8_UNORM &&
+		    formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			return formats[i];
+	}
+	return formats[0];
+}
+
+static VkPresentModeKHR
+choose_present_mode(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
+{
+	uint32_t npresentmod = 0;
+
+	NK_ASSERT(vkGetPhysicalDeviceSurfacePresentModesKHR(vb->phy_device, vksurf, &npresentmod, NULL) ==
+		  VK_SUCCESS);
+	NK_ASSERT(npresentmod > 0);
+
+	VkPresentModeKHR presents[npresentmod];
+	vkGetPhysicalDeviceSurfacePresentModesKHR(vb->phy_device, vksurf, &npresentmod, presents);
+
+	for (int i = 0; i < npresentmod; i++) {
+		if (presents[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+			return presents[i];
+	}
+	return VK_PRESENT_MODE_FIFO_KHR;
+}
+
 
 static void
 create_shaders(struct nk_vulkan_backend *b)
@@ -368,15 +483,32 @@ create_shaders(struct nk_vulkan_backend *b)
 	vstage_info.module = b->vert_shader;
 }
 
+static void
+nk_vulkan_destroy_app_surface(struct app_surface *surf)
+{
+	struct nk_wl_backend *b = surf->user_data;
+	struct nk_vulkan_backend *vb = container_of(b, struct nk_vulkan_backend, base);
+	vkDestroySurfaceKHR(vb->instance, surf->vksurf, vb->alloc_callback);
+	vkDestroyDevice(vb->logic_device, vb->alloc_callback);
+
+
+}
+
 ///exposed APIS
 void
 nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			   nk_wl_drawcall_t draw_cb,
 			   uint32_t w, uint32_t h, uint32_t x, uint32_t y)
 {
-	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, 1);
-}
+	struct nk_vulkan_backend *vb = container_of(bkend, struct nk_vulkan_backend, base);
 
+	NK_ASSERT(surf->wl_surface);
+	NK_ASSERT(surf->wl_globals);
+
+	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, 1);
+	surf->vksurf = create_vk_surface(surf->wl_globals->display, surf->wl_surface, vb->instance,
+					 vb->alloc_callback);
+}
 
 struct nk_wl_backend *
 nk_vulkan_backend_create(void)
@@ -384,7 +516,9 @@ nk_vulkan_backend_create(void)
 	struct nk_vulkan_backend *backend = malloc(sizeof(struct nk_vulkan_backend));
 	backend->alloc_callback = NULL;
 	init_instance(backend);
-	init_device(backend);
+	//we only initialize the instance here. physical device needs the surface to work
+	print_device_name(backend);
+	//you cannot create devices without a surface though
 	//yeah, creating device, okay, I do not need to
 	return &backend->base;
 }
