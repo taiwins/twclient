@@ -86,10 +86,13 @@ struct nk_vulkan_backend {
 	VkQueue graphics_queue;
 	VkQueue present_queue;
 
+	VkSwapchainKHR swap_chain;
+
 	uint32_t graphics_idx;
 	uint32_t present_idx;
 
 	VkCommandPool cmd_pool;
+	VkCommandBuffer cmd_buffers[2];
 
 	VkShaderModule vert_shader;
 	VkShaderModule pixel_shader;
@@ -154,6 +157,31 @@ debug_messenger(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 #endif
 
 
+static bool
+check_instance_extensions(void)
+{
+	uint32_t num_exts = 0;
+	vkEnumerateInstanceExtensionProperties(NULL, &num_exts, NULL);
+	NK_ASSERT(num_exts > 0);
+
+	VkExtensionProperties props[num_exts];
+	vkEnumerateInstanceExtensionProperties(NULL, &num_exts, props);
+	for (int j = 0; j < INS_EXT_COUNT; j++) {
+		bool found = false;
+		for  (int i = 0; i < num_exts; i++) {
+			if (strcmp(INSTANCE_EXTENSIONS[j],
+				   props[i].extensionName) == 0) {
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+			return false;
+	}
+	return true;
+}
+
+
 static void
 init_instance(struct nk_vulkan_backend *b)
 {
@@ -167,6 +195,7 @@ init_instance(struct nk_vulkan_backend *b)
 
 	//define extensions
 	//nvidia is not supporting vk_khr_wayland
+	NK_ASSERT(check_instance_extensions());
 
 	VkInstanceCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -195,6 +224,7 @@ init_instance(struct nk_vulkan_backend *b)
 	//using backend structure here
 	NK_ASSERT(vkCreateInstance(&create_info, b->alloc_callback, &b->instance)
 	       == VK_SUCCESS);
+
 
 #ifdef __DEBUG
 	VkDebugUtilsMessengerCreateInfoEXT mesg_info = {};
@@ -260,19 +290,28 @@ select_graphics_queue(VkPhysicalDevice dev)
 static bool
 check_phydev_feature(VkPhysicalDevice dev)
 {
-	bool is_nvidia_driver = false;
 	VkPhysicalDeviceProperties2 dev_probs;
 	VkPhysicalDeviceFeatures dev_features;
-	VkPhysicalDeviceDriverPropertiesKHR dri_probs;
-	//get the driver info as well.
-	dev_probs.pNext = &dri_probs;
-	dri_probs.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
+	dev_probs.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 
+#if VK_HEADER_VERSION >= 86
+	VkPhysicalDeviceDriverPropertiesKHR dri_probs;
+	dri_probs.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
+	dev_probs.pNext = &dri_probs;
+#endif
+	//this is the best we we can do now, since in this vulkan version, we
+	//cannot get the driver information
 	vkGetPhysicalDeviceProperties2(dev, &dev_probs);
 	vkGetPhysicalDeviceFeatures(dev, &dev_features);
-	/* fprintf(stderr, "%d, %d, %s, %s\n", dev_probs.properties.deviceID,  dev_probs.properties.vendorID, */
-	/*	dev_probs.properties.deviceName, dri_probs.driverName); */
-	is_nvidia_driver = strcasestr(dri_probs.driverName, "nvidia");
+
+#if VK_HEADER_VERSION >= 86
+	bool is_nvidia_driver = (dri_probs.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY_KHR);
+#else
+	bool is_nvidia_driver = strstr(dev_probs.properties.deviceName, "GeForce");
+#endif
+
+	/* fprintf(stderr, "%d, %d, %s\n", dev_probs.deviceID,  dev_probs.vendorID, */
+	/*	dev_probs.deviceName); */
 	return ( (dev_probs.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
 		  dev_probs.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) &&
 		 dev_features.geometryShader && (!is_nvidia_driver));
@@ -301,6 +340,8 @@ check_device_extensions(VkPhysicalDevice dev)
 	}
 	return true;
 }
+
+
 
 static void
 select_phydev(struct nk_vulkan_backend *b, VkSurfaceKHR *surf)
@@ -334,7 +375,7 @@ select_phydev(struct nk_vulkan_backend *b, VkSurfaceKHR *surf)
 }
 
 static void
-print_device_name(struct nk_vulkan_backend *b)
+print_devices(struct nk_vulkan_backend *b)
 {
 	uint32_t device_count = 0;
 	vkEnumeratePhysicalDevices(b->instance, &device_count, NULL);
@@ -351,23 +392,26 @@ print_device_name(struct nk_vulkan_backend *b)
 static void
 create_logical_dev(struct nk_vulkan_backend *b)
 {
-	float que_prio = 1.0;
+	float priorities = 1.0;
 	uint32_t que_idx[2] = {b->graphics_idx, b->present_idx};
 
+	//we are creating two info here, but the queue index should be unique
 	VkDeviceQueueCreateInfo infos[2];
 	for (int i = 0; i < 2; i++) {
 		infos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		infos[i].queueFamilyIndex = que_idx[i];
 		infos[i].queueCount = 1;
-		infos[i].pQueuePriorities = &que_prio;
+		infos[i].pQueuePriorities = &priorities;
+		infos[i].pNext = NULL;
+		infos[i].flags = 0;
 	}
-
 	//device features
 	VkPhysicalDeviceFeatures dev_features = {};
 	VkDeviceCreateInfo dev_info = {};
+	dev_info.flags = 0;
 	dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	dev_info.pQueueCreateInfos = infos;
-	dev_info.queueCreateInfoCount = 2;
+	dev_info.queueCreateInfoCount = (b->graphics_idx == b->present_idx) ? 1 : 2;
 	//TODO: add new features
 	dev_info.pEnabledFeatures = &dev_features;
 	//extensions
@@ -402,8 +446,6 @@ create_vk_surface(struct wl_display *wl_display, struct wl_surface *wl_surface, 
 }
 
 
-
-
 static void
 create_command_pool(struct nk_vulkan_backend *b)
 {
@@ -416,6 +458,21 @@ create_command_pool(struct nk_vulkan_backend *b)
 
 	NK_ASSERT(vkCreateCommandPool(b->logic_device, &info, b->alloc_callback,
 				      &b->cmd_pool) == VK_SUCCESS);
+}
+
+static void
+create_command_buffer(struct nk_vulkan_backend *b)
+{
+	VkCommandBufferAllocateInfo info = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		.commandPool = b->cmd_pool,
+		.commandBufferCount = 2,
+	};
+
+	NK_ASSERT(vkAllocateCommandBuffers(b->logic_device, &info, b->cmd_buffers)
+		  == VK_SUCCESS);
+
 }
 
 static VkSurfaceFormatKHR
@@ -436,12 +493,12 @@ choose_surface_format(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 	vkGetPhysicalDeviceSurfaceFormatsKHR(vb->phy_device, vksurf, &nformats, formats);
 
 	if (nformats == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
-		result.format = VK_FORMAT_B8G8R8_UNORM;
+		result.format = VK_FORMAT_B8G8R8A8_UNORM;
 		result.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		return result;
 	}
 	for (int i = 0; i < nformats; i++) {
-		if (formats[i].format == VK_FORMAT_B8G8R8_UNORM &&
+		if (formats[i].format == VK_FORMAT_B8G8R8A8_UNORM &&
 		    formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
 			return formats[i];
 	}
@@ -467,6 +524,66 @@ choose_present_mode(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
+static VkExtent2D
+choose_surface_extent(VkSurfaceCapabilitiesKHR *cap)
+{
+	VkExtent2D extent;
+
+	if (cap->currentExtent.width == -1) {
+		extent.width = 1000;
+		extent.height = 1000;
+	} else
+		extent = cap->currentExtent;
+	return extent;
+}
+
+static void
+create_swap_chain(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
+{
+	VkSurfaceCapabilitiesKHR caps;
+	NK_ASSERT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vb->phy_device, vksurf, &caps) ==
+		  VK_SUCCESS);
+	VkExtent2D extent = choose_surface_extent(&caps);
+	VkSurfaceFormatKHR surface_format = choose_surface_format(vb, vksurf);
+	VkPresentModeKHR present_mode = choose_present_mode(vb, vksurf);
+
+	VkSwapchainCreateInfoKHR info = {
+		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+		.surface = vksurf,
+
+		.minImageCount = 2,
+
+		.imageFormat = surface_format.format,
+		.imageColorSpace = surface_format.colorSpace,
+
+		.imageExtent = extent,
+		.imageArrayLayers = 1,
+		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+
+		.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+
+		.presentMode = present_mode,
+
+		.clipped = VK_TRUE,
+	};
+
+	if (vb->graphics_idx != vb->present_idx) {
+		uint32_t indices[2] = {vb->graphics_idx, vb->present_idx};
+		info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		info.queueFamilyIndexCount  = 2;
+		info.pQueueFamilyIndices = indices;
+
+	} else {
+		info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	}
+
+	NK_ASSERT(vkCreateSwapchainKHR(vb->logic_device, &info,
+				       vb->alloc_callback, &vb->swap_chain) ==
+		  VK_SUCCESS);
+
+}
+
 
 static void
 create_shaders(struct nk_vulkan_backend *b)
@@ -489,18 +606,19 @@ create_shaders(struct nk_vulkan_backend *b)
 	vstage_info.module = b->vert_shader;
 }
 
+
 static void
 nk_vulkan_destroy_app_surface(struct app_surface *surf)
 {
 	struct nk_wl_backend *b = surf->user_data;
 	struct nk_vulkan_backend *vb = container_of(b, struct nk_vulkan_backend, base);
-	vkDestroySurfaceKHR(vb->instance, surf->vksurf, vb->alloc_callback);
+	vkDestroyCommandPool(vb->logic_device, vb->cmd_pool, vb->alloc_callback);
 	vkDestroyDevice(vb->logic_device, vb->alloc_callback);
-
-
+	vkDestroySurfaceKHR(vb->instance, surf->vksurf, vb->alloc_callback);
 }
 
-///exposed APIS
+///////////////////////////////////////// exposed APIs ////////////////////////////////////////
+
 void
 nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			   nk_wl_drawcall_t draw_cb,
@@ -512,8 +630,20 @@ nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend
 	NK_ASSERT(surf->wl_globals);
 
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, 1);
-	surf->vksurf = create_vk_surface(surf->wl_globals->display, surf->wl_surface, vb->instance,
+	surf->vksurf = create_vk_surface(surf->wl_globals->display,
+					 surf->wl_surface, vb->instance,
 					 vb->alloc_callback);
+	surf->destroy = nk_vulkan_destroy_app_surface;
+	//create devices
+	select_phydev(vb, &surf->vksurf);
+
+	create_logical_dev(vb);
+
+	create_command_pool(vb);
+
+	create_command_buffer(vb);
+
+	create_swap_chain(vb, surf->vksurf);
 }
 
 struct nk_wl_backend *
@@ -523,9 +653,9 @@ nk_vulkan_backend_create(void)
 	backend->alloc_callback = NULL;
 	init_instance(backend);
 	//we only initialize the instance here. physical device needs the surface to work
-	print_device_name(backend);
 	//you cannot create devices without a surface though
 	//yeah, creating device, okay, I do not need to
+	/* print_devices(backend); */
 	return &backend->base;
 }
 
@@ -541,8 +671,6 @@ void
 nk_vulkan_backend_destroy(struct nk_wl_backend *b)
 {
 	struct nk_vulkan_backend *vb = container_of(b, struct nk_vulkan_backend, base);
-	vkDestroyDevice(vb->logic_device, vb->alloc_callback);
-
 #ifdef  __DEBUG
 	PFN_vkDestroyDebugUtilsMessengerEXT destroy_debug =
 		(PFN_vkDestroyDebugUtilsMessengerEXT)

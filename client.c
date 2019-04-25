@@ -129,6 +129,7 @@ handle_key(void *data,
 	globals->inputs.serial = serial;
 	globals->inputs.key_pressed = state == WL_KEYBOARD_KEY_STATE_PRESSED;
 	globals->inputs.keysym = keysym;
+	globals->inputs.keycode = keycode;
 	globals->inputs.modifiers = modifier;
 
 	/* char keyname[100]; */
