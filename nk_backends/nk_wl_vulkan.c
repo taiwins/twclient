@@ -260,16 +260,22 @@ select_graphics_queue(VkPhysicalDevice dev)
 static bool
 check_phydev_feature(VkPhysicalDevice dev)
 {
-	VkPhysicalDeviceProperties dev_probs;
+	bool is_nvidia_driver = false;
+	VkPhysicalDeviceProperties2 dev_probs;
 	VkPhysicalDeviceFeatures dev_features;
-	vkGetPhysicalDeviceProperties(dev, &dev_probs);
-	vkGetPhysicalDeviceFeatures(dev, &dev_features);
-	fprintf(stderr, "%d, %d, %s\n", dev_probs.deviceID,  dev_probs.vendorID,
-		dev_probs.deviceName);
+	VkPhysicalDeviceDriverPropertiesKHR dri_probs;
+	//get the driver info as well.
+	dev_probs.pNext = &dri_probs;
+	dri_probs.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
 
-	return ( (dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
-		  dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) &&
-		 dev_features.geometryShader);
+	vkGetPhysicalDeviceProperties2(dev, &dev_probs);
+	vkGetPhysicalDeviceFeatures(dev, &dev_features);
+	/* fprintf(stderr, "%d, %d, %s, %s\n", dev_probs.properties.deviceID,  dev_probs.properties.vendorID, */
+	/*	dev_probs.properties.deviceName, dri_probs.driverName); */
+	is_nvidia_driver = strcasestr(dri_probs.driverName, "nvidia");
+	return ( (dev_probs.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
+		  dev_probs.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) &&
+		 dev_features.geometryShader && (!is_nvidia_driver));
 }
 
 static bool
