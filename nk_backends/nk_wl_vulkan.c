@@ -261,20 +261,20 @@ static bool
 check_phydev_feature(VkPhysicalDevice dev)
 {
 	bool is_nvidia_driver = false;
-	VkPhysicalDeviceProperties2 dev_probs;
+	VkPhysicalDeviceProperties dev_probs;
 	VkPhysicalDeviceFeatures dev_features;
-	VkPhysicalDeviceDriverPropertiesKHR dri_probs;
-	//get the driver info as well.
-	dev_probs.pNext = &dri_probs;
-	dri_probs.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
+#if VK_HEADER_VERSION >= 86
+#endif
+	//this is the best we we can do now, since in this vulkan version, we
+	//cannot get the driver information
 
-	vkGetPhysicalDeviceProperties2(dev, &dev_probs);
+	vkGetPhysicalDeviceProperties(dev, &dev_probs);
 	vkGetPhysicalDeviceFeatures(dev, &dev_features);
-	/* fprintf(stderr, "%d, %d, %s, %s\n", dev_probs.properties.deviceID,  dev_probs.properties.vendorID, */
-	/*	dev_probs.properties.deviceName, dri_probs.driverName); */
-	is_nvidia_driver = strcasestr(dri_probs.driverName, "nvidia");
-	return ( (dev_probs.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
-		  dev_probs.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) &&
+	/* fprintf(stderr, "%d, %d, %s\n", dev_probs.deviceID,  dev_probs.vendorID, */
+	/*	dev_probs.deviceName); */
+	is_nvidia_driver = strstr(dev_probs.deviceName, "GeForce");
+	return ( (dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
+		  dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) &&
 		 dev_features.geometryShader && (!is_nvidia_driver));
 }
 
@@ -525,6 +525,7 @@ nk_vulkan_backend_create(void)
 	//we only initialize the instance here. physical device needs the surface to work
 	//you cannot create devices without a surface though
 	//yeah, creating device, okay, I do not need to
+	print_devices(backend);
 	return &backend->base;
 }
 
