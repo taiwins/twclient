@@ -260,21 +260,30 @@ select_graphics_queue(VkPhysicalDevice dev)
 static bool
 check_phydev_feature(VkPhysicalDevice dev)
 {
-	bool is_nvidia_driver = false;
-	VkPhysicalDeviceProperties dev_probs;
+	VkPhysicalDeviceProperties2 dev_probs;
 	VkPhysicalDeviceFeatures dev_features;
+	dev_probs.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+
 #if VK_HEADER_VERSION >= 86
+	VkPhysicalDeviceDriverPropertiesKHR dri_probs;
+	dri_probs.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
+	dev_probs.pNext = &dri_probs;
 #endif
 	//this is the best we we can do now, since in this vulkan version, we
 	//cannot get the driver information
-
-	vkGetPhysicalDeviceProperties(dev, &dev_probs);
+	vkGetPhysicalDeviceProperties2(dev, &dev_probs);
 	vkGetPhysicalDeviceFeatures(dev, &dev_features);
+
+#if VK_HEADER_VERSION >= 86
+	bool is_nvidia_driver = (dri_probs.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY_KHR);
+#else
+	bool is_nvidia_driver = strstr(dev_probs.properties.deviceName, "GeForce");
+#endif
+
 	/* fprintf(stderr, "%d, %d, %s\n", dev_probs.deviceID,  dev_probs.vendorID, */
 	/*	dev_probs.deviceName); */
-	is_nvidia_driver = strstr(dev_probs.deviceName, "GeForce");
-	return ( (dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
-		  dev_probs.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) &&
+	return ( (dev_probs.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
+		  dev_probs.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ) &&
 		 dev_features.geometryShader && (!is_nvidia_driver));
 }
 
@@ -500,7 +509,8 @@ nk_vulkan_destroy_app_surface(struct app_surface *surf)
 
 }
 
-///exposed APIS
+///////////////////////////////////////// exposed APIs ////////////////////////////////////////
+
 void
 nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			   nk_wl_drawcall_t draw_cb,
