@@ -360,23 +360,25 @@ print_devices(struct nk_vulkan_backend *b)
 static void
 create_logical_dev(struct nk_vulkan_backend *b)
 {
-	float que_prio = 1.0;
+	float priorities = 1.0;
 	uint32_t que_idx[2] = {b->graphics_idx, b->present_idx};
 
+	//we are creating two info here, but the queue index should be unique
 	VkDeviceQueueCreateInfo infos[2];
 	for (int i = 0; i < 2; i++) {
 		infos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		infos[i].queueFamilyIndex = que_idx[i];
 		infos[i].queueCount = 1;
-		infos[i].pQueuePriorities = &que_prio;
+		infos[i].pQueuePriorities = &priorities;
 	}
 
 	//device features
 	VkPhysicalDeviceFeatures dev_features = {};
 	VkDeviceCreateInfo dev_info = {};
+	dev_info.flags = 0;
 	dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	dev_info.pQueueCreateInfos = infos;
-	dev_info.queueCreateInfoCount = 2;
+	dev_info.queueCreateInfoCount = (b->graphics_idx == b->present_idx) ? 1 : 2;
 	//TODO: add new features
 	dev_info.pEnabledFeatures = &dev_features;
 	//extensions
@@ -409,8 +411,6 @@ create_vk_surface(struct wl_display *wl_display, struct wl_surface *wl_surface, 
 		  == VK_SUCCESS);
 	return vksurf;
 }
-
-
 
 
 static void
@@ -522,8 +522,14 @@ nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend
 	NK_ASSERT(surf->wl_globals);
 
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, 1);
-	surf->vksurf = create_vk_surface(surf->wl_globals->display, surf->wl_surface, vb->instance,
+	surf->vksurf = create_vk_surface(surf->wl_globals->display,
+					 surf->wl_surface, vb->instance,
 					 vb->alloc_callback);
+	surf->destroy = nk_vulkan_destroy_app_surface;
+	//create devices
+	select_phydev(vb, &surf->vksurf);
+	create_logical_dev(vb);
+
 }
 
 struct nk_wl_backend *
@@ -535,7 +541,7 @@ nk_vulkan_backend_create(void)
 	//we only initialize the instance here. physical device needs the surface to work
 	//you cannot create devices without a surface though
 	//yeah, creating device, okay, I do not need to
-	print_devices(backend);
+	/* print_devices(backend); */
 	return &backend->base;
 }
 
@@ -551,8 +557,6 @@ void
 nk_vulkan_backend_destroy(struct nk_wl_backend *b)
 {
 	struct nk_vulkan_backend *vb = container_of(b, struct nk_vulkan_backend, base);
-	vkDestroyDevice(vb->logic_device, vb->alloc_callback);
-
 #ifdef  __DEBUG
 	PFN_vkDestroyDebugUtilsMessengerEXT destroy_debug =
 		(PFN_vkDestroyDebugUtilsMessengerEXT)
