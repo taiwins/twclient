@@ -262,7 +262,7 @@ check_phydev_feature(VkPhysicalDevice dev)
 {
 	VkPhysicalDeviceProperties2 dev_probs;
 	VkPhysicalDeviceFeatures dev_features;
-	dev_probs.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	dev_probs.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 
 #if VK_HEADER_VERSION >= 86
 	VkPhysicalDeviceDriverPropertiesKHR dri_probs;
@@ -370,8 +370,9 @@ create_logical_dev(struct nk_vulkan_backend *b)
 		infos[i].queueFamilyIndex = que_idx[i];
 		infos[i].queueCount = 1;
 		infos[i].pQueuePriorities = &priorities;
+		infos[i].pNext = NULL;
+		infos[i].flags = 0;
 	}
-
 	//device features
 	VkPhysicalDeviceFeatures dev_features = {};
 	VkDeviceCreateInfo dev_info = {};
