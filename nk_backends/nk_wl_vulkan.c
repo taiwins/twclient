@@ -86,6 +86,8 @@ struct nk_vulkan_backend {
 	VkQueue graphics_queue;
 	VkQueue present_queue;
 
+	VkSwapchainKHR swap_chain;
+
 	uint32_t graphics_idx;
 	uint32_t present_idx;
 
@@ -491,12 +493,12 @@ choose_surface_format(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 	vkGetPhysicalDeviceSurfaceFormatsKHR(vb->phy_device, vksurf, &nformats, formats);
 
 	if (nformats == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
-		result.format = VK_FORMAT_B8G8R8_UNORM;
+		result.format = VK_FORMAT_B8G8R8A8_UNORM;
 		result.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		return result;
 	}
 	for (int i = 0; i < nformats; i++) {
-		if (formats[i].format == VK_FORMAT_B8G8R8_UNORM &&
+		if (formats[i].format == VK_FORMAT_B8G8R8A8_UNORM &&
 		    formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
 			return formats[i];
 	}
@@ -539,9 +541,46 @@ static void
 create_swap_chain(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 {
 	VkSurfaceFormatKHR surface_format = choose_surface_format(vb, vksurf);
+	/* surface_format.format = VK_FORMAT_B8G8R8A8_UNORM; */
+	/* surface_format.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR; */
 	VkPresentModeKHR present_mode = choose_present_mode(vb, vksurf);
-	/* VkExtent2D extent = choose_surface_extent(VkSurfaceCapabilitiesKHR *cap) */
-	/* vkGetS */
+	VkExtent2D extent = {.width = 1000, .height = 1000 };
+
+
+	VkSwapchainCreateInfoKHR info = {
+		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+		.surface = vksurf,
+
+		.minImageCount = 2,
+
+		.imageFormat = surface_format.format,
+		.imageColorSpace = surface_format.colorSpace,
+
+		.imageExtent = extent,
+		.imageArrayLayers = 1,
+		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+
+		.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+
+		.presentMode = present_mode,
+
+		.clipped = VK_TRUE,
+	};
+
+	if (vb->graphics_idx != vb->present_idx) {
+		uint32_t indices[2] = {vb->graphics_idx, vb->present_idx};
+		info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		info.queueFamilyIndexCount  = 2;
+		info.pQueueFamilyIndices = indices;
+
+	} else {
+		info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	}
+
+	NK_ASSERT(vkCreateSwapchainKHR(vb->logic_device, &info,
+				       vb->alloc_callback, &vb->swap_chain) ==
+		  VK_SUCCESS);
 
 }
 
