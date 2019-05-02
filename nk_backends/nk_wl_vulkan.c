@@ -155,6 +155,31 @@ debug_messenger(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 #endif
 
 
+static bool
+check_instance_extensions(void)
+{
+	uint32_t num_exts = 0;
+	vkEnumerateInstanceExtensionProperties(NULL, &num_exts, NULL);
+	NK_ASSERT(num_exts > 0);
+
+	VkExtensionProperties props[num_exts];
+	vkEnumerateInstanceExtensionProperties(NULL, &num_exts, props);
+	for (int j = 0; j < INS_EXT_COUNT; j++) {
+		bool found = false;
+		for  (int i = 0; i < num_exts; i++) {
+			if (strcmp(INSTANCE_EXTENSIONS[j],
+				   props[i].extensionName) == 0) {
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+			return false;
+	}
+	return true;
+}
+
+
 static void
 init_instance(struct nk_vulkan_backend *b)
 {
@@ -168,6 +193,7 @@ init_instance(struct nk_vulkan_backend *b)
 
 	//define extensions
 	//nvidia is not supporting vk_khr_wayland
+	NK_ASSERT(check_instance_extensions());
 
 	VkInstanceCreateInfo create_info = {};
 	create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -196,6 +222,7 @@ init_instance(struct nk_vulkan_backend *b)
 	//using backend structure here
 	NK_ASSERT(vkCreateInstance(&create_info, b->alloc_callback, &b->instance)
 	       == VK_SUCCESS);
+
 
 #ifdef __DEBUG
 	VkDebugUtilsMessengerCreateInfoEXT mesg_info = {};
@@ -311,6 +338,8 @@ check_device_extensions(VkPhysicalDevice dev)
 	}
 	return true;
 }
+
+
 
 static void
 select_phydev(struct nk_vulkan_backend *b, VkSurfaceKHR *surf)
