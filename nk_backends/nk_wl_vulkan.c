@@ -511,7 +511,9 @@ create_swap_chain(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 {
 	VkSurfaceFormatKHR surface_format = choose_surface_format(vb, vksurf);
 	VkPresentModeKHR present_mode = choose_present_mode(vb, vksurf);
+	/* VkExtent2D extent = choose_surface_extent(VkSurfaceCapabilitiesKHR *cap) */
 	/* vkGetS */
+
 }
 
 
@@ -573,7 +575,7 @@ nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend
 
 	create_command_buffer(vb);
 
-	//create swap chain
+	create_swap_chain(vb, surf->vksurf);
 }
 
 struct nk_wl_backend *
