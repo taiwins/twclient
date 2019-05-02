@@ -90,6 +90,7 @@ struct nk_vulkan_backend {
 	uint32_t present_idx;
 
 	VkCommandPool cmd_pool;
+	VkCommandBuffer cmd_buffers[2];
 
 	VkShaderModule vert_shader;
 	VkShaderModule pixel_shader;
@@ -428,6 +429,21 @@ create_command_pool(struct nk_vulkan_backend *b)
 				      &b->cmd_pool) == VK_SUCCESS);
 }
 
+static void
+create_command_buffer(struct nk_vulkan_backend *b)
+{
+	VkCommandBufferAllocateInfo info = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		.commandPool = b->cmd_pool,
+		.commandBufferCount = 2,
+	};
+
+	NK_ASSERT(vkAllocateCommandBuffers(b->logic_device, &info, b->cmd_buffers)
+		  == VK_SUCCESS);
+
+}
+
 static VkSurfaceFormatKHR
 choose_surface_format(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 {
@@ -477,6 +493,27 @@ choose_present_mode(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
+static VkExtent2D
+choose_surface_extent(VkSurfaceCapabilitiesKHR *cap)
+{
+	VkExtent2D extent;
+
+	if (cap->currentExtent.width == -1) {
+		extent.width = 1000;
+		extent.height = 1000;
+	} else
+		extent = cap->currentExtent;
+	return extent;
+}
+
+static void
+create_swap_chain(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
+{
+	VkSurfaceFormatKHR surface_format = choose_surface_format(vb, vksurf);
+	VkPresentModeKHR present_mode = choose_present_mode(vb, vksurf);
+	/* vkGetS */
+}
+
 
 static void
 create_shaders(struct nk_vulkan_backend *b)
@@ -499,15 +536,15 @@ create_shaders(struct nk_vulkan_backend *b)
 	vstage_info.module = b->vert_shader;
 }
 
+
 static void
 nk_vulkan_destroy_app_surface(struct app_surface *surf)
 {
 	struct nk_wl_backend *b = surf->user_data;
 	struct nk_vulkan_backend *vb = container_of(b, struct nk_vulkan_backend, base);
-	vkDestroySurfaceKHR(vb->instance, surf->vksurf, vb->alloc_callback);
+	vkDestroyCommandPool(vb->logic_device, vb->cmd_pool, vb->alloc_callback);
 	vkDestroyDevice(vb->logic_device, vb->alloc_callback);
-
-
+	vkDestroySurfaceKHR(vb->instance, surf->vksurf, vb->alloc_callback);
 }
 
 ///////////////////////////////////////// exposed APIs ////////////////////////////////////////
@@ -529,8 +566,14 @@ nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend
 	surf->destroy = nk_vulkan_destroy_app_surface;
 	//create devices
 	select_phydev(vb, &surf->vksurf);
+
 	create_logical_dev(vb);
 
+	create_command_pool(vb);
+
+	create_command_buffer(vb);
+
+	//create swap chain
 }
 
 struct nk_wl_backend *
