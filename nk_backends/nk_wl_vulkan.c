@@ -540,12 +540,12 @@ choose_surface_extent(VkSurfaceCapabilitiesKHR *cap)
 static void
 create_swap_chain(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 {
+	VkSurfaceCapabilitiesKHR caps;
+	NK_ASSERT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vb->phy_device, vksurf, &caps) ==
+		  VK_SUCCESS);
+	VkExtent2D extent = choose_surface_extent(&caps);
 	VkSurfaceFormatKHR surface_format = choose_surface_format(vb, vksurf);
-	/* surface_format.format = VK_FORMAT_B8G8R8A8_UNORM; */
-	/* surface_format.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR; */
 	VkPresentModeKHR present_mode = choose_present_mode(vb, vksurf);
-	VkExtent2D extent = {.width = 1000, .height = 1000 };
-
 
 	VkSwapchainCreateInfoKHR info = {
 		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
