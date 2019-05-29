@@ -122,10 +122,31 @@ struct wl_globals {
 			//keyboard
 			bool key_pressed;
 			xkb_keysym_t keysym;
+			xkb_keycode_t keycode;
 			uint32_t modifiers;
 
 			uint32_t serial;
 		};
+		/* we are literally having two event system right now. One is
+		 * for all the poll events, one is for actual wayland
+		 * client(well, not quite, for example, the repeat info is
+		 * implemented as poll event as well) events. For example the
+		 * `wayland-client-protocols.h`, we will have our common pointer
+		 * (motion, button, axis, frame). Or keypress, or touch, but
+		 * later if you have other protocols you want to implement, then
+		 * the list of events will increase.
+		 *
+		 * The api exposed can be like this, enum event =
+		 * wl_globals_get_wl_event(wl_globals, -1).
+		 *
+		 * Then you get the last event through
+		 * wl_globals_get_*_event(wl_globals, -1, type, arg, ...). Well,
+		 * it is better to implement it like scanf style, oh god this is
+		 * a horrible interface. User would not know what arguments are
+		 * expected. The other thing is that you don't wanna write same
+		 * logic twice.
+		 */
+		queue_t wl_events;
 	} inputs;
 	//application theme settings
 	struct taiwins_theme theme;
@@ -155,6 +176,9 @@ wl_globals_dispatch_event_queue(struct wl_globals *globals)
 
 bool is_shm_format_valid(uint32_t format);
 
+//we can have several input code
+void wl_globals_get_input_state(const struct wl_globals *globals);
+//you will have a few functions
 
 /******************************************************************************
  *
