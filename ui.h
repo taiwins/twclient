@@ -233,6 +233,7 @@ struct app_surface {
 		pointron_t pointron;
 		pointrbtn_t pointrbtn;
 		pointraxis_t pointraxis;
+		//we do actually just need this
 		frame_t do_frame;
 	};
 	//destructor
