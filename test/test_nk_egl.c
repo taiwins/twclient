@@ -11,6 +11,8 @@
 #include "../egl.h"
 #include "../client.h"
 #include "../nk_backends.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "../nk_backends/nuklear/example/stb_image.h"
 /* #include "../config.h" */
 
 
@@ -23,6 +25,7 @@ static struct application {
 	struct nk_wl_backend *bkend;
 	struct wl_shell_surface *shell_surface;
 	bool done;
+	struct nk_image image;
 } App;
 
 static void
@@ -50,11 +53,40 @@ static struct wl_registry_listener registry_listener = {
 	.global_remove = global_registry_removal,
 };
 
+static struct nk_image
+load_texture(const char *filename)
+{
+    int x,y,n;
+    GLuint tex;
+    unsigned char *data = stbi_load(filename, &x, &y, &n, 0);
+    if (!data) {
+	    fprintf(stderr, "[SDL]: failed to load image: %s\n", filename);
+	    exit(-1);
+    }
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    /* glGenerateMipmap(GL_TEXTURE_2D); */
+    stbi_image_free(data);
+    return nk_image_id((int)tex);
+}
+
 
 static void
 sample_widget(struct nk_context *ctx, float width, float height, struct app_surface *data)
 {
 	struct application *app = &App;
+	//just draw the image
+	struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
+	struct nk_rect total_space = nk_window_get_content_region(ctx);
+	nk_draw_image(canvas, total_space, &app->image, nk_rgba(255, 255, 255, 255));
+	return;
+
 	enum nk_buttons btn;
 	uint32_t sx, sy;
 	//TODO, change the draw function to app->draw_widget(app);
@@ -176,6 +208,8 @@ int main(int argc, char *argv[])
 	App.surface.s = 1;
 
 	App.bkend = nk_egl_create_backend(wl_display, NULL);
+	App.image = load_texture(argv[1]);
+
 	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, 200, 400, 0, 0, 2);
 	app_surface_frame(&App.surface, false);
 
