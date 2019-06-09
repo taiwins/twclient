@@ -65,12 +65,13 @@ load_texture(const char *filename)
     }
 
     glGenTextures(1, &tex);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    /* glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); */
+    /* glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); */
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
     /* glGenerateMipmap(GL_TEXTURE_2D); */
     stbi_image_free(data);
     return nk_image_id((int)tex);
@@ -208,9 +209,10 @@ int main(int argc, char *argv[])
 	App.surface.s = 1;
 
 	App.bkend = nk_egl_create_backend(wl_display, NULL);
-	App.image = load_texture(argv[1]);
 
 	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, 200, 400, 0, 0, 2);
+
+	App.image = load_texture(argv[1]);
 	app_surface_frame(&App.surface, false);
 
 	fprintf(stdout, "here\n");

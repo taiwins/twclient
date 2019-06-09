@@ -2,6 +2,8 @@
 #include "../ui.h"
 #include "../nk_backends.h"
 
+
+
 struct nk_wl_bkend;
 struct nk_context;
 struct nk_wl_backend * nk_cairo_create_bkend(void);
@@ -23,6 +25,7 @@ static struct application {
 	struct nk_wl_backend *bkend;
 	struct wl_shell_surface *shell_surface;
 	bool done;
+	struct nk_image image;
 } App;
 
 
@@ -57,6 +60,12 @@ static struct wl_registry_listener registry_listener = {
 static void
 sample_widget(struct nk_context *ctx, float width, float height, struct app_surface *data)
 {
+	/* struct application *app = &App; */
+	/* struct nk_command_buffer *canvas = nk_window_get_canvas(ctx); */
+	/* struct nk_rect total_space = nk_window_get_content_region(ctx); */
+	/* nk_draw_image(canvas, total_space, &app->image, nk_rgba(255, 255, 255, 255)); */
+	/* return; */
+
 	//TODO, change the draw function to app->draw_widget(app);
 	enum {EASY, HARD};
 	static int op = EASY;
@@ -153,6 +162,7 @@ int main(int argc, char *argv[])
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);
 	App.done = false;
+	App.image = nk_wl_load_image(argv[1]);
 
 	struct shm_pool pool;
 
@@ -186,5 +196,7 @@ int main(int argc, char *argv[])
 	wl_globals_release(&App.global);
 	wl_registry_destroy(registry);
 	wl_display_disconnect(wl_display);
+	nk_wl_free_image(&App.image);
+
 	return 0;
 }
