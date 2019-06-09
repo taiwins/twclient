@@ -60,6 +60,7 @@ nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			uint32_t w, uint32_t h, uint32_t x, uint32_t y,
 			int32_t s);
 
+
 /* vulkan_backend */
 struct nk_wl_backend *nk_vulkan_backend_create(void);
 struct nk_wl_backend *nk_vulkan_backend_clone(struct nk_wl_backend *b);
@@ -91,5 +92,11 @@ nk_wl_get_curr_style(struct nk_wl_backend *bkend);
 NK_API void
 nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app,
 		nk_wl_drawcall_t draw_call);
+
+NK_API struct nk_image
+nk_wl_load_image(const char *path);
+
+NK_API void
+nk_wl_free_image(struct nk_image *img);
 
 #endif

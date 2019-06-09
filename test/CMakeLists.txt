@@ -60,3 +60,11 @@ target_include_directories(test_lua_wrapper PUBLIC
 target_link_libraries(test_lua_wrapper
   nk_cairo_backend
   ${LUA_LIBRARIES})
+
+
+add_executable(test_event_queue
+  test_event_queue.c)
+
+target_link_libraries(test_event_queue
+  ${TWCLIENT_LIBRARIES}
+  )

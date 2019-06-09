@@ -479,6 +479,10 @@ nk_wl_clean_app_surface(struct nk_wl_backend *bkend)
 }
 
 /********************************* shared_api *******************************************/
+NK_API struct nk_image nk_wl_load_image(const char *path);
+
+NK_API void nk_wl_free_image(struct nk_image *img);
+
 
 NK_API xkb_keysym_t
 nk_wl_get_keyinput(struct nk_context *ctx)
@@ -509,7 +513,6 @@ nk_wl_get_curr_style(struct nk_wl_backend *bkend)
 {
 	return &bkend->ctx.style;
 }
-
 
 NK_API void
 nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app, nk_wl_drawcall_t draw_call)

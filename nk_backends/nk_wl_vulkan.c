@@ -87,6 +87,10 @@ struct nk_vulkan_backend {
 	VkQueue present_queue;
 
 	VkSwapchainKHR swap_chain;
+	VkFormat image_format;
+	VkPresentModeKHR present_mode;
+	VkImage images[2];
+	VkImageView image_view[2];
 
 	uint32_t graphics_idx;
 	uint32_t present_idx;
@@ -547,6 +551,7 @@ create_swap_chain(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 	VkSurfaceFormatKHR surface_format = choose_surface_format(vb, vksurf);
 	VkPresentModeKHR present_mode = choose_present_mode(vb, vksurf);
 
+
 	VkSwapchainCreateInfoKHR info = {
 		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
 		.surface = vksurf,
@@ -581,9 +586,71 @@ create_swap_chain(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
 	NK_ASSERT(vkCreateSwapchainKHR(vb->logic_device, &info,
 				       vb->alloc_callback, &vb->swap_chain) ==
 		  VK_SUCCESS);
-
+	vb->image_format = info.imageFormat;
+	vb->present_mode = info.presentMode;
 }
 
+static void
+create_image_views(struct nk_vulkan_backend *vb, VkSurfaceKHR vksurf)
+{
+	uint32_t num_images;
+
+	NK_ASSERT(vkGetSwapchainImagesKHR(vb->logic_device, vb->swap_chain,
+					  &num_images, NULL) == VK_SUCCESS );
+	NK_ASSERT(num_images == 2);
+	NK_ASSERT(vkGetSwapchainImagesKHR(vb->logic_device, vb->swap_chain, &num_images, vb->images) == VK_SUCCESS);
+
+	for (int i = 0; i < 2; i++) {
+		VkImageViewCreateInfo info = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.image = vb->images[i],
+			.viewType = VK_IMAGE_VIEW_TYPE_2D,
+			.format = vb->image_format,
+			.components = {
+				.r = VK_COMPONENT_SWIZZLE_R,
+				.g = VK_COMPONENT_SWIZZLE_G,
+				.b = VK_COMPONENT_SWIZZLE_B,
+				.a = VK_COMPONENT_SWIZZLE_A,
+			},
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			},
+			.flags = 0,
+		};
+		NK_ASSERT(vkCreateImageView(vb->logic_device, &info, vb->alloc_callback, &vb->image_view[i]) == VK_SUCCESS);
+
+	}
+}
+
+static void
+create_render_pass(struct nk_vulkan_backend *vb)
+{
+	VkAttachmentDescription color_attachment = {
+
+	};
+	color_attachment.format = vb->image_format;
+	//multisample settings
+	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	VkAttachmentReference color_ref = {
+		.attachment = 0,
+		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	};
+	//we need depth format
+	VkAttachmentDescription depth_attachment = {
+	};
+
+
+}
 
 static void
 create_shaders(struct nk_vulkan_backend *b)
@@ -612,6 +679,8 @@ nk_vulkan_destroy_app_surface(struct app_surface *surf)
 {
 	struct nk_wl_backend *b = surf->user_data;
 	struct nk_vulkan_backend *vb = container_of(b, struct nk_vulkan_backend, base);
+	vkDestroyImageView(vb->logic_device, vb->image_view[0], vb->alloc_callback);
+	vkDestroyImageView(vb->logic_device, vb->image_view[1], vb->alloc_callback);
 	vkDestroyCommandPool(vb->logic_device, vb->cmd_pool, vb->alloc_callback);
 	vkDestroyDevice(vb->logic_device, vb->alloc_callback);
 	vkDestroySurfaceKHR(vb->instance, surf->vksurf, vb->alloc_callback);
@@ -644,6 +713,8 @@ nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend
 	create_command_buffer(vb);
 
 	create_swap_chain(vb, surf->vksurf);
+
+	create_image_views(vb, surf->vksurf);
 }
 
 struct nk_wl_backend *
