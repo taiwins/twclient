@@ -65,13 +65,14 @@ load_texture(const char *filename)
     }
 
     glGenTextures(1, &tex);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    /* glGenerateMipmap(GL_TEXTURE_2D); */
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
     stbi_image_free(data);
     return nk_image_id((int)tex);
 }
@@ -81,11 +82,11 @@ static void
 sample_widget(struct nk_context *ctx, float width, float height, struct app_surface *data)
 {
 	struct application *app = &App;
-	//just draw the image
-	struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
-	struct nk_rect total_space = nk_window_get_content_region(ctx);
-	nk_draw_image(canvas, total_space, &app->image, nk_rgba(255, 255, 255, 255));
-	return;
+	/* //just draw the image */
+	/* struct nk_command_buffer *canvas = nk_window_get_canvas(ctx); */
+	/* struct nk_rect total_space = nk_window_get_content_region(ctx); */
+	/* nk_draw_image(canvas, total_space, &app->image, nk_rgba(255, 255, 255, 255)); */
+	/* return; */
 
 	enum nk_buttons btn;
 	uint32_t sx, sy;
@@ -129,11 +130,9 @@ sample_widget(struct nk_context *ctx, float width, float height, struct app_surf
 	bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f,0.005f);
 	bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f,0.005f);
 
-
-
 	nk_layout_row_dynamic(ctx, 25, 1);
 	if (nk_button_label(ctx, "quit")) {
-		app->done = true;
+		App.global.event_queue.quit = true;
 	}
 }
 
@@ -208,9 +207,10 @@ int main(int argc, char *argv[])
 	App.surface.s = 1;
 
 	App.bkend = nk_egl_create_backend(wl_display, NULL);
-	App.image = load_texture(argv[1]);
 
 	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, 200, 400, 0, 0, 2);
+
+	/* App.image = load_texture(argv[1]); */
 	app_surface_frame(&App.surface, false);
 
 	fprintf(stdout, "here\n");

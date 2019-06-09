@@ -18,6 +18,7 @@ struct egl_env {
 	EGLContext egl_context;
 	struct wl_display *wl_display;
 	EGLConfig config;
+	//I need to make reference to this
 };
 
 bool egl_env_init(struct egl_env *env, const struct wl_display *disp);

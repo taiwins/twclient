@@ -27,7 +27,7 @@
 #define NK_INCLUDE_STANDARD_VARARGS
 
 //this will make our struct various size, so lets put the buffer in the end
-#define NK_MAX_CTX_MEM 64 * 64 * 1024
+#define NK_MAX_CTX_MEM 64 * 1024
 
 
 #include "nuklear/nuklear.h"
@@ -79,15 +79,15 @@ struct nk_wl_backend {
 	struct app_surface *app_surface;
 	nk_wl_drawcall_t frame;
 	nk_wl_postcall_t post_cb;
+	int32_t nk_flags;
 
+	//look
 	struct {
 		xkb_keysym_t ckey; //cleaned up every frame
 		int32_t cbtn; //clean up every frame
 		uint32_t sx;
 		uint32_t sy;
 	};
-	//data
-	unsigned char ctx_buffer[NK_MAX_CTX_MEM];
 };
 
 
@@ -105,13 +105,20 @@ nk_wl_new_frame(struct app_surface *surf, uint32_t user_data)
 {
 	//here is how we manage the buffer
 	struct nk_wl_backend *bkend = surf->user_data;
-	int width = bkend->app_surface->w;
-	int height = bkend->app_surface->h;
+	int width = surf->w;
+	int height = surf->h;
 
-	if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height),
-		     NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) {
+	if (bkend->nk_flags == -1) {
 		bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
-	} nk_end(&bkend->ctx);
+	} else {
+		if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height),
+			     bkend->nk_flags)) {
+			bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
+		} nk_end(&bkend->ctx);
+	}
+	/* if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height), */
+	/*	     NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) { */
+	/* } nk_end(&bkend->ctx); */
 
 	nk_wl_render(bkend);
 	//text edit has problems, I don't think it is here though
@@ -479,6 +486,10 @@ nk_wl_clean_app_surface(struct nk_wl_backend *bkend)
 }
 
 /********************************* shared_api *******************************************/
+NK_API struct nk_image nk_wl_load_image(const char *path);
+
+NK_API void nk_wl_free_image(struct nk_image *img);
+
 
 NK_API xkb_keysym_t
 nk_wl_get_keyinput(struct nk_context *ctx)
@@ -509,7 +520,6 @@ nk_wl_get_curr_style(struct nk_wl_backend *bkend)
 {
 	return &bkend->ctx.style;
 }
-
 
 NK_API void
 nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app, nk_wl_drawcall_t draw_call)

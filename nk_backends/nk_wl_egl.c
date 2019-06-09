@@ -365,7 +365,7 @@ _nk_egl_draw_begin(struct nk_egl_backend *bkend,
 	glBindVertexArray(bkend->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, bkend->vbo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bkend->ebo);
-	assert(glGetError() == GL_NO_ERROR);
+	/* assert(glGetError() == GL_NO_ERROR); */
 	//I guess it is not really a good idea to allocate buffer every frame.
 	//if we already have the glBufferData, we would just mapbuffer
 	glBufferData(GL_ARRAY_BUFFER, MAX_VERTEX_BUFFER, NULL, GL_STREAM_DRAW);
@@ -435,6 +435,7 @@ nk_wl_render(struct nk_wl_backend *b)
 	nk_draw_foreach(cmd, ctx, &bkend->cmds) {
 		if (!cmd->elem_count)
 			continue;
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, (GLuint)cmd->texture.id);
 		GLint scissor_region[4] = {
 			(GLint)(cmd->clip_rect.x * scale),
@@ -511,7 +512,8 @@ nk_egl_create_backend(const struct wl_display *display, const struct egl_env *sh
 
 	bkend->compiled = false;
 	//part 2) nuklear init, font is initialized later
-	nk_init_fixed(&bkend->base.ctx, bkend->base.ctx_buffer, NK_MAX_CTX_MEM, NULL);
+	nk_init_default(&bkend->base.ctx, NULL);
+	/* nk_init_fixed(&bkend->base.ctx, bkend->base.ctx_buffer, NK_MAX_CTX_MEM, NULL); */
 	nk_buffer_init_fixed(&bkend->cmds, bkend->cmd_buffer, sizeof(bkend->cmd_buffer));
 	nk_buffer_clear(&bkend->cmds);
 
@@ -530,6 +532,7 @@ nk_egl_destroy_backend(struct nk_wl_backend *b)
 	free(bkend);
 
 }
+
 
 //this need to include in a c file and we include it from there
 

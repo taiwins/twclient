@@ -702,12 +702,6 @@ nk_lua_edit_unfocus(lua_State *L)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-extern void
-nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
-			  uint32_t w, uint32_t h, uint32_t x, uint32_t y,
-			  int32_t s);
-
 /* cairo_backend */
 struct nk_wl_backend *nk_cairo_create_bkend(void);
 void nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
@@ -790,7 +784,7 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 #if defined (NK_EGL_BACKEND)
 	nk_egl_impl_app_surface(surf, bkend, _nk_lua_drawcb, w, h, 0, 0, scale);
 #elif defined (NK_CAIRO_BACKEND)
-	nk_cairo_impl_app_surface(surf, bkend, _nk_lua_drawcb, pool, w, h, 0, 0, scale);
+	nk_cairo_impl_app_surface(surf, bkend, _nk_lua_drawcb, pool, w, h, 0, 0, scale, 0);
 #elif defined (NK_VK_BACKEND)
 	nk_vulkan_impl_app_surface(surf, bkend, _nk_lua_drawcb, w, h, 0, 0);
 #endif
