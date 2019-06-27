@@ -475,11 +475,12 @@ nk_egl_destroy_app_surface(struct app_surface *app)
 void
 nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			nk_wl_drawcall_t draw_cb,
-			uint32_t w, uint32_t h, uint32_t x, uint32_t y, int32_t s)
+			short w, short h, short x, short y, short s,
+			int32_t flags)
 
 {
 	struct nk_egl_backend *b = container_of(bkend, struct nk_egl_backend, base);
-	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, s);
+	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, s, 0);
 	surf->destroy = nk_egl_destroy_app_surface;
 	//assume it is compiled
 	app_surface_init_egl(surf, &b->env);
@@ -496,24 +497,22 @@ nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 }
 
 struct nk_wl_backend*
-nk_egl_create_backend(const struct wl_display *display, const struct egl_env *shared_env)
+nk_egl_create_backend(const struct wl_display *display)
 {
 	//we do not have any font here,
 	struct nk_egl_backend *bkend = (struct nk_egl_backend *)calloc(1, sizeof(*bkend));
-	if (shared_env)
-		egl_env_init_shared(&bkend->env, shared_env);
-	else
-		egl_env_init(&bkend->env, display);
+	egl_env_init(&bkend->env, display);
 	//let us assign a default row size
 	bkend->base.row_size = 16;
 	bkend->base.L = NULL;
 	bkend->font_size = 0;
 	bkend->font_tex = 0;
+	bkend->base.nk_flags = -1;
 
 	bkend->compiled = false;
-	//part 2) nuklear init, font is initialized later
+	//depends on the implementation, we can init backend in different wey
+
 	nk_init_default(&bkend->base.ctx, NULL);
-	/* nk_init_fixed(&bkend->base.ctx, bkend->base.ctx_buffer, NK_MAX_CTX_MEM, NULL); */
 	nk_buffer_init_fixed(&bkend->cmds, bkend->cmd_buffer, sizeof(bkend->cmd_buffer));
 	nk_buffer_clear(&bkend->cmds);
 

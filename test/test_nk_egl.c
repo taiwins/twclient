@@ -206,9 +206,9 @@ int main(int argc, char *argv[])
 	App.surface.h = 400;
 	App.surface.s = 1;
 
-	App.bkend = nk_egl_create_backend(wl_display, NULL);
+	App.bkend = nk_egl_create_backend(wl_display);
 
-	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, 200, 400, 0, 0, 2);
+	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, 200, 400, 0, 0, 2, 0);
 
 	/* App.image = load_texture(argv[1]); */
 	app_surface_frame(&App.surface, false);

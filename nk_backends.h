@@ -45,19 +45,18 @@ void nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
 void
 nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
-			  uint32_t w, uint32_t h, uint32_t x, uint32_t y,
-			  int32_t s, int32_t nk_flags);
+			  short w, short h, short x, short y, short s,
+			  int32_t nk_flags);
 
 /* egl_backend */
-struct nk_wl_backend* nk_egl_create_backend(const struct wl_display *display,
-					    const struct egl_env *shared_env);
+struct nk_wl_backend* nk_egl_create_backend(const struct wl_display *display);
 
 void nk_egl_destroy_backend(struct nk_wl_backend *b);
 void
 nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			nk_wl_drawcall_t draw_cb,
-			uint32_t w, uint32_t h, uint32_t x, uint32_t y,
-			int32_t s);
+			short w, short h, short x, short y,
+			short s, int32_t nk_flags);
 
 
 /* vulkan_backend */
@@ -67,7 +66,7 @@ void nk_vulkan_backend_destroy(struct nk_wl_backend *b);
 void
 nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			   nk_wl_drawcall_t draw_cb,
-			   uint32_t w, uint32_t h, uint32_t x, uint32_t y);
+			   short w, short h, short x, short y);
 
 
 #endif /* NK_PRIVATE */
