@@ -81,6 +81,7 @@ struct nk_wl_backend {
 	nk_wl_postcall_t post_cb;
 	int32_t nk_flags;
 
+	//look
 	struct {
 		xkb_keysym_t ckey; //cleaned up every frame
 		int32_t cbtn; //clean up every frame
@@ -104,13 +105,20 @@ nk_wl_new_frame(struct app_surface *surf, uint32_t user_data)
 {
 	//here is how we manage the buffer
 	struct nk_wl_backend *bkend = surf->user_data;
-	int width = bkend->app_surface->w;
-	int height = bkend->app_surface->h;
+	int width = surf->w;
+	int height = surf->h;
 
-	if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height),
-		     NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) {
+	if (bkend->nk_flags == -1) {
 		bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
-	} nk_end(&bkend->ctx);
+	} else {
+		if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height),
+			     bkend->nk_flags)) {
+			bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
+		} nk_end(&bkend->ctx);
+	}
+	/* if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height), */
+	/*	     NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) { */
+	/* } nk_end(&bkend->ctx); */
 
 	nk_wl_render(bkend);
 	//text edit has problems, I don't think it is here though

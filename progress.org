@@ -5,7 +5,9 @@
    simple fullscreen application.
 ** TODO the drawing of complex applications.
    You never tried one, I mean, never actually tried the complex programs.
-
+** TODO remove the 4 callbacks(ptron, ptrpress) make make them into one event
+   If you pass as an event struct, then you will need to create additional
+   struct just for event.
 * [0%] BUGS
 ** TODO twclient leak
    There are currently leaks in the use of `xkbcommon` and `wl_get_keyboard`. I

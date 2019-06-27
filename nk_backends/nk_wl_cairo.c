@@ -767,11 +767,12 @@ nk_cairo_destroy_app_surface(struct app_surface *app)
 void
 nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
-			  uint32_t w, uint32_t h, uint32_t x, uint32_t y, int32_t s, int32_t flags)
+			  uint32_t w, uint32_t h, uint32_t x, uint32_t y, int32_t s,
+			  int32_t flags)
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
-	/* bkend->nk_flags = flags; */
+	bkend->nk_flags = flags;
 
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, s);
 	surf->pool = pool;
@@ -795,7 +796,7 @@ nk_cairo_create_bkend(void)
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
 	b->base.theme_hash = 0;
 	b->base.L = NULL;
-	/* b->base.nk_flags = -1; */
+	b->base.nk_flags = -1;
 	nk_init_default(&b->base.ctx, &b->user_font.nk_font);
 	/* nk_init_fixed(&b->base.ctx, b->base.ctx_buffer, NK_MAX_CTX_MEM, &b->user_font.nk_font); */
 	nk_cairo_font_init(&b->user_font, NULL, NULL);
