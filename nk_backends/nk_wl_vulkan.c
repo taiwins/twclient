@@ -691,14 +691,14 @@ nk_vulkan_destroy_app_surface(struct app_surface *surf)
 void
 nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			   nk_wl_drawcall_t draw_cb,
-			   uint32_t w, uint32_t h, uint32_t x, uint32_t y)
+			   short w, short h, short x, short y)
 {
 	struct nk_vulkan_backend *vb = container_of(bkend, struct nk_vulkan_backend, base);
 
 	NK_ASSERT(surf->wl_surface);
 	NK_ASSERT(surf->wl_globals);
 
-	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, 1);
+	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, 1, 0);
 	surf->vksurf = create_vk_surface(surf->wl_globals->display,
 					 surf->wl_surface, vb->instance,
 					 vb->alloc_callback);
