@@ -11,11 +11,6 @@ void nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
 
 
 typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct app_surface *app);
-extern void
-nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
-			  uint32_t w, uint32_t h, uint32_t x, uint32_t y, int32_t s);
-
 
 
 static struct application {
@@ -66,7 +61,6 @@ sample_widget(struct nk_context *ctx, float width, float height, struct app_surf
 	/* nk_draw_image(canvas, total_space, &app->image, nk_rgba(255, 255, 255, 255)); */
 	/* return; */
 
-	//TODO, change the draw function to app->draw_widget(app);
 	enum {EASY, HARD};
 	static int op = EASY;
 	static struct nk_text_edit text_edit;
@@ -77,7 +71,6 @@ sample_widget(struct nk_context *ctx, float width, float height, struct app_surf
 		init_text_edit = true;
 		nk_textedit_init_fixed(&text_edit, text_buffer, 256);
 	}
-
 
 	int unicodes[] = {0xf1c1, 'C', 0xf1c2, 0xf1c3, 0xf1c4, 0xf1c5};
 	char strings[256];
@@ -100,10 +93,10 @@ sample_widget(struct nk_context *ctx, float width, float height, struct app_surf
 	/* nk_layout_row_dynamic(ctx, 30, 2); */
 	/* if (nk_option_label(ctx, "easy", op == EASY)) op = EASY; */
 	/* if (nk_option_label(ctx, "hard", op == HARD)) op = HARD; */
-	/* nk_layout_row_dynamic(ctx, 30, 1); */
-	/* if (nk_button_label(ctx, strings)) { */
-	/*	App.done = true; */
-	/* } */
+	nk_layout_row_dynamic(ctx, 30, 1);
+	if (nk_button_label(ctx, strings)) {
+		App.global.event_queue.quit = true;
+	}
 	/* nk_layout_row_dynamic(ctx, 30, 1); */
 	/* nk_edit_buffer(ctx, NK_EDIT_FIELD, &text_edit, nk_filter_default); */
 }
@@ -162,7 +155,7 @@ int main(int argc, char *argv[])
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);
 	App.done = false;
-	App.image = nk_wl_load_image(argv[1]);
+	/* App.image = nk_wl_load_image(argv[1]); */
 
 	struct shm_pool pool;
 
@@ -182,7 +175,7 @@ int main(int argc, char *argv[])
 	App.bkend = nk_cairo_create_bkend();
 	//the drawing is easy, but input handler is not
 	nk_cairo_impl_app_surface(&App.surface, App.bkend, sample_widget, &pool,
-				  200, 400, 0, 0, 2);
+				  200, 400, 0, 0, 2, NK_WINDOW_NO_SCROLLBAR | NK_WINDOW_BORDER);
 
 
 	app_surface_frame(&App.surface, false);
@@ -196,7 +189,7 @@ int main(int argc, char *argv[])
 	wl_globals_release(&App.global);
 	wl_registry_destroy(registry);
 	wl_display_disconnect(wl_display);
-	nk_wl_free_image(&App.image);
+	/* nk_wl_free_image(&App.image); */
 
 	return 0;
 }

@@ -82,11 +82,11 @@ static void
 sample_widget(struct nk_context *ctx, float width, float height, struct app_surface *data)
 {
 	struct application *app = &App;
-	//just draw the image
-	struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
-	struct nk_rect total_space = nk_window_get_content_region(ctx);
-	nk_draw_image(canvas, total_space, &app->image, nk_rgba(255, 255, 255, 255));
-	return;
+	/* //just draw the image */
+	/* struct nk_command_buffer *canvas = nk_window_get_canvas(ctx); */
+	/* struct nk_rect total_space = nk_window_get_content_region(ctx); */
+	/* nk_draw_image(canvas, total_space, &app->image, nk_rgba(255, 255, 255, 255)); */
+	/* return; */
 
 	enum nk_buttons btn;
 	uint32_t sx, sy;
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 
 	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, 200, 400, 0, 0, 2);
 
-	App.image = load_texture(argv[1]);
+	/* App.image = load_texture(argv[1]); */
 	app_surface_frame(&App.surface, false);
 
 	fprintf(stdout, "here\n");

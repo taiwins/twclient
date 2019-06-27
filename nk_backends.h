@@ -46,8 +46,7 @@ void
 nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
 			  uint32_t w, uint32_t h, uint32_t x, uint32_t y,
-			  int32_t s);
-
+			  int32_t s, int32_t nk_flags);
 
 /* egl_backend */
 struct nk_wl_backend* nk_egl_create_backend(const struct wl_display *display,

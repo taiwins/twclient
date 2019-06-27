@@ -27,7 +27,7 @@
 #define NK_INCLUDE_STANDARD_VARARGS
 
 //this will make our struct various size, so lets put the buffer in the end
-#define NK_MAX_CTX_MEM 64 * 64 * 1024
+#define NK_MAX_CTX_MEM 64 * 1024
 
 
 #include "nuklear/nuklear.h"
@@ -79,6 +79,7 @@ struct nk_wl_backend {
 	struct app_surface *app_surface;
 	nk_wl_drawcall_t frame;
 	nk_wl_postcall_t post_cb;
+	int32_t nk_flags;
 
 	struct {
 		xkb_keysym_t ckey; //cleaned up every frame
@@ -86,8 +87,6 @@ struct nk_wl_backend {
 		uint32_t sx;
 		uint32_t sy;
 	};
-	//data
-	unsigned char ctx_buffer[NK_MAX_CTX_MEM];
 };
 
 
