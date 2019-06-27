@@ -512,7 +512,8 @@ nk_egl_create_backend(const struct wl_display *display, const struct egl_env *sh
 
 	bkend->compiled = false;
 	//part 2) nuklear init, font is initialized later
-	nk_init_fixed(&bkend->base.ctx, bkend->base.ctx_buffer, NK_MAX_CTX_MEM, NULL);
+	nk_init_default(&bkend->base.ctx, NULL);
+	/* nk_init_fixed(&bkend->base.ctx, bkend->base.ctx_buffer, NK_MAX_CTX_MEM, NULL); */
 	nk_buffer_init_fixed(&bkend->cmds, bkend->cmd_buffer, sizeof(bkend->cmd_buffer));
 	nk_buffer_clear(&bkend->cmds);
 

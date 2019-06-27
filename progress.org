@@ -1,0 +1,14 @@
+* Client side work
+* [%] refactoring works
+** TODO change the ~nk_wl_impl_*~ calls
+   This allows the client to have multiple gui windows at its disposal. Or a
+   simple fullscreen application.
+** TODO the drawing of complex applications.
+   You never tried one, I mean, never actually tried the complex programs.
+
+* [0%] BUGS
+** TODO twclient leak
+   There are currently leaks in the use of `xkbcommon` and `wl_get_keyboard`. I
+   called the corresponding destructor but there are still leaks.
+** repeated key in the non edit environment
+   The **textedit** seems fine but other cases have problems

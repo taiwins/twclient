@@ -775,11 +775,26 @@ wl_globals_release(struct wl_globals *globals)
 		globals->inputs.cursor_surface = NULL;
 		globals->inputs.focused_surface = NULL;
 	}
-	if (globals->inputs.wl_pointer) {
+	if (globals->inputs.wl_pointer)
 		wl_pointer_destroy(globals->inputs.wl_pointer);
-	}
 	if (globals->inputs.wl_keyboard)
 		wl_keyboard_destroy(globals->inputs.wl_keyboard);
+	if (globals->inputs.wl_touch)
+		wl_touch_destroy(globals->inputs.wl_touch);
+
+	if (globals->inputs.kstate) {
+		xkb_state_unref(globals->inputs.kstate);
+		globals->inputs.kstate = NULL;
+	}
+	if (globals->inputs.keymap) {
+		xkb_keymap_unref(globals->inputs.keymap);
+		globals->inputs.keymap = NULL;
+	}
+	if (globals->inputs.kcontext) {
+		xkb_context_unref(globals->inputs.kcontext);
+		globals->inputs.kcontext = NULL;
+	}
+
 	wl_seat_destroy(globals->inputs.wl_seat);
 	wl_shm_destroy(globals->shm);
 	wl_compositor_destroy(globals->compositor);
