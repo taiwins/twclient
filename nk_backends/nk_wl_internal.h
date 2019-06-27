@@ -444,8 +444,8 @@ nk_pointraxis(struct app_surface *surf, int pos, int direction, uint32_t sx, uin
 /********************************* setup *******************************************/
 static void
 nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-		       nk_wl_drawcall_t draw_cb, uint32_t w, uint32_t h,
-		       uint32_t x, uint32_t y, int32_t scale)
+		       nk_wl_drawcall_t draw_cb, short w, short h,
+		       short x, short y, short scale, int32_t flags)
 {
 	surf->w = w;
 	surf->h = h;
@@ -465,6 +465,7 @@ nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->app_surface = surf;
 	bkend->post_cb = NULL;
+	bkend->nk_flags = flags;
 
 	if (surf->wl_globals) {
 		nk_wl_apply_color(bkend, &surf->wl_globals->theme);
