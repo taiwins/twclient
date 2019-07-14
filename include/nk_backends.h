@@ -33,7 +33,7 @@ struct nk_style;
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
 
-#include "nk_backends/nuklear/nuklear.h"
+#include "nuklear/nuklear.h"
 
 typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct app_surface *app);
 typedef void (*nk_wl_postcall_t)(struct app_surface *app);

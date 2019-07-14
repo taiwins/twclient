@@ -7,13 +7,12 @@
 #include <string.h>
 #include <fcntl.h>
 
-#include "../ui.h"
-#include "../egl.h"
-#include "../client.h"
-#include "../nk_backends.h"
+#include <ui.h>
+#include <egl.h>
+#include <client.h>
+#include <nk_backends.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include "../nk_backends/nuklear/example/stb_image.h"
-/* #include "../config.h" */
+#include "stb_image.h"
 
 
 //create a egl ui

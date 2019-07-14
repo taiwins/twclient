@@ -23,8 +23,8 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
-#include "client.h"
-#include "egl.h"
+#include <client.h>
+#include <egl.h>
 
 
 /*

@@ -29,8 +29,15 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_ZERO_COMMAND_MEMORY
 
-#include "../client.h"
-#include "../ui.h"
+
+#ifdef NK_INCLUDE_FONT_BAKING
+#undef NK_INCLUDE_FONT_BAKING
+#endif
+#define NK_IMPLEMENTATION
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_VK_BACKEND
+
 #include "nk_wl_internal.h"
 
 #ifdef __DEBUG

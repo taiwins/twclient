@@ -1,6 +1,6 @@
-#include "../client.h"
-#include "../ui.h"
-#include "../nk_backends.h"
+#include <client.h>
+#include <ui.h>
+#include <nk_backends.h>
 
 
 
