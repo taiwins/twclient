@@ -19,7 +19,7 @@ endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   add_definitions(-D__DEBUG)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O1 -ggdb3 -fsanitize=address -fno-omit-frame-pointer")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb3 -fsanitize=address -fno-omit-frame-pointer")
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Release)

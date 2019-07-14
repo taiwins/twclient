@@ -59,11 +59,9 @@ struct taiwins_theme {
 	struct widget_colors slider;
 	struct widget_colors chart;
 	struct tw_rgba_t combo_color;
-
-	//you only need to set one font right now, use it for normal text
-	//render, icons is done by system
-	char font[256];
-	//there could other fonts, but hope not so many
+	//we can contain a font name here. eventually the icon font is done by
+	//searching all the svg in the widgets
+	char font[64];
 };
 
 extern const struct taiwins_theme taiwins_dark_theme;
@@ -143,13 +141,6 @@ enum APP_SURFACE_TYPE {
 	APP_LOCKER,
 };
 
-enum taiwins_btn_t {
-	TWBTN_LEFT,
-	TWBTN_RIGHT,
-	TWBTN_MID,
-	TWBTN_DCLICK,
-};
-
 enum taiwins_modifier_mask {
 	TW_NOMOD = 0,
 	TW_ALT = 1,
@@ -158,17 +149,80 @@ enum taiwins_modifier_mask {
 	TW_SHIFT = 8,
 };
 
+//So the app surface becomes a event based surface. What we wanted to avoid in
+//the beginning. When the events becames so complex.
+enum app_event_type {
+	/**
+	 * app_surface would receive of such event and frame call, most of those
+	 * events are interested by application only. We do not make event
+	 * system sophisticated like QEvent ,thus we do take many assumptions
+	 * for the app so we can preprocess many events as possible, for
+	 * example, keymap is handled by xkbcommon in the client library, so
+	 * user are forced to use it.
+	 *
+	 * pointer and touch has a frame concept, so we need to aggregate them
+	 * and send them there
+	 */
+	//general
+	TW_FOCUS, TW_UNFOCUS,
+	//animation
+	TW_TIMER,
+	//pointer
+	TW_POINTER_MOTION, TW_POINTER_BTN, TW_POINTER_AXIS,
+	//keyboard
+	TW_KEY_BTN, //no keymap event, repeat info, or modifier. We output modifier
+		 //directly
+	//touch
+	TW_TOUCH_MOTION,
+	//resize, fullscreen and all that should be here as well.
+	TW_RESIZE,
+	TW_FULLSCREEN,
+	TW_MINIMIZE,
+};
+
+struct app_event {
+	enum app_event_type type;
+	uint32_t time; //maybe I should process it take timestamp, like milliseconds
+	union {
+		struct {
+			xkb_keycode_t code;
+			xkb_keysym_t sym;
+			uint32_t mod;
+			bool state;
+		} key;
+		struct {
+			uint32_t mod;
+			uint32_t x, y;
+			uint32_t btn; bool state;
+		} ptr;
+
+		struct {
+			uint32_t mod;
+			//in the context of touch pad, this represents the
+			//travel of finger in surface coordinates
+			int dx; int dy;
+		} axis;
+		struct {
+			uint32_t mod;
+		} touch;
+		//resize and max/minimize requires specific protocols
+		//`wl_shell_surface` or `xdg_shell_surface`. app_surface will
+		//need to have those protocols ready
+
+		//
+		struct {
+			//xdg surface and shell surface share the same enum
+			uint32_t edge;
+			uint32_t nw, wh;
+		} resize;
+	};
+};
 
 struct wl_globals;
 struct app_surface;
 struct egl_env;
 
-typedef void (*keycb_t)(struct app_surface *, xkb_keysym_t, uint32_t, int);
-typedef void (*pointron_t)(struct app_surface *, uint32_t, uint32_t);
-typedef void (*pointrbtn_t)(struct app_surface *, enum taiwins_btn_t, bool, uint32_t, uint32_t);
-typedef void (*pointraxis_t)(struct app_surface *, int, int, uint32_t, uint32_t);
-/* This actually implements the wl_callback callback. */
-typedef void (*frame_t)(struct app_surface *, uint32_t user_data);
+typedef void (*frame_t)(struct app_surface *, const struct app_event *e);
 
 /**
  * /brief Abstract wl_surface container
@@ -193,7 +247,7 @@ struct app_surface {
 	//geometry information
 	unsigned int px, py; //anchor
 	unsigned int w, h; //size
-	unsigned int s;
+	unsigned int s; //scale
 	enum APP_SURFACE_TYPE type;
 
 	struct wl_globals *wl_globals;
@@ -201,7 +255,8 @@ struct app_surface {
 	struct wl_surface *wl_surface;
 	bool need_animation;
 	uint32_t last_serial;
-	/* buffer */
+
+	/* data holder */
 	union {
 		struct {
 			struct shm_pool *pool;
@@ -227,15 +282,9 @@ struct app_surface {
 			VkSurfaceKHR vksurf;
 		};
 	};
-	/* callbacks */
-	struct {
-		keycb_t keycb;
-		pointron_t pointron;
-		pointrbtn_t pointrbtn;
-		pointraxis_t pointraxis;
-		//we do actually just need this
-		frame_t do_frame;
-	};
+
+	frame_t do_frame;
+
 	//destructor
 	void (*destroy)(struct app_surface *);
 	//XXX this user_data is controlled by implementation, do not set it!!!
@@ -273,10 +322,6 @@ app_surface_release(struct app_surface *surf)
 	if (surf->destroy)
 		surf->destroy(surf);
 	//throw all the callbacks
-	surf->keycb = NULL;
-	surf->pointron = NULL;
-	surf->pointrbtn = NULL;
-	surf->pointraxis = NULL;
 	wl_surface_destroy(surf->wl_surface);
 	if (surf->protocol)
 		wl_proxy_destroy(surf->protocol);
@@ -299,11 +344,15 @@ app_surface_end_frame_request(struct app_surface *surf)
 static inline void
 app_surface_frame(struct app_surface *surf, bool anime)
 {
+	struct app_event e = {
+		.type = TW_TIMER,
+		.time = 0,
+	};
 	//this is the best we
 	surf->need_animation = anime;
 	if (anime)
 		app_surface_request_frame(surf);
-	surf->do_frame(surf, 0);
+	surf->do_frame(surf, &e);
 }
 
 
