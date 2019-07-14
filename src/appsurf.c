@@ -47,6 +47,21 @@ app_surface_init(struct app_surface *surf, struct wl_surface *wl_surface,
 }
 
 
+void
+app_surface_frame(struct app_surface *surf, bool anime)
+{
+	struct wl_globals *g = surf->wl_globals;
+	struct app_event e = {
+		.type = TW_TIMER,
+		.time = (g) ? g->inputs.millisec : 0,
+	};
+	//this is the best we
+	surf->need_animation = anime;
+	if (anime)
+		app_surface_request_frame(surf);
+	surf->do_frame(surf, &e);
+}
+
 
 static void
 app_surface_frame_done(void *user_data, struct wl_callback *cb, uint32_t data)
@@ -79,12 +94,12 @@ app_surface_request_frame(struct app_surface *surf)
 	wl_callback_add_listener(callback, &app_surface_wl_frame_impl, surf);
 }
 
-/*
- * Here we implement a sample attach -> damage -> commit routine for the
- * wl_buffer. It should be straightforward.
- *
- * I should expect a free surface to draw.
- */
+
+
+/**********************************************************
+ *                shm_buffer_impl_surface                 *
+ **********************************************************/
+
 static void
 shm_buffer_surface_swap(struct app_surface *surf, const struct app_event *e)
 {
@@ -167,6 +182,14 @@ shm_buffer_impl_app_surface(struct app_surface *surf, struct shm_pool *pool,
 	//TODO we should be able to resize the surface as well.
 }
 
+
+
+
+
+
+/**********************************************************
+ *              embeded_buffer_impl_surface               *
+ **********************************************************/
 
 static void
 embeded_app_surface_do_frame(struct app_surface *surf, const struct app_event *e)
