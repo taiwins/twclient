@@ -22,8 +22,8 @@
 #include <os/buffer.h>
 #include <os/file.h>
 
-#include "client.h"
-#include "ui.h"
+#include <client.h>
+#include <ui.h>
 
 ////////////////////////////wayland listeners///////////////////////////
 

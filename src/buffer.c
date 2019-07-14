@@ -1,4 +1,4 @@
-#include "client.h"
+#include <client.h>
 
 struct wl_buffer_node {
 	list_t link;

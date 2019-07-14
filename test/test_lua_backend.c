@@ -9,9 +9,9 @@
 #include <lauxlib.h>
 #include <lualib.h>
 
-#include "../client.h"
-#include "../ui.h"
-#include "../nk_backends.h"
+#include <client.h>
+#include <ui.h>
+#include <nk_backends.h>
 /* #include "../nk_backends/nk_wl_internal.h" */
 
 #ifndef NK_CAIRO_BACKEND
