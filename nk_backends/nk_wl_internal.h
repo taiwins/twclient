@@ -91,72 +91,6 @@ struct nk_wl_backend {
 };
 
 
-/******************************** render *******************************************/
-static void nk_wl_render(struct nk_wl_backend *bkend);
-
-//we should not implement directly like this, it kills all the freedom for user,
-//you should have widget implement like this. The problem is this call does the
-//rendering as well, suppose you have a background, you want to draw that
-//first. Then you want to draw the widgets, at last, you want to call
-//nk_wl_render and
-
-static void
-nk_wl_new_frame(struct app_surface *surf, uint32_t user_data)
-{
-	//here is how we manage the buffer
-	struct nk_wl_backend *bkend = surf->user_data;
-	int width = surf->w;
-	int height = surf->h;
-
-	if (bkend->nk_flags == -1) {
-		bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
-	} else {
-		if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height),
-			     bkend->nk_flags)) {
-			bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
-		} nk_end(&bkend->ctx);
-	}
-	/* if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height), */
-	/*	     NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) { */
-	/* } nk_end(&bkend->ctx); */
-
-	nk_wl_render(bkend);
-	//text edit has problems, I don't think it is here though
-	nk_clear(&bkend->ctx);
-
-	if (bkend->post_cb) {
-		bkend->post_cb(bkend->app_surface);
-		bkend->post_cb = NULL;
-	}
-	bkend->ckey = XKB_KEY_NoSymbol;
-	bkend->cbtn = -1;
-}
-
-static inline bool
-nk_wl_need_redraw(struct nk_wl_backend *bkend)
-{
-	static nk_max_cmd_t nk_last_draw[100] = {0};
-	void *cmds = nk_buffer_memory(&bkend->ctx.memory);
-	bool need_redraw = memcmp(cmds, nk_last_draw, bkend->ctx.memory.allocated);
-	if (need_redraw)
-		memcpy(nk_last_draw, cmds, bkend->ctx.memory.allocated);
-	return need_redraw;
-}
-
-//this function has side effects
-static inline bool
-nk_wl_maybe_skip(struct nk_wl_backend *bkend)
-{
-	bool need_redraw = nk_wl_need_redraw(bkend);
-	bool need_commit = need_redraw || bkend->app_surface->need_animation;
-	if (!need_commit)
-		return true;
-	if (!need_redraw) {
-		wl_surface_commit(bkend->app_surface->wl_surface);
-		return true;
-	}
-	return false;
-}
 
 /******************************** nuklear colors ***********************************/
 static inline void
@@ -243,7 +177,6 @@ nk_wl_apply_color(struct nk_wl_backend *bkend, const struct taiwins_theme *theme
 	table[NK_COLOR_TAB_HEADER] = table[NK_COLOR_WINDOW];
 	nk_style_from_table(&bkend->ctx, table);
 }
-
 
 /********************************* unicode ****************************************/
 #ifdef NK_INCLUDE_FONT_BAKING
@@ -332,13 +265,18 @@ nk_input_reset(struct nk_context *ctx)
 //this is so verbose
 
 static void
-nk_keycb(struct app_surface *surf, xkb_keysym_t keysym, uint32_t modifier, int state)
+nk_keycb(struct app_surface *surf, const struct app_event *e)
+	 /* xkb_keysym_t keysym, uint32_t modifier, int state) */
 {
 	//nk_input_key and nk_input_unicode are different, you kinda need to
 	//registered all the keys
 	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
-	uint32_t keycode = xkb_keysym_to_utf32(keysym);
+	uint32_t keycode = xkb_keysym_to_utf32(e->key.sym);
+	uint32_t keysym = e->key.sym;
+	uint32_t modifier = e->key.mod;
+	bool state = e->key.state;
 	nk_input_begin(&bkend->ctx);
+
 	//now we deal with the ctrl-keys
 	if (modifier & TW_CTRL) {
 		//the emacs keybindings
@@ -375,70 +313,145 @@ nk_keycb(struct app_surface *surf, xkb_keysym_t keysym, uint32_t modifier, int s
 	else
 		bkend->ckey = XKB_KEY_NoSymbol;
 	nk_input_end(&bkend->ctx);
-
-	nk_wl_new_frame(surf, surf->last_serial);
-	nk_input_reset(&bkend->ctx);
 }
 
 static void
-nk_pointron(struct app_surface *surf, uint32_t sx, uint32_t sy)
+nk_pointron(struct app_surface *surf, const struct app_event *e)
 {
 	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
 	nk_input_begin(&bkend->ctx);
-	nk_input_motion(&bkend->ctx, sx, sy);
+	nk_input_motion(&bkend->ctx, e->ptr.x, e->ptr.y);
 	nk_input_end(&bkend->ctx);
-	bkend->sx = sx;
-	bkend->sy = sy;
-	nk_wl_new_frame(surf, surf->last_serial);
-	nk_input_reset(&bkend->ctx);
+	bkend->sx = e->ptr.x;
+	bkend->sy = e->ptr.y;
 }
 
 static void
-nk_pointrbtn(struct app_surface *surf, enum taiwins_btn_t btn, bool state, uint32_t sx, uint32_t sy)
+nk_pointrbtn(struct app_surface *surf, const struct app_event *e)
 {
 	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
 	enum nk_buttons b;
-	switch (btn) {
-	case TWBTN_LEFT:
+	switch (e->ptr.btn) {
+	case BTN_LEFT:
 		b = NK_BUTTON_LEFT;
 		break;
-	case TWBTN_RIGHT:
+	case BTN_RIGHT:
 		b = NK_BUTTON_RIGHT;
 		break;
-	case TWBTN_MID:
+	case BTN_MIDDLE:
 		b = NK_BUTTON_MIDDLE;
 		break;
-	case TWBTN_DCLICK:
-		b = NK_BUTTON_DOUBLE;
-		break;
+		//case TWBTN_DCLICK:
+		//b = NK_BUTTON_DOUBLE;
+		//break;
 	default:
 		b = NK_BUTTON_MAX;
 		break;
 	}
 
 	nk_input_begin(&bkend->ctx);
-	nk_input_button(&bkend->ctx, b, (int)sx, (int)sy, state);
+	nk_input_button(&bkend->ctx, b, e->ptr.x, e->ptr.y, e->ptr.state);
 	nk_input_end(&bkend->ctx);
 
-	bkend->cbtn = (state) ? b : -2;
-	bkend->sx = sx;
-	bkend->sy = sy;
-
-	nk_wl_new_frame(surf, surf->last_serial);
-	nk_input_reset(&bkend->ctx);
-
+	/* bkend->cbtn = (state) ? b : -2; */
+	/* bkend->sx = sx; */
+	/* bkend->sy = sy; */
 }
 
 static void
-nk_pointraxis(struct app_surface *surf, int pos, int direction, uint32_t sx, uint32_t sy)
+nk_pointraxis(struct app_surface *surf, const struct app_event *e)
 {
 	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
 	nk_input_begin(&bkend->ctx);
-	nk_input_scroll(&bkend->ctx, nk_vec2(direction * (float)sx, (direction * (float)sy)));
-	nk_input_begin(&bkend->ctx);
-	nk_wl_new_frame(surf, surf->last_serial);
-	nk_input_reset(&bkend->ctx);
+	nk_input_scroll(&bkend->ctx, nk_vec2(e->axis.dx, e->axis.dy));
+	nk_input_end(&bkend->ctx);
 }
+
+/******************************** render *******************************************/
+static void nk_wl_render(struct nk_wl_backend *bkend);
+
+static void
+nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
+{
+	bool handled_input = false;
+	//here is how we manage the buffer
+	struct nk_wl_backend *bkend = surf->user_data;
+	int width = surf->w;
+	int height = surf->h;
+	switch (e->type) {
+	case TW_TIMER:
+		handled_input = true;
+		break;
+	case TW_POINTER_MOTION:
+		nk_pointron(surf, e);
+		handled_input = true;
+		break;
+	case TW_POINTER_BTN:
+		nk_pointrbtn(surf, e);
+		handled_input = true;
+		break;
+	case TW_POINTER_AXIS:
+		nk_pointraxis(surf, e);
+		handled_input = true;
+		break;
+	case TW_KEY_BTN:
+		nk_keycb(surf, e);
+		handled_input = true;
+		break;
+	default:
+		break;
+	}
+	if (!handled_input)
+		return;
+
+	if (bkend->nk_flags == -1) {
+		bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
+	} else {
+		if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height),
+			     bkend->nk_flags)) {
+			bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
+		} nk_end(&bkend->ctx);
+	}
+
+	nk_wl_render(bkend);
+	//text edit has problems, I don't think it is here though
+	nk_clear(&bkend->ctx);
+
+	if (bkend->post_cb) {
+		bkend->post_cb(bkend->app_surface);
+		bkend->post_cb = NULL;
+	}
+	//we will need to remove this
+	bkend->ckey = XKB_KEY_NoSymbol;
+	bkend->cbtn = -1;
+}
+
+static inline bool
+nk_wl_need_redraw(struct nk_wl_backend *bkend)
+{
+	static nk_max_cmd_t nk_last_draw[100] = {0};
+	void *cmds = nk_buffer_memory(&bkend->ctx.memory);
+	bool need_redraw = memcmp(cmds, nk_last_draw, bkend->ctx.memory.allocated);
+	if (need_redraw)
+		memcpy(nk_last_draw, cmds, bkend->ctx.memory.allocated);
+	return need_redraw;
+}
+
+//this function has side effects
+static inline bool
+nk_wl_maybe_skip(struct nk_wl_backend *bkend)
+{
+	bool need_redraw = nk_wl_need_redraw(bkend);
+	bool need_commit = need_redraw || bkend->app_surface->need_animation;
+	if (!need_commit)
+		return true;
+	if (!need_redraw) {
+		wl_surface_commit(bkend->app_surface->wl_surface);
+		return true;
+	}
+	return false;
+}
+
 
 
 /********************************* setup *******************************************/
@@ -454,11 +467,6 @@ nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 	surf->s = scale;
 	surf->user_data = bkend;
 	surf->do_frame = nk_wl_new_frame;
-	//input
-	surf->keycb = nk_keycb;
-	surf->pointrbtn = nk_pointrbtn;
-	surf->pointron = nk_pointron;
-	surf->pointraxis = nk_pointraxis;
 	//change the current state of the backend
 	bkend->frame = draw_cb;
 	bkend->cbtn = -1;

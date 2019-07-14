@@ -51,13 +51,19 @@ app_surface_init(struct app_surface *surf, struct wl_surface *wl_surface,
 static void
 app_surface_frame_done(void *user_data, struct wl_callback *cb, uint32_t data)
 {
+	struct app_event e = {
+		.type = TW_TIMER,
+		.time = data,
+	};
+
 	fprintf(stderr, "now I am in animation\n");
 	if (cb)
 		wl_callback_destroy(cb);
 	struct app_surface *surf = (struct app_surface *)user_data;
 	if (surf->need_animation)
 		app_surface_request_frame(surf);
-	surf->do_frame(surf, data);
+	surf->do_frame(surf, &e);
+
 	surf->last_serial = data;
 }
 
@@ -80,7 +86,7 @@ app_surface_request_frame(struct app_surface *surf)
  * I should expect a free surface to draw.
  */
 static void
-shm_buffer_surface_swap(struct app_surface *surf, unsigned int timestamp)
+shm_buffer_surface_swap(struct app_surface *surf, const struct app_event *e)
 {
 	struct wl_buffer *free_buffer = NULL;
 	int32_t x, y, w, h;
@@ -163,9 +169,9 @@ shm_buffer_impl_app_surface(struct app_surface *surf, struct shm_pool *pool,
 
 
 static void
-embeded_app_surface_do_frame(struct app_surface *surf, uint32_t data)
+embeded_app_surface_do_frame(struct app_surface *surf, const struct app_event *e)
 {
-	surf->parent->do_frame(surf->parent, data);
+	surf->parent->do_frame(surf->parent, e);
 }
 
 void

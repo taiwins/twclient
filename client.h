@@ -80,7 +80,13 @@ bool tw_event_queue_add_wl_display(struct tw_event_queue *queue, struct wl_displ
 
 
 /**
- * struct for one application, it should normally contains those
+ * global context for one application (can be shared with multiple surface)
+ *
+ * It contains almost everything and app_surface should have a reference of
+ * this.
+ *
+ * This struct is indeed rather big (currently 488 bytes), we would want to fit
+ * in L1 Cache
  */
 struct wl_globals {
 	struct wl_shm *shm;
@@ -92,62 +98,46 @@ struct wl_globals {
 		struct wl_keyboard *wl_keyboard;
 		struct wl_pointer *wl_pointer;
 		struct wl_touch *wl_touch;
-		char name[64];
 		struct itimerspec repeat_info;
+		char name[64]; //seat name
+		uint32_t millisec;
+		//keyboard
 		struct {
-			/* xkbinfo */
 			struct xkb_context *kcontext;
 			struct xkb_keymap  *keymap;
 			struct xkb_state   *kstate;
+			struct wl_surface *keyboard_focused;
+			//state
+			uint32_t modifiers;
+			bool key_pressed;
+			xkb_keycode_t keycode;
+			xkb_keysym_t keysym;
 		};
-
+		//pointer
 		struct {
-			/* cursor surface */
 			char cursor_theme_name[64];
 			struct wl_cursor *cursor;
 			struct wl_cursor_theme *cursor_theme;
 			struct wl_surface *cursor_surface;
 			struct wl_buffer *cursor_buffer;
-			struct wl_surface *focused_surface; //the surface that cursor is on
 			struct wl_callback_listener cursor_done_listener;
+			struct wl_surface *pointer_focused; //the surface that cursor is on
+			//state
+			uint32_t pointer_events;
+			uint32_t btn;
+			bool btn_pressed;
+			short sx, sy; //screen coordinates
+			uint32_t dx_axis, dy_axis; //axis advance
+			short w;
 		};
-		//current state of input
+		//touch
 		struct {
-			//cursor
-			uint32_t cursor_events;
-			bool cursor_state;
-			uint32_t cx, cy; //current coordinate of the cursor
-			uint32_t axis;
-			bool axis_pos;
-			//keyboard
-			bool key_pressed;
-			xkb_keysym_t keysym;
-			xkb_keycode_t keycode;
-			uint32_t modifiers;
-
-			uint32_t serial;
+			bool touch_down;
+			short tsx, tsy; //touch point
 		};
-		/* we are literally having two event system right now. One is
-		 * for all the poll events, one is for actual wayland
-		 * client(well, not quite, for example, the repeat info is
-		 * implemented as poll event as well) events. For example the
-		 * `wayland-client-protocols.h`, we will have our common pointer
-		 * (motion, button, axis, frame). Or keypress, or touch, but
-		 * later if you have other protocols you want to implement, then
-		 * the list of events will increase.
-		 *
-		 * The api exposed can be like this, enum event =
-		 * wl_globals_get_wl_event(wl_globals, -1).
-		 *
-		 * Then you get the last event through
-		 * wl_globals_get_*_event(wl_globals, -1, type, arg, ...). Well,
-		 * it is better to implement it like scanf style, oh god this is
-		 * a horrible interface. User would not know what arguments are
-		 * expected. The other thing is that you don't wanna write same
-		 * logic twice.
-		 */
-		queue_t wl_events;
+
 	} inputs;
+
 	//application theme settings
 	struct taiwins_theme theme;
 	struct tw_event_queue event_queue;

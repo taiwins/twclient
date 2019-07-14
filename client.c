@@ -91,13 +91,30 @@ static int
 handle_key_repeat(struct tw_event *e, int fd)
 {
 	struct app_surface *surf = e->data;
-	xkb_keysym_t keysym = e->arg.u;
 	struct wl_globals *globals = surf->wl_globals;
-	if (globals && surf->keycb &&
+
+	if (globals && surf->do_frame &&
 	    globals->inputs.key_pressed &&
-		keysym == globals->inputs.keysym) {
-		surf->keycb(surf, globals->inputs.keysym, globals->inputs.modifiers,
-			    globals->inputs.key_pressed);
+		globals->inputs.keysym == globals->inputs.keysym) {
+		//there are two ways to generate press and release
+
+		//1) giving two do_frame event, but in this way we may get
+		//blocked(over commit)
+
+		//2) consecutively generate on/off. Thanks god the tw_event is
+		//modifable
+		struct app_event ae = {
+			.type = TW_KEY_BTN,
+			.time = globals->inputs.millisec,
+			.key = {
+				.code = globals->inputs.keycode,
+				.sym = globals->inputs.keysym,
+				.mod = globals->inputs.modifiers,
+				.state = (bool)e->arg.u,
+			},
+		};
+		e->arg.u = !(bool)e->arg.u;
+		surf->do_frame(surf, &ae);
 		return TW_EVENT_NOOP;
 	} else
 		return TW_EVENT_DEL;
@@ -120,40 +137,42 @@ handle_key(void *data,
 	   uint32_t state)
 {
 	struct wl_globals *globals = (struct wl_globals *)data;
-
-	xkb_keycode_t keycode = kc_linux2xkb(key);
-	xkb_keysym_t  keysym  = xkb_state_key_get_one_sym(globals->inputs.kstate,
-							  keycode);
-	uint32_t modifier = tw_mod_mask_from_xkb_state(globals->inputs.kstate);
-
-	globals->inputs.serial = serial;
-	globals->inputs.key_pressed = state == WL_KEYBOARD_KEY_STATE_PRESSED;
-	globals->inputs.keysym = keysym;
-	globals->inputs.keycode = keycode;
-	globals->inputs.modifiers = modifier;
-
-	/* char keyname[100]; */
-	/* xkb_keysym_get_name(keysym, keyname, 100); */
-	/* fprintf(stderr, "the key pressed is %s\n", keyname); */
-	struct wl_surface *focused = globals->inputs.focused_surface;
+	struct wl_surface *focused = globals->inputs.keyboard_focused;
 	struct app_surface *appsurf = (focused) ? app_surface_from_wl_surface(focused) : NULL;
-	if (appsurf && is_repeat_info_valid(globals->inputs.repeat_info) && state) {
+
+	globals->inputs.millisec = time;
+	globals->inputs.keycode = kc_linux2xkb(key);
+	globals->inputs.keysym  = xkb_state_key_get_one_sym(globals->inputs.kstate,
+							    globals->inputs.keycode);
+	globals->inputs.key_pressed = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
+	if (!appsurf || !appsurf->do_frame)
+		return;
+
+	struct app_event e = {
+		.time = time,
+		.type = TW_KEY_BTN,
+		.key = {
+			.mod = globals->inputs.modifiers,
+			.code = globals->inputs.keycode,
+			.sym = globals->inputs.keysym,
+			.state = globals->inputs.key_pressed,
+		},
+	};
+
+	if (is_repeat_info_valid(globals->inputs.repeat_info) &&
+		globals->inputs.key_pressed) {
 		struct tw_event repeat_event = {
 			.data = appsurf,
 			.cb = handle_key_repeat,
 			.arg = {
-				.u = keysym,
+				.u = false, //next we generate release event
 			},
 		};
 		tw_event_queue_add_timer(&globals->event_queue,
 					 &globals->inputs.repeat_info,
 					 &repeat_event);
 	}
-
-	keycb_t keycb = (appsurf && appsurf->keycb) ? appsurf->keycb : NULL;
-	if (keycb)
-		keycb(appsurf, keysym, modifier,
-		      (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? 1 : 0);
+	appsurf->do_frame(appsurf, &e);
 }
 
 static
@@ -168,7 +187,7 @@ void handle_modifiers(void *data,
 	struct wl_globals *globals = (struct wl_globals *)data;
 	xkb_state_update_mask(globals->inputs.kstate,
 			      mods_depressed, mods_latched, mods_locked, 0, 0, group);
-	globals->inputs.serial = serial;
+	globals->inputs.modifiers = tw_mod_mask_from_xkb_state(globals->inputs.kstate);
 }
 
 static void
@@ -220,9 +239,10 @@ handle_keyboard_enter(void *data,
 		      struct wl_array *keys)
 {
 	struct wl_globals *globals = (struct wl_globals *)data;
-	globals->inputs.focused_surface = surface;
-	globals->inputs.serial = serial;
-	fprintf(stderr, "keyboard got focus\n");
+	globals->inputs.keyboard_focused = surface;
+	struct app_surface *app = app_surface_from_wl_surface(surface);
+	app->wl_globals = globals;
+	fprintf(stderr, "keyboard has\n");
 }
 
 static void
@@ -232,8 +252,7 @@ handle_keyboard_leave(void *data,
 		    struct wl_surface *surface)
 {
 	struct wl_globals *globals = (struct wl_globals *)data;
-	globals->inputs.focused_surface = NULL;
-	globals->inputs.serial = serial;
+	globals->inputs.keyboard_focused = NULL;
 	fprintf(stderr, "keyboard lost focus\n");
 }
 
@@ -251,32 +270,60 @@ struct wl_keyboard_listener keyboard_listener = {
 //////////////////////////////////////////////////////////////////////////
 /////////////////////////////Pointer listeners////////////////////////////
 //////////////////////////////////////////////////////////////////////////
-
-//the code is accumlate for the frame event.
-//the bit map info
-//[1] motion.
-//[2-4] 2->left. 4->right. 8->middle. 16->dclick
-// 5-> axis
 enum POINTER_EVENT_CODE {
-	//the event doesn't need to be handle
-	POINTER_ENTER = 0,
-	POINTER_LEAVE = 0,
+	//focus, unfocus
+	POINTER_ENTER = 1 << 0,
+	POINTER_LEAVE = 1 << 1,
 	//motion
-	POINTER_MOTION = 1,
-
-	//the btn group, no middle key handled
-	POINTER_BTN_LEFT =  2,
-	POINTER_BTN_RIGHT = 4,
-	POINTER_BTN_MID = 8,
-	POINTER_BTN_DCLICK = 16,
-	//axis events, we only handle a few.
-	POINTER_AXIS = 32,
-
+	POINTER_MOTION = 1 << 2,
+	//btn
+	POINTER_BTN = 1 << 3,
+	//AXIS
+	POINTER_AXIS = 1 << 4,
 };
+
+static inline void
+pointer_event_clean(struct wl_globals *globals)
+{
+	//we dont change the pointer state here since you may want to query it
+	//later
+	globals->inputs.dx_axis = 0;
+	globals->inputs.dy_axis = 0;
+	globals->inputs.pointer_events = 0;
+}
+
+static void
+pointer_init(struct wl_pointer *wl_pointer)
+{
+	struct wl_globals *globals = wl_pointer_get_user_data(wl_pointer);
+	if (!globals)
+		return;
+	globals->inputs.cursor_theme = wl_cursor_theme_load("whiteglass", 32, globals->shm);
+	globals->inputs.w = 32;
+	globals->inputs.cursor = wl_cursor_theme_get_cursor(
+		globals->inputs.cursor_theme, "plus");
+	globals->inputs.cursor_surface =
+		wl_compositor_create_surface(globals->compositor);
+	globals->inputs.cursor_buffer =
+		wl_cursor_image_get_buffer(globals->inputs.cursor->images[0]);
+	pointer_event_clean(globals);
+}
+
+static void
+pointer_destroy(struct wl_pointer *wl_pointer)
+{
+	struct wl_globals *globals = wl_pointer_get_user_data(wl_pointer);
+	wl_cursor_theme_destroy(globals->inputs.cursor_theme);
+	wl_surface_destroy(globals->inputs.cursor_surface);
+
+	wl_pointer_destroy(wl_pointer);
+}
+
 
 static void
 pointer_cursor_done(void *data, struct wl_callback *callback, uint32_t callback_data)
 {
+	//you do necessary need this
 	/* fprintf(stderr, "cursor set!\n"); */
 	wl_callback_destroy(callback);
 }
@@ -289,24 +336,30 @@ pointer_enter(void *data,
 	      wl_fixed_t surface_x,
 	      wl_fixed_t surface_y)
 {
+	struct wl_globals *globals = data;
+	struct app_surface *app = app_surface_from_wl_surface(surface);
+	globals->inputs.pointer_focused = surface;
+	app->wl_globals = globals;
+
+	globals->inputs.pointer_events = POINTER_ENTER;
+	//this works only if you have one surface, we may need to set cursor
+	//every time
 	static bool cursor_set = false;
-	struct wl_globals *globals = (struct wl_globals *)data;
-	globals->inputs.focused_surface = surface;
-	globals->inputs.serial = serial;
 	if (!cursor_set) {
-		struct wl_surface *csurface = globals->inputs.cursor_surface;
-		struct wl_buffer *cbuffer = globals->inputs.cursor_buffer;
-		struct wl_callback *callback = wl_surface_frame(csurface);
+		struct wl_callback *callback =
+			wl_surface_frame(globals->inputs.cursor_surface);
 		globals->inputs.cursor_done_listener.done = pointer_cursor_done;
 		wl_callback_add_listener(callback, &globals->inputs.cursor_done_listener, NULL);
 		//give a role to the the cursor_surface
-		wl_pointer_set_cursor(wl_pointer, serial, csurface, 16, 16);
-		wl_surface_attach(csurface, cbuffer, 0, 0);
-		wl_surface_damage(csurface, 0, 0, 32, 32);
-		wl_surface_commit(csurface);
+		wl_pointer_set_cursor(wl_pointer,
+				      serial, globals->inputs.cursor_surface,
+				      globals->inputs.w/2, globals->inputs.w/2);
+		wl_surface_attach(globals->inputs.cursor_surface,
+				  globals->inputs.cursor_buffer, 0, 0);
+		wl_surface_damage(globals->inputs.cursor_surface, 0, 0,
+				  globals->inputs.w, globals->inputs.w);
+		wl_surface_commit(globals->inputs.cursor_surface);
 	}
-
-	globals->inputs.cursor_events = POINTER_ENTER;
 }
 
 static void
@@ -315,65 +368,21 @@ pointer_leave(void *data,
 	      uint32_t serial,
 	      struct wl_surface *surface)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
-	globals->inputs.focused_surface = NULL;
-	globals->inputs.cursor_events = POINTER_LEAVE;
-	globals->inputs.serial = serial;
+	struct wl_globals *globals = data;
+	globals->inputs.pointer_focused = NULL;
 }
 
 static void
 pointer_motion(void *data,
 	       struct wl_pointer *wl_pointer,
 	       uint32_t serial,
-	       wl_fixed_t surface_x,
-	       wl_fixed_t surface_y)
+	       wl_fixed_t x,
+	       wl_fixed_t y)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
-	globals->inputs.cx = wl_fixed_to_int(surface_x);
-	globals->inputs.cy = wl_fixed_to_int(surface_y);
-	globals->inputs.cursor_events |= POINTER_MOTION;
-	globals->inputs.serial = serial;
-}
-
-static void
-pointer_frame(void *data,
-	      struct wl_pointer *wl_pointer)
-{
-	struct wl_globals *globals = (struct wl_globals *)data;
-	if (!globals->inputs.cursor_events)
-		return;
-	//with the line above, we won't have any null surface problem
-	struct wl_surface *focused = globals->inputs.focused_surface;
-	struct app_surface *appsurf = (focused) ? app_surface_from_wl_surface(focused) : NULL;
-	pointron_t ptr_on = (appsurf && appsurf->pointron) ? appsurf->pointron : NULL;
-	pointrbtn_t ptr_btn = (appsurf && appsurf->pointrbtn) ? appsurf->pointrbtn : NULL;
-	pointraxis_t ptr_axis = (appsurf && appsurf->pointraxis) ? appsurf->pointraxis : NULL;
-
-	uint32_t event = globals->inputs.cursor_events;
-	if ((event & POINTER_AXIS) && ptr_axis)
-		ptr_axis(appsurf,
-			 globals->inputs.axis_pos, globals->inputs.axis,
-			 globals->inputs.cx, globals->inputs.cy);
-
-	if ((event & POINTER_MOTION) && ptr_on)
-		ptr_on(appsurf, globals->inputs.cx, globals->inputs.cy);
-
-	if ((event & POINTER_BTN_LEFT) && ptr_btn)
-		ptr_btn(appsurf, TWBTN_LEFT, globals->inputs.cursor_state,
-				   globals->inputs.cx, globals->inputs.cy);
-	if ((event & POINTER_BTN_RIGHT) && ptr_btn)
-		ptr_btn(appsurf, TWBTN_RIGHT, globals->inputs.cursor_state,
-				   globals->inputs.cx, globals->inputs.cy);
-	if ((event & POINTER_BTN_MID) && ptr_btn)
-		ptr_btn(appsurf, TWBTN_MID, globals->inputs.cursor_state,
-				   globals->inputs.cx, globals->inputs.cy);
-
-	/* fprintf(stderr, "we are getting a cursor event it is %s.\n", */
-	/*	(event & POINTER_MOTION) ? "motion" : */
-	/*	(event & POINTER_BTN_LEFT) ? "button" : "other"); */
-
-	//finally erase all previous events
-	globals->inputs.cursor_events = 0;
+	struct wl_globals *globals = data;
+	globals->inputs.sx = wl_fixed_to_int(x);
+	globals->inputs.sy = wl_fixed_to_int(y);
+	globals->inputs.pointer_events |=  POINTER_MOTION;
 }
 
 
@@ -385,45 +394,35 @@ pointer_button(void *data,
 	       uint32_t button,
 	       uint32_t state)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
-	globals->inputs.cursor_state = state;
-	globals->inputs.serial = serial;
-
-	switch (button) {
-	case BTN_LEFT:
-		globals->inputs.cursor_events |= POINTER_BTN_LEFT;
-		break;
-	case BTN_RIGHT:
-		globals->inputs.cursor_events |= POINTER_BTN_RIGHT;
-		break;
-	case BTN_MIDDLE:
-		globals->inputs.cursor_events |= POINTER_BTN_MID;
-		break;
-	default:
-		break;
-	}
+	struct wl_globals *globals = data;
+	globals->inputs.millisec = time;
+	globals->inputs.btn_pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
+	globals->inputs.btn = button;
+	globals->inputs.pointer_events |= POINTER_BTN;
 }
 
 static void
 pointer_axis(void *data,
 	     struct wl_pointer *wl_pointer,
 	     uint32_t time,
-	     uint32_t axis,
+	     uint32_t axis, //vertial or horizental
 	     wl_fixed_t value)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
-	//in the surface coordinates, (0, 0) sits on top left, so we need to
-	//reverse it
-	globals->inputs.axis_pos = wl_fixed_to_int(value);
-	globals->inputs.axis = axis;
-	globals->inputs.cursor_events |= POINTER_AXIS;
+	struct wl_globals *globals = data;
+	globals->inputs.millisec = time;
+
+	globals->inputs.dx_axis += (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) ?
+		wl_fixed_to_int(value) : 0;
+	globals->inputs.dy_axis += (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) ?
+		wl_fixed_to_int(value) : 0;
+	globals->inputs.pointer_events |= POINTER_AXIS;
 }
 
 static void
 pointer_axis_src(void *data,
 		 struct wl_pointer *wl_pointer, uint32_t src)
 {
-//	fprintf(stderr, "axis src event\n");
+	//distinguish the type of wheel or pad, we do not handle that
 }
 
 static void
@@ -431,18 +430,70 @@ pointer_axis_stop(void *data,
 		  struct wl_pointer *wl_pointer,
 		  uint32_t time, uint32_t axis)
 {
-//	fprintf(stderr, "axis end event\n");
+	struct wl_globals *globals = data;
+	globals->inputs.millisec = time;
+	//we do not implement kinect scrolling
 }
 
 static void
-pointer_axis_discret(void *data, struct wl_pointer *wl_pointer,
+pointer_axis_discrete(void *data, struct wl_pointer *wl_pointer,
 		     uint32_t axis, int32_t discrete)
 {
-	//useless for a mouse
-//	fprintf(stderr, "axis discrete event\n");
+	//the discrete representation of the axis event, for example(a travel of
+	//102 pixel represent) 2 times of wheel scrolling, the axis event is
+	//more useful.
 }
 
-//make all of the them available, so we don't crash
+//once a frame event generate, we need to accumelate all previous pointer events
+//and then send them all. Call frame on them, all though you should not receive
+//more than one type of pointer event
+static void
+pointer_frame(void *data,
+	      struct wl_pointer *wl_pointer)
+{
+	//we need somehow generate a timestamp
+	struct app_event e;
+	struct wl_globals *globals = data;
+
+	if (!globals->inputs.pointer_events)
+		return;
+
+	struct wl_surface *focused = globals->inputs.pointer_focused;
+	struct app_surface *appsurf = (focused) ?
+		app_surface_from_wl_surface(focused) : NULL;
+	if (!appsurf || !appsurf->do_frame)
+		return;
+
+	e.time = globals->inputs.millisec;
+	uint32_t event = globals->inputs.pointer_events;
+	if (event & POINTER_AXIS) {
+		e.type = TW_POINTER_AXIS;
+		e.axis.mod = globals->inputs.modifiers;
+		e.axis.dx = globals->inputs.dx_axis;
+		e.axis.dy = globals->inputs.dy_axis;
+	}
+	if (event & POINTER_MOTION) {
+		e.type = TW_POINTER_MOTION;
+		e.ptr.x = globals->inputs.sx;
+		e.ptr.y = globals->inputs.sy;
+		e.ptr.mod = globals->inputs.modifiers;
+		appsurf->do_frame(appsurf, &e);
+	}
+	if (event & POINTER_BTN) {
+		e.type = TW_POINTER_BTN;
+		e.ptr.btn = globals->inputs.btn;
+		e.ptr.x = globals->inputs.sx;
+		e.ptr.y = globals->inputs.sy;;
+		e.ptr.state = globals->inputs.btn_pressed;
+		e.ptr.mod = globals->inputs.modifiers;
+		appsurf->do_frame(appsurf, &e);
+	}
+	pointer_event_clean(globals);
+}
+
+
+//the default grab of pointer, other type grab(resize), or types like
+//data_device. There should be other type of grab
 static struct wl_pointer_listener pointer_listener = {
 	.enter = pointer_enter,
 	.leave = pointer_leave,
@@ -452,7 +503,7 @@ static struct wl_pointer_listener pointer_listener = {
 	.axis  = pointer_axis,
 	.axis_source = pointer_axis_src,
 	.axis_stop = pointer_axis_stop,
-	.axis_discrete = pointer_axis_discret,
+	.axis_discrete = pointer_axis_discrete,
 };
 
 
@@ -480,13 +531,9 @@ seat_capabilities(void *data,
 	}
 	if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
 		globals->inputs.wl_pointer = wl_seat_get_pointer(wl_seat);
-		fprintf(stderr, "got a mouse\n");
-		//TODO use the name in the global
-		globals->inputs.cursor_theme = wl_cursor_theme_load("whiteglass", 32, globals->shm);
-		globals->inputs.cursor = wl_cursor_theme_get_cursor(globals->inputs.cursor_theme, "plus");
-		globals->inputs.cursor_surface = wl_compositor_create_surface(globals->compositor);
-		globals->inputs.cursor_buffer = wl_cursor_image_get_buffer(globals->inputs.cursor->images[0]);
 		wl_pointer_add_listener(globals->inputs.wl_pointer, &pointer_listener, globals);
+		pointer_init(globals->inputs.wl_pointer);
+		fprintf(stderr, "got a mouse\n");
 	}
 	if (capabilities & WL_SEAT_CAPABILITY_TOUCH) {
 		globals->inputs.wl_touch = wl_seat_get_touch(wl_seat);
@@ -744,6 +791,10 @@ tw_event_queue_add_wl_display(struct tw_event_queue *queue, struct wl_display *d
 /*************************************************************
  *               wl_globals implementation                   *
  *************************************************************/
+#ifdef _GNU_SOURCE
+/* we want to fit wl_globals inside L1 cache */
+_Static_assert(sizeof(struct wl_globals) <= 32 * 1024, "wl_globals is too big");
+#endif
 
 void
 wl_globals_init(struct wl_globals *globals, struct wl_display *display)
@@ -760,23 +811,8 @@ wl_globals_init(struct wl_globals *globals, struct wl_display *display)
 void
 wl_globals_release(struct wl_globals *globals)
 {
-	//we distroy everything except wl_display, since we get that from user,
-	//it is up to user to clear it
-
-	//destroy the input
-	if (globals->inputs.cursor_theme) {
-		//there is no need to destroy the cursor wl_buffer or wl_cursor,
-		//it gets cleaned up automatically in theme_destroy
-		wl_cursor_theme_destroy(globals->inputs.cursor_theme);
-		wl_surface_destroy(globals->inputs.cursor_surface);
-		globals->inputs.cursor_theme = NULL;
-		globals->inputs.cursor = NULL;
-		globals->inputs.cursor_buffer = NULL;
-		globals->inputs.cursor_surface = NULL;
-		globals->inputs.focused_surface = NULL;
-	}
 	if (globals->inputs.wl_pointer)
-		wl_pointer_destroy(globals->inputs.wl_pointer);
+		pointer_destroy(globals->inputs.wl_pointer);
 	if (globals->inputs.wl_keyboard)
 		wl_keyboard_destroy(globals->inputs.wl_keyboard);
 	if (globals->inputs.wl_touch)
@@ -802,7 +838,7 @@ wl_globals_release(struct wl_globals *globals)
 }
 
 //we need to have a global remove function here
-
+//if we have our own configurator, the wl_globals can be really useful.
 int
 wl_globals_announce(struct wl_globals *globals,
 		    struct wl_registry *wl_registry,
