@@ -4,6 +4,10 @@ add_library(twclient
   ui.c
   egl.c
   buffer.c
+  event_queue.c
+  #inputs
+  keyboard.c
+  pointer.c
   )
 
 target_include_directories(twclient PUBLIC
