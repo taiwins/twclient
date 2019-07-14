@@ -27,8 +27,6 @@
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_ZERO_COMMAND_MEMORY
 
-#include "../client.h"
-#include "../ui.h"
 #include "nk_wl_internal.h"
 
 /////////////////////////////////// NK_CAIRO text handler /////////////////////////////////////

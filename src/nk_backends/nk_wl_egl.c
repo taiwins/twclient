@@ -23,8 +23,7 @@
 
 #define NK_SHADER_VERSION "#version 330 core\n"
 
-#include "../client.h"
-#include "../egl.h"
+#include <egl.h>
 #include "nk_wl_internal.h"
 #include <helpers.h>
 

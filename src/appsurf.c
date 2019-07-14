@@ -1,7 +1,7 @@
 #include <assert.h>
-#include "client.h"
-#include "ui.h"
-#include "egl.h"
+#include <client.h>
+#include <ui.h>
+#include <egl.h>
 
 
 

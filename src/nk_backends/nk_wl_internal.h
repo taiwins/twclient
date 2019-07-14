@@ -29,10 +29,10 @@
 //this will make our struct various size, so lets put the buffer in the end
 #define NK_MAX_CTX_MEM 64 * 1024
 
+#include <ui.h>
+#include <client.h>
+#include <nuklear/nuklear.h>
 
-#include "nuklear/nuklear.h"
-#include "../client.h"
-#include "../ui.h"
 
 //we may in the end include that file so save all the trouble
 typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct app_surface *app);
