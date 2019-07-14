@@ -312,6 +312,14 @@ void app_surface_init(struct app_surface *surf, struct wl_surface *, struct wl_p
  */
 void app_surface_request_frame(struct app_surface *surf);
 
+/**
+ * /brief kick off the drawing for the surface
+ *
+ * user call this function to start drawing. It triggers the frames untils
+ * app_surface_release is called.
+ */
+void app_surface_frame(struct app_surface *surf, bool anime);
+
 
 /**
  * /brief the universal release function
@@ -335,25 +343,6 @@ app_surface_end_frame_request(struct app_surface *surf)
 	surf->need_animation = false;
 }
 
-/**
- * /brief kick off the drawing for the surface
- *
- * user call this function to start drawing. It triggers the frames untils
- * app_surface_release is called.
- */
-static inline void
-app_surface_frame(struct app_surface *surf, bool anime)
-{
-	struct app_event e = {
-		.type = TW_TIMER,
-		.time = 0,
-	};
-	//this is the best we
-	surf->need_animation = anime;
-	if (anime)
-		app_surface_request_frame(surf);
-	surf->do_frame(surf, &e);
-}
 
 
 /**
