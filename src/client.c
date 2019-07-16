@@ -31,6 +31,9 @@ extern void tw_keyboard_destroy(struct wl_keyboard *);
 extern void tw_pointer_init(struct wl_pointer *, struct wl_globals *);
 extern void tw_pointer_destroy(struct wl_pointer *);
 
+extern void tw_touch_init(struct wl_touch *, struct wl_globals *);
+extern void tw_touch_destroy(struct wl_touch *);
+
 
 /*************************************************************
  *                  wl_shm implementation                    *

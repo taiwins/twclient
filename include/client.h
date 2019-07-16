@@ -68,7 +68,7 @@ struct wl_globals {
 			xkb_keycode_t keycode;
 			xkb_keysym_t keysym;
 		};
-		//pointer
+		//pointer, touch use this as well
 		struct {
 			char cursor_theme_name[64];
 			struct wl_cursor *cursor;
@@ -78,17 +78,13 @@ struct wl_globals {
 			struct wl_callback_listener cursor_done_listener;
 			struct wl_surface *pointer_focused; //the surface that cursor is on
 			//state
-			uint32_t pointer_events;
 			uint32_t btn;
 			bool btn_pressed;
+			uint32_t enter_serial;
+			uint32_t pointer_events;
 			short sx, sy; //screen coordinates
 			uint32_t dx_axis, dy_axis; //axis advance
 			short w;
-		};
-		//touch
-		struct {
-			bool touch_down;
-			short tsx, tsy; //touch point
 		};
 
 	} inputs;
