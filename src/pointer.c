@@ -39,15 +39,35 @@ pointer_event_clean(struct wl_globals *globals)
 	globals->inputs.pointer_events = 0;
 }
 
+/* static void */
+/* pointer_cursor_done(void *data, struct wl_callback *callback, uint32_t callback_data) */
+/* { */
+/*	//you do necessary need this */
+/*	/\* fprintf(stderr, "cursor set!\n"); *\/ */
+/*	wl_callback_destroy(callback); */
+/* } */
 
 
 static void
-pointer_cursor_done(void *data, struct wl_callback *callback, uint32_t callback_data)
+pointer_set_cursor(struct wl_pointer *wl_pointer)
 {
-	//you do necessary need this
-	/* fprintf(stderr, "cursor set!\n"); */
-	wl_callback_destroy(callback);
+	struct wl_globals *globals = wl_pointer_get_user_data(wl_pointer);
+	/* struct wl_callback *callback = */
+	/*	wl_surface_frame(globals->inputs.cursor_surface); */
+	/* globals->inputs.cursor_done_listener.done = pointer_cursor_done; */
+	/* wl_callback_add_listener(callback, &globals->inputs.cursor_done_listener, NULL); */
+	//give a role to the the cursor_surface
+	wl_surface_attach(globals->inputs.cursor_surface,
+			  globals->inputs.cursor_buffer, 0, 0);
+	wl_surface_damage(globals->inputs.cursor_surface, 0, 0,
+			  globals->inputs.w, globals->inputs.w);
+	wl_surface_commit(globals->inputs.cursor_surface);
+	wl_pointer_set_cursor(wl_pointer,
+			      globals->inputs.enter_serial,
+			      globals->inputs.cursor_surface,
+			      globals->inputs.w/2, globals->inputs.w/2);
 }
+
 
 static void
 pointer_enter(void *data,
@@ -60,27 +80,15 @@ pointer_enter(void *data,
 	struct wl_globals *globals = data;
 	struct app_surface *app = app_surface_from_wl_surface(surface);
 	globals->inputs.pointer_focused = surface;
+	globals->inputs.enter_serial = serial;
 	app->wl_globals = globals;
 
 	globals->inputs.pointer_events = POINTER_ENTER;
 	//this works only if you have one surface, we may need to set cursor
 	//every time
 	static bool cursor_set = false;
-	if (!cursor_set) {
-		struct wl_callback *callback =
-			wl_surface_frame(globals->inputs.cursor_surface);
-		globals->inputs.cursor_done_listener.done = pointer_cursor_done;
-		wl_callback_add_listener(callback, &globals->inputs.cursor_done_listener, NULL);
-		//give a role to the the cursor_surface
-		wl_pointer_set_cursor(wl_pointer,
-				      serial, globals->inputs.cursor_surface,
-				      globals->inputs.w/2, globals->inputs.w/2);
-		wl_surface_attach(globals->inputs.cursor_surface,
-				  globals->inputs.cursor_buffer, 0, 0);
-		wl_surface_damage(globals->inputs.cursor_surface, 0, 0,
-				  globals->inputs.w, globals->inputs.w);
-		wl_surface_commit(globals->inputs.cursor_surface);
-	}
+	if (!cursor_set)
+		pointer_set_cursor(wl_pointer);
 }
 
 static void
@@ -91,6 +99,7 @@ pointer_leave(void *data,
 {
 	struct wl_globals *globals = data;
 	globals->inputs.pointer_focused = NULL;
+	globals->inputs.pointer_events = POINTER_LEAVE;
 }
 
 static void
@@ -236,6 +245,7 @@ tw_pointer_init(struct wl_pointer *wl_pointer, struct wl_globals *globals)
 		return;
 
 	wl_pointer_add_listener(wl_pointer, &pointer_listener, globals);
+	//set pointer theme and surface
 	globals->inputs.cursor_theme = wl_cursor_theme_load("whiteglass", 32, globals->shm);
 	globals->inputs.w = 32;
 	globals->inputs.cursor = wl_cursor_theme_get_cursor(
@@ -248,7 +258,6 @@ tw_pointer_init(struct wl_pointer *wl_pointer, struct wl_globals *globals)
 }
 
 
-
 void
 tw_pointer_destroy(struct wl_pointer *wl_pointer)
 {
@@ -257,4 +266,132 @@ tw_pointer_destroy(struct wl_pointer *wl_pointer)
 	wl_surface_destroy(globals->inputs.cursor_surface);
 
 	wl_pointer_destroy(wl_pointer);
+}
+
+
+
+/*************************************************************************/
+/*                    wl_touch_implements as pointer                     */
+/*************************************************************************/
+
+
+static void
+handle_touch_down(void *data,
+		  struct wl_touch *wl_touch,
+		  uint32_t serial,
+		  uint32_t time,
+		  struct wl_surface *surface,
+		  int32_t id,
+		  wl_fixed_t x,
+		  wl_fixed_t y)
+{
+	(void)id;
+	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	if (!g->inputs.wl_pointer)
+		return;
+	//setup the position and surface
+	g->inputs.sx = wl_fixed_to_int(x);
+	g->inputs.sy = wl_fixed_to_int(y);
+	g->inputs.pointer_focused = surface;
+
+	pointer_button(data, g->inputs.wl_pointer, serial, time,
+		       BTN_LEFT,
+		WL_POINTER_BUTTON_STATE_PRESSED);
+	//well. The thing we could do we simulate the pointer events with touch for now
+
+}
+
+static void
+handle_touch_up(void *data,
+		struct wl_touch *wl_touch,
+		uint32_t serial,
+		uint32_t time,
+		int32_t id)
+{
+	(void)id;
+	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	if (!g->inputs.wl_pointer)
+		return;
+	/* g->inputs.pointer_focused = NULL; */
+	pointer_button(data, g->inputs.wl_pointer, serial, time,
+		       BTN_LEFT,
+		WL_POINTER_BUTTON_STATE_RELEASED);
+}
+
+static void
+handle_touch_motion(void *data,
+		    struct wl_touch *wl_touch,
+		    uint32_t time,
+		    int32_t id,
+		    wl_fixed_t x,
+		    wl_fixed_t y)
+{
+	(void)id;
+	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	if (!g->inputs.wl_pointer)
+		return;
+	pointer_motion(data, g->inputs.wl_pointer, time, x, y);
+}
+
+
+static void
+handle_touch_cancel(void *data,
+		    struct wl_touch *wl_touch)
+{
+	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	if (!g->inputs.wl_pointer)
+		return;
+	pointer_event_clean(g);
+}
+
+
+static void
+handle_touch_frame(void *data,
+		   struct wl_touch *wl_touch)
+{
+	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	if (!g->inputs.wl_pointer)
+		return;
+	pointer_frame(data, g->inputs.wl_pointer);
+}
+
+static void
+handle_touch_shape(void *data,
+		   struct wl_touch *wl_touch,
+		   int32_t id,
+		   wl_fixed_t major,
+		   wl_fixed_t minor)
+{
+
+}
+static void
+handle_touch_orientation(void *data,
+			 struct wl_touch *wl_touch,
+			 int32_t id,
+			 wl_fixed_t orientation)
+{
+}
+
+
+//default touch grap.
+static struct wl_touch_listener touch_listener = {
+	.down = handle_touch_down,
+	.up = handle_touch_up,
+	.motion = handle_touch_motion,
+	.frame = handle_touch_frame,
+	.cancel = handle_touch_cancel,
+	.shape = handle_touch_shape,
+	.orientation = handle_touch_orientation,
+};
+
+
+void
+tw_touch_init(struct wl_touch *wl_touch, struct wl_globals *globals)
+{
+	wl_touch_add_listener(wl_touch, &touch_listener, globals);
+}
+void
+tw_touch_destroy(struct wl_touch *wl_touch)
+{
+	wl_touch_destroy(wl_touch);
 }
