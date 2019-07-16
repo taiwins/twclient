@@ -45,7 +45,7 @@ handle_key_repeat(struct tw_event *e, int fd)
 
 	if (globals && surf->do_frame &&
 	    globals->inputs.key_pressed &&
-		globals->inputs.keysym == globals->inputs.keysym) {
+		e->arg.u == globals->inputs.keysym) {
 		//there are two ways to generate press and release
 
 		//1) giving two do_frame event, but in this way we may get
@@ -60,10 +60,11 @@ handle_key_repeat(struct tw_event *e, int fd)
 				.code = globals->inputs.keycode,
 				.sym = globals->inputs.keysym,
 				.mod = globals->inputs.modifiers,
-				.state = (bool)e->arg.u,
+				.state = false,
 			},
 		};
-		e->arg.u = !(bool)e->arg.u;
+		surf->do_frame(surf, &ae);
+		ae.key.state = true;
 		surf->do_frame(surf, &ae);
 		return TW_EVENT_NOOP;
 	} else
@@ -115,7 +116,7 @@ handle_key(void *data,
 			.data = appsurf,
 			.cb = handle_key_repeat,
 			.arg = {
-				.u = false, //next we generate release event
+				.u = globals->inputs.keysym,
 			},
 		};
 		tw_event_queue_add_timer(&globals->event_queue,

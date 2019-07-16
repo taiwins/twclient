@@ -131,8 +131,8 @@ nk_egl_prepare_font(struct nk_egl_backend *bkend, size_t font_size)
 	const void *image;
 	struct nk_font_config cfg = nk_font_config(font_size);
 
-	size_t len_range  = merge_unicode_range(nk_font_default_glyph_ranges(),
-						pua_range, NULL);
+	//size_t len_range  = merge_unicode_range(nk_font_default_glyph_ranges(),
+	//					pua_range, NULL);
 
 	nk_font_atlas_init_default(&bkend->atlas);
 	nk_font_atlas_begin(&bkend->atlas);
@@ -311,9 +311,11 @@ release_backend(struct nk_egl_backend *bkend)
 		glDeleteBuffers(1, &bkend->vbo);
 		glDeleteBuffers(1, &bkend->ebo);
 		glDeleteVertexArrays(1, &bkend->vao);
+		glDetachShader(GL_VERTEX_SHADER, bkend->vs);
 		glDeleteShader(bkend->vs);
+		glDetachShader(GL_FRAGMENT_SHADER, bkend->fs);
 		glDeleteShader(bkend->fs);
-		glDeleteShader(bkend->glprog);
+		glDeleteProgram(bkend->glprog);
 		//nuklear resource
 		//egl free context
 		eglMakeCurrent(bkend->env.egl_display, NULL, NULL, NULL);

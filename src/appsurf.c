@@ -174,6 +174,7 @@ shm_buffer_impl_app_surface(struct app_surface *surf, struct shm_pool *pool,
 	surf->px = 0; surf->py = 0;
 	for (int i = 0; i < 2; i++) {
 		surf->wl_buffer[i] = shm_pool_alloc_buffer(pool, w, h);
+		wl_buffer_add_listener(surf->wl_buffer[i], &shm_wl_buffer_impl, surf);
 		surf->dirty[i] = false;
 		surf->committed[i] = false;
 		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
