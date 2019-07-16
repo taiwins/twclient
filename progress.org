@@ -1,6 +1,6 @@
 * Client side work
-* [%] refactoring works
-** TODO change the ~nk_wl_impl_*~ calls
+* [33%] refactoring works
+** DONE change the ~nk_wl_impl_*~ calls
    This allows the client to have multiple gui windows at its disposal. Or a
    simple fullscreen application.
 ** TODO the drawing of complex applications.
