@@ -178,76 +178,6 @@ nk_wl_apply_color(struct nk_wl_backend *bkend, const struct taiwins_theme *theme
 	nk_style_from_table(&bkend->ctx, table);
 }
 
-/********************************* unicode ****************************************/
-#ifdef NK_INCLUDE_FONT_BAKING
-static inline void
-union_unicode_range(const nk_rune left[2], const nk_rune right[2], nk_rune out[2])
-{
-	nk_rune tmp[2];
-	tmp[0] = left[0] < right[0] ? left[0] : right[0];
-	tmp[1] = left[1] > right[1] ? left[1] : right[1];
-	out[0] = tmp[0];
-	out[1] = tmp[1];
-}
-
-//return true if left and right are insersected, else false
-static inline bool
-intersect_unicode_range(const nk_rune left[2], const nk_rune right[2])
-{
-	return (left[0] <= right[1] && left[1] >= right[1]) ||
-		(left[0] <= right[0] && left[1] >= right[0]);
-}
-
-static inline int
-unicode_range_compare(const void *l, const void *r)
-{
-	const nk_rune *range_left = (const nk_rune *)l;
-	const nk_rune *range_right = (const nk_rune *)r;
-	return ((int)range_left[0] - (int)range_right[0]);
-}
-
-static int
-merge_unicode_range(const nk_rune *left, const nk_rune *right, nk_rune *out)
-{
-	//get the range
-	int left_size = 0;
-	while(*(left+left_size)) left_size++;
-	int right_size = 0;
-	while(*(right+right_size)) right_size++;
-	//sort the range,
-	nk_rune sorted_ranges[left_size+right_size];
-	memcpy(sorted_ranges, left, sizeof(nk_rune) * left_size);
-	memcpy(sorted_ranges+left_size, right, sizeof(nk_rune) * right_size);
-	qsort(sorted_ranges, (left_size+right_size)/2, sizeof(nk_rune) * 2,
-	      unicode_range_compare);
-	//merge algorithm
-	nk_rune merged[left_size+right_size+1];
-	merged[0] = sorted_ranges[0];
-	merged[1] = sorted_ranges[1];
-	int m = 0;
-	for (int i = 0; i < (left_size+right_size) / 2; i++) {
-		if (intersect_unicode_range(&sorted_ranges[i*2],
-					    &merged[2*m]))
-			union_unicode_range(&sorted_ranges[i*2], &merged[2*m],
-					    &merged[2*m]);
-		else {
-			m++;
-			merged[2*m] = sorted_ranges[2*i];
-			merged[2*m+1] = sorted_ranges[2*i+1];
-		}
-	}
-	m++;
-	merged[2*m] = 0;
-
-	if (!out)
-		return 2*m;
-	memcpy(out, merged, (2*m+1) * sizeof(nk_rune));
-	return 2*m;
-}
-
-#endif /* NK_INCLUDE_FONT_BAKING */
-
-
 /********************************* input ****************************************/
 
 /* Clear the retained input state
@@ -550,5 +480,81 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app, nk_wl_draw
 
 
 //there are quite a few code we can write here for sure.
+
+
+
+/********************************* unicode ****************************************/
+
+#ifdef NK_INCLUDE_FONT_BAKING
+/*
+static inline void
+union_unicode_range(const nk_rune left[2], const nk_rune right[2], nk_rune out[2])
+{
+	nk_rune tmp[2];
+	tmp[0] = left[0] < right[0] ? left[0] : right[0];
+	tmp[1] = left[1] > right[1] ? left[1] : right[1];
+	out[0] = tmp[0];
+	out[1] = tmp[1];
+}
+
+//return true if left and right are insersected, else false
+static inline bool
+intersect_unicode_range(const nk_rune left[2], const nk_rune right[2])
+{
+	return (left[0] <= right[1] && left[1] >= right[1]) ||
+		(left[0] <= right[0] && left[1] >= right[0]);
+}
+
+static inline int
+unicode_range_compare(const void *l, const void *r)
+{
+	const nk_rune *range_left = (const nk_rune *)l;
+	const nk_rune *range_right = (const nk_rune *)r;
+	return ((int)range_left[0] - (int)range_right[0]);
+}
+
+static int
+merge_unicode_range(const nk_rune *left, const nk_rune *right, nk_rune *out)
+{
+	//get the range
+	int left_size = 0;
+	while(*(left+left_size)) left_size++;
+	int right_size = 0;
+	while(*(right+right_size)) right_size++;
+	//sort the range,
+	nk_rune sorted_ranges[left_size+right_size];
+	memcpy(sorted_ranges, left, sizeof(nk_rune) * left_size);
+	memcpy(sorted_ranges+left_size, right, sizeof(nk_rune) * right_size);
+	qsort(sorted_ranges, (left_size+right_size)/2, sizeof(nk_rune) * 2,
+	      unicode_range_compare);
+	//merge algorithm
+	nk_rune merged[left_size+right_size+1];
+	merged[0] = sorted_ranges[0];
+	merged[1] = sorted_ranges[1];
+	int m = 0;
+	for (int i = 0; i < (left_size+right_size) / 2; i++) {
+		if (intersect_unicode_range(&sorted_ranges[i*2],
+					    &merged[2*m]))
+			union_unicode_range(&sorted_ranges[i*2], &merged[2*m],
+					    &merged[2*m]);
+		else {
+			m++;
+			merged[2*m] = sorted_ranges[2*i];
+			merged[2*m+1] = sorted_ranges[2*i+1];
+		}
+	}
+	m++;
+	merged[2*m] = 0;
+
+	if (!out)
+		return 2*m;
+	memcpy(out, merged, (2*m+1) * sizeof(nk_rune));
+	return 2*m;
+}
+*/
+#endif /* NK_INCLUDE_FONT_BAKING */
+
+
+
 
 #endif /* EOF */
