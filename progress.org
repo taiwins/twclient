@@ -1,11 +1,11 @@
 * Client side work
-* [33%] refactoring works
+* [100%] refactoring works
 ** DONE change the ~nk_wl_impl_*~ calls
    This allows the client to have multiple gui windows at its disposal. Or a
    simple fullscreen application.
-** TODO the drawing of complex applications.
+** DONE the drawing of complex applications.
    You never tried one, I mean, never actually tried the complex programs.
-** TODO remove the 4 callbacks(ptron, ptrpress) make make them into one event
+** DONE remove the 4 callbacks(ptron, ptrpress) make make them into one event
    If you pass as an event struct, then you will need to create additional
    struct just for event.
 * [0%] BUGS
