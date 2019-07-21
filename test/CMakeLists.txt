@@ -68,3 +68,10 @@ add_executable(test_event_queue
 target_link_libraries(test_event_queue
   ${TWCLIENT_LIBRARIES}
   )
+
+add_executable(test_udev
+  test_udev.c)
+
+target_link_libraries(test_udev
+  ${TWCLIENT_LIBRARIES}
+  )
