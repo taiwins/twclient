@@ -13,6 +13,8 @@
 extern "C" {
 #endif
 
+struct udev_device;
+
 //this is accessible API
 enum tw_event_op { TW_EVENT_NOOP, TW_EVENT_DEL };
 
@@ -49,6 +51,22 @@ bool tw_event_queue_add_source(struct tw_event_queue *queue, int fd,
 bool tw_event_queue_add_file(struct tw_event_queue *queue, const char *path,
 			     struct tw_event *e, uint32_t mask);
 
+/**
+ * /brief add a device to udev monitoring system
+ *
+ * subsystem shouldn't be none.
+ */
+bool tw_event_queue_add_device(struct tw_event_queue *queue, const char *subsystem,
+			  const char *devname, struct tw_event *e);
+
+/**
+ * /brief returns an allocated udev_device
+ *
+ * you have the responsibility to free the allocated `udev_device` by calling
+ * `udev_device_unref`. And you should only call this function with udev event,
+ * otherwise the behavior is undefined
+ */
+struct udev_device *tw_event_get_udev_device(const struct tw_event *e);
 
 bool tw_event_queue_add_timer(struct tw_event_queue *queue, const struct itimerspec *interval,
 			      struct tw_event *event);

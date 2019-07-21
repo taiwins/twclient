@@ -144,6 +144,7 @@ tw_event_queue_add_file(struct tw_event_queue *queue, const char *path,
 		return false;
 	int fd = inotify_init1(IN_CLOEXEC);
 	struct tw_event_source *s = alloc_event_source(e, EPOLLIN | EPOLLET, fd);
+	wl_list_insert(&queue->head, &s->link);
 	s->close = close_inotify_watch;
 	s->pre_hook = read_inotify;
 
@@ -155,6 +156,62 @@ tw_event_queue_add_file(struct tw_event_queue *queue, const char *path,
 	return true;
 }
 
+//////////////////////////// UDEV //////////////////////////////
+
+static void
+close_udev_monitor(struct tw_event_source *src)
+{
+	struct udev_monitor *mon = src->mon;
+	struct udev *udev = udev_monitor_get_udev(mon);
+	//destroy the resources, if we only have one monitor, we should be
+	//destroying
+	udev_monitor_unref(mon);
+	udev_unref(udev);
+}
+
+struct udev_device *
+tw_event_get_udev_device(const struct tw_event *e)
+{
+	const struct tw_event_source *source =
+		container_of(e, const struct tw_event_source, event);
+	struct udev_device *dev =
+		udev_monitor_receive_device(source->mon);
+	return dev;
+	//user has the responsibility to unref it
+}
+
+bool
+tw_event_queue_add_device(struct tw_event_queue *queue, const char *subsystem,
+			  const char *devname, struct tw_event *e)
+{
+	static struct udev *udev = NULL;
+
+	if (!subsystem)
+		return false;
+	if (!udev)
+		udev = udev_new();
+	else {
+		//in other case, we should add 1 to udev monitor, indicate that
+		//we have
+		udev_ref(udev);
+	}
+
+	struct udev_monitor *mon = udev_monitor_new_from_netlink(udev, "udev");
+	udev_monitor_filter_add_match_subsystem_devtype(mon, subsystem, NULL);
+	udev_monitor_enable_receiving(mon);
+	int fd = udev_monitor_get_fd(mon);
+
+	struct tw_event_source *s = alloc_event_source(e, EPOLLIN | EPOLLET, fd);
+	s->mon = mon;
+	s->close = close_udev_monitor;
+	wl_list_insert(&queue->head, &s->link);
+
+	if (epoll_ctl(queue->pollfd, EPOLL_CTL_ADD, fd, &s->poll_event)) {
+		destroy_event_source(s);
+		return false;
+	}
+	return true;
+}
 
 //////////////////// GENERAL SOURCE ////////////////////////////
 
