@@ -38,6 +38,7 @@ find_package(LuaJIT REQUIRED)
 find_package(NVEGL)
 find_package(fontconfig REQUIRED)
 find_package(Freetype REQUIRED)
+find_package(UDEV REQUIRED)
 find_package(Vulkan REQUIRED)
 
 ###########################################################
@@ -66,12 +67,14 @@ set(TWCLIENT_INCLUDE_DIRS
   ${PIXMAN_INCLUDE_DIRS}
   ${FONTCONFIG_INCLUDE_DIR}
   ${FREETYPE_INCLUDE_DIRS}
+  ${UDEV_INCLUDE_DIRS}
   "${CMAKE_CURRENT_LIST_DIR}/include"
-  CACHE PATH "twclient include dir"
+#  CACHE PATH "twclient include dir"
   )
 
 list(REMOVE_DUPLICATES TWCLIENT_INCLUDE_DIRS)
 
+#you should be needing cache variables.
 set(TWCLIENT_TRD_LIB
   ${CTYPES_LIBRARIES}
   ${XKBCOMMON_LIBRARIES}
@@ -86,7 +89,8 @@ set(TWCLIENT_TRD_LIB
   ${PIXMAN_LIBRARIES}
   ${FONTCONFIG_LIBRARIES}
   ${FREETYPE_LIBRARIES}
-  CACHE STRING "external requirements"
+  ${UDEV_LIBRARIES}
+#  CACHE STRING "external requirements"
   )
 
 add_subdirectory(src)

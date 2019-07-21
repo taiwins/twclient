@@ -808,6 +808,11 @@ nk_cairo_destroy_bkend(struct nk_wl_backend *bkend)
 		container_of(bkend, struct nk_cairo_backend, base);
 	nk_cairo_font_done(&b->user_font);
 	nk_free(&bkend->ctx);
+	//we make it here to
+	//float unused_val = nk_sin(1.0);
+	//unused_val = nk_cos(unused_val);
+	//unused_val = nk_sqrt(unused_val);
+	//(void)unused_val;
 }
 
 
