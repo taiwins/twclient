@@ -17,14 +17,14 @@ on_device_change(struct tw_event *e, int fd)
 
 	struct udev_device *dev = tw_event_get_udev_device(e);
 	const char *name = udev_device_get_sysname(dev);
+
+	if (strstr(name, "BAT")) {
 		//do our actions
 		fprintf(stderr, "device type: %s\n", udev_device_get_devtype(dev));
 		fprintf(stderr, "device action: %s\n", udev_device_get_action(dev));
 		fprintf(stderr, "device path: %s\n", udev_device_get_syspath(dev));
-
-	/* if (strstr(name, "BAT")) { */
-
-	/* } */
+		//then we can simply get the
+	}
 	udev_device_unref(dev);
 	if (counter >= 3)
 		queue.quit = true;
