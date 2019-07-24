@@ -1,3 +1,14 @@
+include(Wayland)
+
+WAYLAND_ADD_PROTOCOL_CLIENT(proto_xdg_shell_client
+  "${WLPROTO_PATH}/stable/xdg-shell/xdg-shell.xml"
+  xdg-shell
+  )
+
+add_library(xdg_shell_client
+  ${proto_xdg_shell_client}
+  )
+
 add_library(twclient
   client.c
   appsurf.c
@@ -12,6 +23,8 @@ add_library(twclient
 
 target_include_directories(twclient PUBLIC
   ${TWCLIENT_INCLUDE_DIRS}
+  #this will work but we should extract the path from xdg_shell_client
+  "${CMAKE_BINARY_DIR}/src"
   )
 
 add_subdirectory(nk_backends)
