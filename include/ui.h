@@ -15,6 +15,7 @@
 //doesnt support jpeg in this way, but there is a cairo-jpeg project
 #include <cairo/cairo.h>
 #include <wayland-client.h>
+#include <wayland-xdg-shell-client-protocol.h>
 #include <sequential.h>
 
 #ifdef __cplusplus
@@ -213,7 +214,8 @@ struct app_event {
 		struct {
 			//xdg surface and shell surface share the same enum
 			uint32_t edge;
-			uint32_t nw, wh;
+			uint32_t nw, nh;
+			uint32_t serial;
 		} resize;
 	};
 };
@@ -244,6 +246,9 @@ typedef void (*frame_t)(struct app_surface *, const struct app_event *e);
 struct app_surface {
 	//the structure to store wl_shell_surface, xdg_shell_surface or tw_ui
 	struct wl_proxy *protocol;
+	//could be a shell surface
+	struct wl_shell_surface *shell_surface;
+	struct xdg_toplevel *xdg_surface;
 	//geometry information
 	unsigned int px, py; //anchor
 	unsigned int w, h; //size

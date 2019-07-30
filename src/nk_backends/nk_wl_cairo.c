@@ -739,13 +739,37 @@ nk_cairo_buffer_release(void *data,
 			struct wl_buffer *wl_buffer)
 {
 	struct app_surface *surf = (struct app_surface *)data;
+	bool inuse = false;
 	for (int i = 0; i < 2; i++)
 		if (surf->wl_buffer[i] == wl_buffer) {
 			surf->dirty[i] = false;
 			surf->committed[i] = false;
+			inuse = true;
 			break;
 		}
+	if (!inuse)
+		shm_pool_buffer_free(wl_buffer);
 }
+
+static void
+nk_wl_resize(struct app_surface *surf, const struct app_event *e)
+{
+	//TODO we would have memory leak here
+	for (int i = 0; i < 2; i++) {
+		//our buffer has to be freed by compositor first, otherwise we are leaking tones of memory
+		surf->wl_buffer[i] =
+			shm_pool_alloc_buffer(surf->pool, surf->s * e->resize.nw, surf->s * e->resize.nh);
+		surf->dirty[i] = NULL;
+		surf->committed[i] = NULL;
+		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
+						   nk_cairo_buffer_release, surf);
+	}
+	surf->h = e->resize.nh;
+	surf->w = e->resize.nw;
+
+}
+
+
 
 static void
 nk_cairo_destroy_app_surface(struct app_surface *app)
