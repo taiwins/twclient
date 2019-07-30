@@ -17,16 +17,21 @@
 //////////////////////////////////////////////////////////////////////////
 /////////////////////////////Pointer listeners////////////////////////////
 //////////////////////////////////////////////////////////////////////////
+//This is the default grab for wl_pointer, we need to modify this struct based on needs
+static struct wl_pointer_listener pointer_listener = {0};
+static void default_pointer_grab(struct wl_pointer_listener *);
+static void resize_pointer_grab(struct wl_pointer_listener *);
+
 enum POINTER_EVENT_CODE {
-	//focus, unfocus
-	POINTER_ENTER = 1 << 0,
-	POINTER_LEAVE = 1 << 1,
-	//motion
-	POINTER_MOTION = 1 << 2,
-	//btn
-	POINTER_BTN = 1 << 3,
-	//AXIS
-	POINTER_AXIS = 1 << 4,
+  // focus, unfocus
+  POINTER_ENTER = 1 << 0,
+  POINTER_LEAVE = 1 << 1,
+  // motion
+  POINTER_MOTION = 1 << 2,
+  // btn
+  POINTER_BTN = 1 << 3,
+  // AXIS
+  POINTER_AXIS = 1 << 4,
 };
 
 static inline void
@@ -115,6 +120,23 @@ pointer_motion(void *data,
 	globals->inputs.pointer_events |=  POINTER_MOTION;
 }
 
+static inline struct app_surface *
+pointer_button_meta(struct wl_globals *globals,
+		    uint32_t serial,
+		    uint32_t time,
+		    uint32_t button,
+		    uint32_t state)
+{
+	globals->inputs.millisec = time;
+	globals->inputs.btn_pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
+	globals->inputs.btn = button;
+	globals->inputs.pointer_events |= POINTER_BTN;
+
+	struct wl_surface *surf = globals->inputs.pointer_focused;
+	struct app_surface *app = (!surf) ? NULL :
+		app_surface_from_wl_surface(surf);
+	return app;
+}
 
 static void
 pointer_button(void *data,
@@ -125,10 +147,20 @@ pointer_button(void *data,
 	       uint32_t state)
 {
 	struct wl_globals *globals = data;
-	globals->inputs.millisec = time;
-	globals->inputs.btn_pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
-	globals->inputs.btn = button;
-	globals->inputs.pointer_events |= POINTER_BTN;
+	struct app_surface *app =
+		pointer_button_meta(globals, serial, time, button,
+				    state);
+	if (!app)
+		return;
+
+	//test if at right cornor
+	if ((float)globals->inputs.sx > 0.9 * (float)app->w &&
+	    (float)globals->inputs.sy > 0.9 * (float)app->h &&
+	    state == WL_POINTER_BUTTON_STATE_PRESSED &&
+	    button == BTN_LEFT) {
+		resize_pointer_grab(&pointer_listener);
+	}
+
 }
 
 static void
@@ -177,23 +209,30 @@ pointer_axis_discrete(void *data, struct wl_pointer *wl_pointer,
 //once a frame event generate, we need to accumelate all previous pointer events
 //and then send them all. Call frame on them, all though you should not receive
 //more than one type of pointer event
+static inline struct app_surface *
+pointer_frame_meta(struct wl_globals *globals)
+{
+	if (!globals->inputs.pointer_events)
+		return NULL;
+	struct wl_surface *focused = globals->inputs.pointer_focused;
+	struct app_surface *appsurf = (focused) ?
+		app_surface_from_wl_surface(focused) : NULL;
+	if (!appsurf || !appsurf->do_frame)
+		return NULL;
+	return appsurf;
+}
+
 static void
 pointer_frame(void *data,
 	      struct wl_pointer *wl_pointer)
 {
 	//we need somehow generate a timestamp
-	struct app_event e;
 	struct wl_globals *globals = data;
-
-	if (!globals->inputs.pointer_events)
+	struct app_surface *appsurf = pointer_frame_meta(globals);
+	if (!appsurf)
 		return;
 
-	struct wl_surface *focused = globals->inputs.pointer_focused;
-	struct app_surface *appsurf = (focused) ?
-		app_surface_from_wl_surface(focused) : NULL;
-	if (!appsurf || !appsurf->do_frame)
-		return;
-
+	struct app_event e;
 	e.time = globals->inputs.millisec;
 	uint32_t event = globals->inputs.pointer_events;
 	if (event & POINTER_AXIS) {
@@ -221,22 +260,67 @@ pointer_frame(void *data,
 	pointer_event_clean(globals);
 }
 
+static void
+default_pointer_grab(struct wl_pointer_listener *grab)
+{
+	grab->enter = pointer_enter;
+	grab->leave = pointer_leave;
+	grab->motion = pointer_motion;
+	grab->frame = pointer_frame;
+	grab->button = pointer_button;
+	grab->axis = pointer_axis;
+	grab->axis_source = pointer_axis_src;
+	grab->axis_stop = pointer_axis_stop;
+	grab->axis_discrete = pointer_axis_discrete;
+}
 
-//the DEFAULT grab of pointer, other type grab(resize), or types like
-//data_device. There should be other type of grab
-static struct wl_pointer_listener pointer_listener = {
-	.enter = pointer_enter,
-	.leave = pointer_leave,
-	.motion = pointer_motion,
-	.frame = pointer_frame,
-	.button = pointer_button,
-	.axis  = pointer_axis,
-	.axis_source = pointer_axis_src,
-	.axis_stop = pointer_axis_stop,
-	.axis_discrete = pointer_axis_discrete,
-};
+///////////////////////////////////////////////////////////
+// resize pointer grab
+///////////////////////////////////////////////////////////
 
+static void
+resize_pointer_button(void *data,
+		      struct wl_pointer *wl_pointer,
+		      uint32_t serial,
+		      uint32_t time,
+		      uint32_t button,
+		      uint32_t state)
+{
+	//this is the ugly part we have to copy them again
+	struct wl_globals *globals = data;
+	pointer_button_meta(globals, serial, time, button, state);
 
+	/* struct wl_globals *globals = data; */
+	if (state == WL_POINTER_BUTTON_STATE_RELEASED &&
+	    button == BTN_LEFT) {
+		default_pointer_grab(&pointer_listener);
+	}
+}
+
+static void
+resize_pointer_frame(void *data,
+		     struct wl_pointer *wl_pointer)
+{
+	//we need somehow generate a timestamp
+	struct wl_globals *globals = data;
+	struct app_surface *app = pointer_frame_meta(globals);
+	if (!app)
+		return;
+
+	struct app_event e;
+	e.time = globals->inputs.millisec;
+	uint32_t event = globals->inputs.pointer_events;
+	//REPEAT CODE
+	if (event & POINTER_MOTION) {
+
+	}
+}
+
+static void
+resize_pointer_grab(struct wl_pointer_listener *grab)
+{
+	grab->button = resize_pointer_button;
+}
 
 void
 tw_pointer_init(struct wl_pointer *wl_pointer, struct wl_globals *globals)
@@ -244,6 +328,7 @@ tw_pointer_init(struct wl_pointer *wl_pointer, struct wl_globals *globals)
 	if (!globals)
 		return;
 
+	default_pointer_grab(&pointer_listener);
 	wl_pointer_add_listener(wl_pointer, &pointer_listener, globals);
 	//set pointer theme and surface
 	globals->inputs.cursor_theme = wl_cursor_theme_load("whiteglass", 32, globals->shm);
