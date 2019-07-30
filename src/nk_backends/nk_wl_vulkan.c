@@ -119,6 +119,11 @@ nk_wl_render(struct nk_wl_backend *bkend)
 	fprintf(stderr, "this sucks\n");
 }
 
+static void
+nk_wl_resize(struct app_surface *surf, const struct app_event *e)
+{}
+
+
 
 #ifdef __DEBUG
 static inline bool

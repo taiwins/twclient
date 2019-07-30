@@ -1,5 +1,5 @@
 * Client side work
-* [75%] refactoring works
+* TODO [75%] refactoring works
 ** DONE change the ~nk_wl_impl_*~ calls
    This allows the client to have multiple gui windows at its disposal. Or a
    simple fullscreen application.
@@ -8,7 +8,13 @@
 ** DONE remove the 4 callbacks(ptron, ptrpress) make make them into one event
    If you pass as an event struct, then you will need to create additional
    struct just for event.
-** TODO add pointer's resize/maximize/minimize grab
+** DOIN add pointer's resize/maximize/minimize grab
+*** DONE simple resize handler(by every event)
+    This does not work apparently. allocating new buffers within the frame is
+    probably too much
+*** TODO add defered method resizing method, using pending information.
+
+
 
 * [0%] BUGS
 ** TODO twclient leak

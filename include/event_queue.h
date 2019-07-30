@@ -30,7 +30,10 @@ struct tw_event_queue {
 	struct wl_display *wl_display;
 	int pollfd;
 	struct wl_list head;
+	struct wl_list idle_tasks;
 	bool quit;
+
+
 };
 
 void tw_event_queue_run(struct tw_event_queue *queue);
@@ -72,6 +75,8 @@ bool tw_event_queue_add_timer(struct tw_event_queue *queue, const struct itimers
 			      struct tw_event *event);
 
 bool tw_event_queue_add_wl_display(struct tw_event_queue *queue, struct wl_display *d);
+
+bool tw_event_queue_add_idle(struct tw_event_queue *queue, struct tw_event *e);
 
 
 #ifdef __cplusplus

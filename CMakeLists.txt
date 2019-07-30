@@ -43,7 +43,6 @@ find_package(UDEV REQUIRED)
 find_package(Vulkan REQUIRED)
 
 ###########################################################
-#we have to slove this
 if(CTYPES_INCLUDE_DIR AND CTYPES_LIBRARIES)
   #check whether we include
   if(CTYPES_INCLUDE_DIR MATCHES "${CMAKE_CURRENT_LIST_DIR}/ctypes/src")
@@ -70,7 +69,6 @@ set(TWCLIENT_INCLUDE_DIRS
   ${FREETYPE_INCLUDE_DIRS}
   ${UDEV_INCLUDE_DIRS}
   "${CMAKE_CURRENT_LIST_DIR}/include"
-#  CACHE PATH "twclient include dir"
   )
 
 list(REMOVE_DUPLICATES TWCLIENT_INCLUDE_DIRS)
@@ -91,7 +89,6 @@ set(TWCLIENT_TRD_LIB
   ${FONTCONFIG_LIBRARIES}
   ${FREETYPE_LIBRARIES}
   ${UDEV_LIBRARIES}
-#  CACHE STRING "external requirements"
   )
 
 add_subdirectory(src)

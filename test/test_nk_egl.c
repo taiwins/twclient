@@ -11,8 +11,8 @@
 #include <egl.h>
 #include <client.h>
 #include <nk_backends.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+/* #define STB_IMAGE_IMPLEMENTATION */
+/* #include "stb_image.h" */
 
 
 //create a egl ui
@@ -52,6 +52,7 @@ static struct wl_registry_listener registry_listener = {
 	.global_remove = global_registry_removal,
 };
 
+/*
 static struct nk_image
 load_texture(const char *filename)
 {
@@ -75,23 +76,23 @@ load_texture(const char *filename)
     stbi_image_free(data);
     return nk_image_id((int)tex);
 }
-
+*/
 
 static void
 sample_widget(struct nk_context *ctx, float width, float height, struct app_surface *data)
 {
-	struct application *app = &App;
+	//struct application *app = &App;
 	/* //just draw the image */
 	/* struct nk_command_buffer *canvas = nk_window_get_canvas(ctx); */
 	/* struct nk_rect total_space = nk_window_get_content_region(ctx); */
 	/* nk_draw_image(canvas, total_space, &app->image, nk_rgba(255, 255, 255, 255)); */
 	/* return; */
 
-	enum nk_buttons btn;
-	uint32_t sx, sy;
+	//enum nk_buttons btn;
+	//uint32_t sx, sy;
 	//TODO, change the draw function to app->draw_widget(app);
 	enum {EASY, HARD};
-	static int op = EASY;
+	//static int op = EASY;
 	static struct nk_text_edit text_edit;
 	static bool inanimation = false;
 	static bool init_text_edit = false;
@@ -206,6 +207,7 @@ int main(int argc, char *argv[])
 	App.surface.s = 1;
 
 	App.bkend = nk_egl_create_backend(wl_display);
+	App.surface.shell_surface = shell_surface;
 
 	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, 200, 400, 0, 0, 2, 0);
 

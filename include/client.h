@@ -4,6 +4,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <sys/mman.h>
 #include <pthread.h>
 #include <poll.h>
@@ -56,6 +58,7 @@ struct wl_globals {
 		struct itimerspec repeat_info;
 		char name[64]; //seat name
 		uint32_t millisec;
+		uint32_t serial;
 		//keyboard
 		struct {
 			struct xkb_context *kcontext;
@@ -82,7 +85,8 @@ struct wl_globals {
 			bool btn_pressed;
 			uint32_t enter_serial;
 			uint32_t pointer_events;
-			short sx, sy; //screen coordinates
+			int16_t sx, sy; //screen coordinates
+			int16_t dx, dy; //relative motion
 			uint32_t dx_axis, dy_axis; //axis advance
 			short w;
 		};

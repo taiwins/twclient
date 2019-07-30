@@ -86,6 +86,7 @@ pointer_enter(void *data,
 	struct app_surface *app = app_surface_from_wl_surface(surface);
 	globals->inputs.pointer_focused = surface;
 	globals->inputs.enter_serial = serial;
+	globals->inputs.serial = serial;
 	app->wl_globals = globals;
 
 	globals->inputs.pointer_events = POINTER_ENTER;
@@ -103,6 +104,7 @@ pointer_leave(void *data,
 	      struct wl_surface *surface)
 {
 	struct wl_globals *globals = data;
+	globals->inputs.serial = serial;
 	globals->inputs.pointer_focused = NULL;
 	globals->inputs.pointer_events = POINTER_LEAVE;
 }
@@ -115,6 +117,9 @@ pointer_motion(void *data,
 	       wl_fixed_t y)
 {
 	struct wl_globals *globals = data;
+	globals->inputs.serial = serial;
+	globals->inputs.dx = wl_fixed_to_int(x) - globals->inputs.sx;
+	globals->inputs.dy = wl_fixed_to_int(y) - globals->inputs.sy;
 	globals->inputs.sx = wl_fixed_to_int(x);
 	globals->inputs.sy = wl_fixed_to_int(y);
 	globals->inputs.pointer_events |=  POINTER_MOTION;
@@ -131,6 +136,7 @@ pointer_button_meta(struct wl_globals *globals,
 	globals->inputs.btn_pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
 	globals->inputs.btn = button;
 	globals->inputs.pointer_events |= POINTER_BTN;
+	globals->inputs.serial = serial;
 
 	struct wl_surface *surf = globals->inputs.pointer_focused;
 	struct app_surface *app = (!surf) ? NULL :
@@ -312,15 +318,41 @@ resize_pointer_frame(void *data,
 	uint32_t event = globals->inputs.pointer_events;
 	//REPEAT CODE
 	if (event & POINTER_MOTION) {
+		e.type = TW_RESIZE;
+		e.resize.nw = app->w + globals->inputs.dx;
+		e.resize.nh = app->h + globals->inputs.dy;
+		e.resize.edge = WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT;
+		e.resize.serial = globals->inputs.serial;
 
+		if (app->shell_surface)
+			wl_shell_surface_resize(app->shell_surface,
+						globals->inputs.wl_seat, globals->inputs.serial,
+						WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT);
+		else if (app->xdg_surface)
+			xdg_toplevel_resize(app->xdg_surface, globals->inputs.wl_seat, globals->inputs.serial,
+					    XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_RIGHT);
+		//fprintf(stderr, "we should be resizing at %d, %d\n",
+		//	e.resize.nw, e.resize.nh);
+		app->do_frame(app, &e);
 	}
+	pointer_event_clean(globals);
 }
 
 static void
 resize_pointer_grab(struct wl_pointer_listener *grab)
 {
 	grab->button = resize_pointer_button;
+	grab->frame = resize_pointer_frame;
 }
+
+///////////////////////////////////////////////////////////
+// move pointer grab, this sucks
+///////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////
+// constructor/destructor
+///////////////////////////////////////////////////////////
 
 void
 tw_pointer_init(struct wl_pointer *wl_pointer, struct wl_globals *globals)

@@ -2,8 +2,7 @@ include(Wayland)
 
 WAYLAND_ADD_PROTOCOL_CLIENT(proto_xdg_shell_client
   "${WLPROTO_PATH}/stable/xdg-shell/xdg-shell.xml"
-  xdg-shell
-  )
+  xdg-shell)
 
 add_library(xdg_shell_client
   ${proto_xdg_shell_client}
@@ -18,14 +17,11 @@ add_library(twclient
   event_queue.c
   #inputs
   keyboard.c
-  pointer.c
-  )
+  pointer.c)
 
 target_include_directories(twclient PUBLIC
   ${TWCLIENT_INCLUDE_DIRS}
-  #this will work but we should extract the path from xdg_shell_client
-  "${CMAKE_BINARY_DIR}/src"
-  )
+  ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(nk_backends)
 
