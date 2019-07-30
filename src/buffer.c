@@ -94,6 +94,7 @@ shm_pool_set_buffer_release_notify(struct wl_buffer *wl_buffer,
 struct wl_buffer *
 shm_pool_alloc_buffer(struct shm_pool *pool, size_t width, size_t height)
 {
+	fprintf(stderr, "size of buffer node is %d\n", list_length(&pool->wl_buffers));
 	size_t stride = stride_of_wl_shm_format(pool->format);
 	size_t size = stride * height * width;
 	{

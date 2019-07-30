@@ -408,6 +408,18 @@ _nk_egl_draw_end(struct nk_egl_backend *bkend)
 	nk_buffer_clear(&bkend->cmds);
 }
 
+
+static void
+nk_wl_resize(struct app_surface *surf, const struct app_event *e)
+{
+	wl_egl_window_resize(surf->eglwin,
+			     surf->s * e->resize.nw, surf->s *e->resize.nh,
+			     0, 0);
+	surf->h = e->resize.nh;
+	surf->w = e->resize.nw;
+}
+
+
 static void
 nk_wl_render(struct nk_wl_backend *b)
 {
