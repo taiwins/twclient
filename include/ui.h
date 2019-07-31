@@ -252,6 +252,7 @@ struct app_surface {
 	//geometry information
 	unsigned int px, py; //anchor
 	unsigned int w, h; //size
+	unsigned int pending_w, pending_h;
 	unsigned int s; //scale
 	enum APP_SURFACE_TYPE type;
 
