@@ -309,3 +309,22 @@ tw_event_queue_add_wl_display(struct tw_event_queue *queue, struct wl_display *d
 	}
 	return true;
 }
+
+
+/**
+ * /brief add the idle task to the queue.
+ *
+ * You could have a lot of allocation under one frame. So use this feature
+ * carefully. For example, use a cached state to check whether it is necessary
+ * to add to this list.
+ *
+ * an example of event would be resize event, this event is delegated from
+ * a wl_event.
+ */
+bool
+tw_event_queue_add_idle(struct tw_event_queue *queue, struct tw_event *event)
+{
+	struct tw_event_source *s = alloc_event_source(event, 0, 0);
+	wl_list_insert(&queue->idle_tasks, &s->link);
+	return true;
+}
