@@ -311,6 +311,7 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 	int width = surf->w;
 	int height = surf->h;
 	switch (e->type) {
+	case TW_FRAME_START:
 	case TW_TIMER:
 		handled_input = true;
 		break;
