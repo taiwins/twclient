@@ -52,7 +52,7 @@ app_surface_frame(struct app_surface *surf, bool anime)
 {
 	struct wl_globals *g = surf->wl_globals;
 	struct app_event e = {
-		.type = TW_TIMER,
+		.type = TW_FRAME_START,
 		.time = (g) ? g->inputs.millisec : 0,
 	};
 	//this is the best we
@@ -103,6 +103,9 @@ app_surface_request_frame(struct app_surface *surf)
 static void
 shm_buffer_surface_swap(struct app_surface *surf, const struct app_event *e)
 {
+	if (e->type != TW_FRAME_START)
+		return;
+
 	struct wl_buffer *free_buffer = NULL;
 	int32_t x, y, w, h;
 	shm_buffer_draw_t draw_cb = surf->user_data;
@@ -205,6 +208,7 @@ embeded_impl_app_surface(struct app_surface *surf, struct app_surface *parent,
 	surf->wl_surface = NULL;
 	surf->protocol = NULL;
 	surf->parent = parent;
+	surf->wl_globals = parent->wl_globals;
 	surf->do_frame = embeded_app_surface_do_frame;
 	surf->w = w; surf->h = h; surf->s = 1;
 	surf->px = px; surf->py = py;
