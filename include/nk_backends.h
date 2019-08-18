@@ -44,8 +44,7 @@ void nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
 
 void
 nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
-			  const struct bbox geo,
+			  nk_wl_drawcall_t draw_cb,  const struct bbox geo,
 			  int32_t nk_flags);
 
 /* egl_backend */

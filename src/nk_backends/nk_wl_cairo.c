@@ -744,35 +744,64 @@ nk_cairo_buffer_release(void *data,
 			struct wl_buffer *wl_buffer)
 {
 	struct app_surface *surf = (struct app_surface *)data;
+	struct shm_pool *pool = NULL;
 	bool inuse = false;
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < 2; i++) {
 		if (surf->wl_buffer[i] == wl_buffer) {
 			surf->dirty[i] = false;
 			surf->committed[i] = false;
 			inuse = true;
 			break;
 		}
-	if (!inuse)
-		shm_pool_buffer_free(wl_buffer);
+	}
+	/* a more secure way to release the buffers */
+	if (!inuse) {
+		pool = shm_pool_buffer_free(wl_buffer);
+		if (shm_pool_release_if_unused(pool))
+			free(pool);
+	}
+
+
 }
+
+static int
+nk_cairo_resize(struct tw_event *e, int fd)
+{
+	struct app_surface *surf = e->data;
+	struct bbox *geo = &surf->pending_allocation;
+
+	if (surf->pending_allocation.w == surf->allocation.w &&
+	    surf->pending_allocation.h == surf->allocation.h)
+		return TW_EVENT_DEL;
+	if (shm_pool_release_if_unused(surf->pool))
+		free(surf->pool);
+
+	surf->pool = calloc(1, sizeof(struct shm_pool));
+	shm_pool_init(surf->pool, surf->wl_globals->shm, bbox_area(geo) * 2,
+		      surf->wl_globals->buffer_format);
+	for (int i = 0; i < 2; i++) {
+		surf->wl_buffer[i] = shm_pool_alloc_buffer(
+			surf->pool, geo->w * geo->s, geo->h * geo->s);
+		surf->dirty[i] = NULL;
+		surf->committed[i] = NULL;
+		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
+						   nk_cairo_buffer_release, surf);
+	}
+	surf->allocation = surf->pending_allocation;
+	return TW_EVENT_DEL;
+}
+
 
 static void
 nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 {
 	surf->pending_allocation.w = e->resize.nw;
 	surf->pending_allocation.h = e->resize.nh;
-	//TODO we would have memory leak here
-	/* for (int i = 0; i < 2; i++) { */
-	/*	//our buffer has to be freed by compositor first, otherwise we are leaking tones of memory */
-	/*	surf->wl_buffer[i] = */
-	/*		shm_pool_alloc_buffer(surf->pool, surf->s * e->resize.nw, surf->s * e->resize.nh); */
-	/*	surf->dirty[i] = NULL; */
-	/*	surf->committed[i] = NULL; */
-	/*	shm_pool_set_buffer_release_notify(surf->wl_buffer[i], */
-	/*					   nk_cairo_buffer_release, surf); */
-	/* } */
-	/* surf->h = e->resize.nh; */
-	/* surf->w = e->resize.nw; */
+	struct tw_event re = {
+		.data = surf,
+		.cb = nk_cairo_resize,
+	};
+	tw_event_queue_add_idle(&surf->wl_globals->event_queue, &re);
 }
 
 
@@ -784,27 +813,33 @@ nk_cairo_destroy_app_surface(struct app_surface *app)
 	nk_wl_clean_app_surface(b);
 	app->user_data = NULL;
 	for (int i = 0; i < 2; i++) {
-		shm_pool_buffer_free(app->wl_buffer[i]);
+		app->wl_buffer[i] = NULL;
 		app->dirty[i] = false;
 		app->committed[i] = false;
 	}
+	shm_pool_release(app->pool);
+	free(app->pool);
 	app->pool = NULL;
 }
 
 
 void
 nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
+			  nk_wl_drawcall_t draw_cb,
 			  struct bbox geo, int32_t flags)
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
 
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, geo, flags);
-	surf->pool = pool;
+
+
+	surf->pool = calloc(1, sizeof(struct shm_pool));
+	shm_pool_init(surf->pool, surf->wl_globals->shm, bbox_area(&geo) * 2,
+		      surf->wl_globals->buffer_format);
 	for (int i = 0; i < 2; i++) {
 		surf->wl_buffer[i] = shm_pool_alloc_buffer(
-			pool, geo.w * geo.s, geo.h * geo.s);
+			surf->pool, geo.w * geo.s, geo.h * geo.s);
 		surf->dirty[i] = NULL;
 		surf->committed[i] = NULL;
 		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
