@@ -108,28 +108,49 @@ struct point2d {
 	unsigned int y;
 };
 
-
+/**
+ * @brief a rectangle area that supports scales.
+ */
 struct bbox {
-	unsigned int x;
-	unsigned int y;
-	unsigned int w;
-	unsigned int h;
+	uint16_t x; uint16_t y;
+	uint16_t w; uint16_t h;
+	uint8_t s;
 };
 
 static inline bool
 bbox_contain_point(const struct bbox *box, unsigned int x, unsigned int y)
 {
 	return ((x >= box->x) &&
-		(x < box->x + box->w) &&
+		(x < box->x + box->w * box->s) &&
 		(y >= box->y) &&
-		(y < box->y + box->h));
+		(y < box->y + box->h * box->s));
 }
 
 static inline bool
 bboxs_intersect(const struct bbox *ba, const struct bbox *bb)
 {
-	return (ba->x < bb->x+bb->w) && (ba->x+ba->w > bb->x) &&
-		(ba->y < bb->y+bb->h) && (ba->y + ba->h > bb->y);
+	return (ba->x < bb->x + bb->w*bb->s) &&
+		(ba->x + ba->w*ba->s > bb->x) &&
+		(ba->y < bb->y + bb->h*bb->s) &&
+		(ba->y + ba->h*ba->s > bb->y);
+}
+
+static inline unsigned long
+bbox_aread(const struct bbox *box)
+{
+	return box->w * box->s * box->h * box->s;
+}
+
+static inline struct bbox
+make_bbox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t s)
+{
+	return (struct bbox){x, y, w, h, s};
+}
+
+static inline struct bbox
+make_bbox_origin(uint16_t w, uint16_t h, uint16_t s)
+{
+	return (struct bbox){0, 0, w, h, s};
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -178,14 +199,19 @@ typedef void (*frame_t)(struct app_surface *, const struct app_event *e);
 struct app_surface {
 	//the structure to store wl_shell_surface, xdg_shell_surface or tw_ui
 	struct wl_proxy *protocol;
-	//could be a shell surface
+	//TODO: remove those
 	struct wl_shell_surface *shell_surface;
 	struct xdg_toplevel *xdg_surface;
+
 	//geometry information
-	unsigned int px, py; //anchor
-	unsigned int w, h; //size
-	unsigned int pending_w, pending_h;
-	unsigned int s; //scale
+	struct bbox allocation;
+	struct bbox pending_allocation;
+
+	/* unsigned int px, py; //anchor */
+	/* unsigned int w, h; //size */
+	/* unsigned int s; //scale */
+	/* unsigned int pending_w, pending_h; */
+
 	enum APP_SURFACE_TYPE type;
 
 	struct wl_globals *wl_globals;
@@ -240,6 +266,13 @@ void app_surface_init(struct app_surface *surf, struct wl_surface *, struct wl_p
 	struct wl_globals *globals);
 
 /**
+ * /brief the universal release function
+ */
+void
+app_surface_release(struct app_surface *surf);
+
+
+/**
  * /brief request a frame for the appsurface
  *
  *  You can use this callback to start the animation sequence for the surface,
@@ -257,23 +290,6 @@ void app_surface_request_frame(struct app_surface *surf);
  * app_surface_release is called.
  */
 void app_surface_frame(struct app_surface *surf, bool anime);
-
-
-/**
- * /brief the universal release function
- */
-static inline void
-app_surface_release(struct app_surface *surf)
-{
-	if (surf->destroy)
-		surf->destroy(surf);
-	//throw all the callbacks
-	wl_surface_destroy(surf->wl_surface);
-	if (surf->protocol)
-		wl_proxy_destroy(surf->protocol);
-	surf->protocol = NULL;
-	surf->wl_surface = NULL;
-}
 
 static inline void
 app_surface_end_frame_request(struct app_surface *surf)
@@ -316,18 +332,19 @@ app_surface_from_wl_surface(struct wl_surface *s)
  *
  */
 typedef void (*shm_buffer_draw_t)(struct app_surface *surf, struct wl_buffer *buffer,
-				  int32_t *dx, int32_t *dy, int32_t *dw, int32_t *dh);
+				  struct bbox *geo);
 
 void
 shm_buffer_impl_app_surface(struct app_surface *surf, struct shm_pool *pool,
-			    shm_buffer_draw_t draw_call, uint32_t w, uint32_t h);
+			    shm_buffer_draw_t draw_call, const struct bbox geo);
 
 
 /**
  * /brief second implementation we provide here is the parent surface
  */
 void embeded_impl_app_surface(struct app_surface *surf, struct app_surface *parent,
-			      uint32_t w, uint32_t h, uint32_t px, uint32_t py);
+			      const struct bbox geo);
+
 
 
 #ifdef __cplusplus

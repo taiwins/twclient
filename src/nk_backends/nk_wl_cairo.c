@@ -670,15 +670,19 @@ _Static_assert(NK_COMMAND_CUSTOM == 18, NO_COMMAND);
 
 static void
 nk_cairo_render(struct wl_buffer *buffer, struct nk_cairo_backend *b,
-		struct app_surface *surf, int32_t w, int32_t h)
+		struct app_surface *surf)
 {
+	int w = surf->allocation.w;
+	int h = surf->allocation.h;
+	int s = surf->allocation.s;
+
 	struct nk_wl_backend *bkend = &b->base;
 	cairo_format_t format = translate_wl_shm_format(surf->pool->format);
 	cairo_surface_t *image_surface =
 		cairo_image_surface_create_for_data(
 			shm_pool_buffer_access(buffer),
-			format, w * surf->s, h * surf->s,
-			cairo_format_stride_for_width(format, w * surf->s));
+			format, w * s, h * s,
+			cairo_format_stride_for_width(format, w * s));
 	cairo_t *cr = cairo_create(image_surface);
 	cairo_surface_destroy(image_surface);
 
@@ -689,7 +693,7 @@ nk_cairo_render(struct wl_buffer *buffer, struct nk_cairo_backend *b,
 	cairo_set_source_rgb(cr, bkend->main_color.r, bkend->main_color.g,
 			     bkend->main_color.b);
 	cairo_paint(cr);
-	cairo_scale(cr, surf->s, surf->s);
+	cairo_scale(cr, s, s);
 	nk_foreach(cmd, &bkend->ctx) {
 		nk_cairo_ops[cmd->type](cr, cmd);
 	}
@@ -725,9 +729,10 @@ nk_wl_render(struct nk_wl_backend *bkend)
 
 	*to_dirty = true;
 
-	nk_cairo_render(free_buffer, b, surf, surf->w, surf->h);
+	nk_cairo_render(free_buffer, b, surf);
 	wl_surface_attach(surf->wl_surface, free_buffer, 0, 0);
-	wl_surface_damage(surf->wl_surface, 0, 0, surf->w, surf->h);
+	wl_surface_damage(surf->wl_surface, 0, 0,
+			  surf->allocation.w, surf->allocation.h);
 	wl_surface_commit(surf->wl_surface);
 	*to_commit = true;
 	*to_dirty = false;
@@ -755,18 +760,17 @@ static void
 nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 {
 	//TODO we would have memory leak here
-	for (int i = 0; i < 2; i++) {
-		//our buffer has to be freed by compositor first, otherwise we are leaking tones of memory
-		surf->wl_buffer[i] =
-			shm_pool_alloc_buffer(surf->pool, surf->s * e->resize.nw, surf->s * e->resize.nh);
-		surf->dirty[i] = NULL;
-		surf->committed[i] = NULL;
-		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
-						   nk_cairo_buffer_release, surf);
-	}
-	surf->h = e->resize.nh;
-	surf->w = e->resize.nw;
-
+	/* for (int i = 0; i < 2; i++) { */
+	/*	//our buffer has to be freed by compositor first, otherwise we are leaking tones of memory */
+	/*	surf->wl_buffer[i] = */
+	/*		shm_pool_alloc_buffer(surf->pool, surf->s * e->resize.nw, surf->s * e->resize.nh); */
+	/*	surf->dirty[i] = NULL; */
+	/*	surf->committed[i] = NULL; */
+	/*	shm_pool_set_buffer_release_notify(surf->wl_buffer[i], */
+	/*					   nk_cairo_buffer_release, surf); */
+	/* } */
+	/* surf->h = e->resize.nh; */
+	/* surf->w = e->resize.nw; */
 }
 
 
@@ -789,16 +793,16 @@ nk_cairo_destroy_app_surface(struct app_surface *app)
 void
 nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			  nk_wl_drawcall_t draw_cb, struct shm_pool *pool,
-			  short w, short h, short x, short y, short s,
-			  int32_t flags)
+			  struct bbox geo, int32_t flags)
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
 
-	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, s, flags);
+	nk_wl_impl_app_surface(surf, bkend, draw_cb, geo, flags);
 	surf->pool = pool;
 	for (int i = 0; i < 2; i++) {
-		surf->wl_buffer[i] = shm_pool_alloc_buffer(pool, w * s, h * s);
+		surf->wl_buffer[i] = shm_pool_alloc_buffer(
+			pool, geo.w * geo.s, geo.h * geo.s);
 		surf->dirty[i] = NULL;
 		surf->committed[i] = NULL;
 		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
@@ -806,8 +810,8 @@ nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 	}
 	surf->destroy = nk_cairo_destroy_app_surface;
 	//change the font size here,
-	if (b->user_font.size != (int)(bkend->row_size * s))
-		nk_cairo_font_set_size(&b->user_font, bkend->row_size, s);
+	if (b->user_font.size != (int)(bkend->row_size * geo.s))
+		nk_cairo_font_set_size(&b->user_font, bkend->row_size, geo.s);
 }
 
 

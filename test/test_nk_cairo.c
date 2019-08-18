@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 	App.bkend = nk_cairo_create_bkend();
 	//the drawing is easy, but input handler is not
 	nk_cairo_impl_app_surface(&App.surface, App.bkend, sample_widget, &pool,
-				  200, 400, 0, 0, 2, -1);
+				  make_bbox_origin(200, 400, 2), -1);
 
 
 	app_surface_frame(&App.surface, false);
