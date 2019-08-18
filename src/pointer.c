@@ -159,9 +159,10 @@ pointer_button(void *data,
 	if (!app)
 		return;
 
-	//test if at right cornor
-	if ((float)globals->inputs.sx > 0.9 * (float)app->w &&
-	    (float)globals->inputs.sy > 0.9 * (float)app->h &&
+	//test if at right cornor,
+	//XXX I don't seem need to apply the scale here
+	if ((float)globals->inputs.sx > 0.9 * (float)app->allocation.w &&
+	    (float)globals->inputs.sy > 0.9 * (float)app->allocation.h &&
 	    state == WL_POINTER_BUTTON_STATE_PRESSED &&
 	    button == BTN_LEFT) {
 		resize_pointer_grab(&pointer_listener);
@@ -319,8 +320,8 @@ resize_pointer_frame(void *data,
 	//REPEAT CODE
 	if (event & POINTER_MOTION) {
 		e.type = TW_RESIZE;
-		e.resize.nw = app->w + globals->inputs.dx;
-		e.resize.nh = app->h + globals->inputs.dy;
+		e.resize.nw = app->allocation.w + globals->inputs.dx;
+		e.resize.nh = app->allocation.h + globals->inputs.dy;
 		e.resize.edge = WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT;
 		e.resize.serial = globals->inputs.serial;
 

@@ -722,8 +722,8 @@ _nk_lua_drawcb(struct nk_context *c, float width, float height,
 	struct lua_user_data *user_data = (struct lua_user_data *)lua_touserdata(L, -1);
 	user_data->c = c;
 
-	lua_pushnumber(L, app->w);
-	lua_pushnumber(L, app->h);
+	lua_pushnumber(L, app->allocation.w);
+	lua_pushnumber(L, app->allocation.h);
 
 	if (lua_pcall(L, 3, 0, 0)) {
 		const char *err_str = lua_tostring(L, -1);
@@ -782,11 +782,11 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	lua_pop(L, 2);
 	//mostly this is what
 #if defined (NK_EGL_BACKEND)
-	nk_egl_impl_app_surface(surf, bkend, _nk_lua_drawcb, w, h, 0, 0, scale);
+	nk_egl_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w,h,scale), 0 );
 #elif defined (NK_CAIRO_BACKEND)
-	nk_cairo_impl_app_surface(surf, bkend, _nk_lua_drawcb, pool, w, h, 0, 0, scale, 0);
+	nk_cairo_impl_app_surface(surf, bkend, _nk_lua_drawcb, pool, make_bbox_origin(w, h, scale), 0);
 #elif defined (NK_VK_BACKEND)
-	nk_vulkan_impl_app_surface(surf, bkend, _nk_lua_drawcb, w, h, 0, 0);
+	nk_vulkan_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w, h, scale));
 #endif
 
 }
