@@ -136,7 +136,7 @@ bboxs_intersect(const struct bbox *ba, const struct bbox *bb)
 }
 
 static inline unsigned long
-bbox_aread(const struct bbox *box)
+bbox_area(const struct bbox *box)
 {
 	return box->w * box->s * box->h * box->s;
 }

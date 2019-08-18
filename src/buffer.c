@@ -1,7 +1,7 @@
 #include <client.h>
 
 struct wl_buffer_node {
-	list_t link;
+	struct wl_list link;
 	struct wl_buffer *wl_buffer;
 	struct shm_pool *pool;
 
@@ -22,7 +22,7 @@ shm_pool_init(struct shm_pool *pool, struct wl_shm *shm, size_t size,
 {
 	pool->format = format;
 	pool->shm = shm;
-	list_init(&pool->wl_buffers);
+	wl_list_init(&pool->wl_buffers);
 	if (anonymous_buff_new(&pool->file, size, PROT_READ | PROT_WRITE, MAP_SHARED) < 0) {
 		return 0;
 	}
@@ -35,9 +35,9 @@ void
 shm_pool_release(struct shm_pool *pool)
 {
 	struct wl_buffer_node *v, *n;
-	list_for_each_safe(v, n, &pool->wl_buffers, link) {
+	wl_list_for_each_safe(v, n, &pool->wl_buffers, link) {
 		wl_buffer_destroy(v->wl_buffer);
-		list_remove(&v->link);
+		wl_list_remove(&v->link);
 		free(v);
 	}
 	wl_shm_pool_destroy(pool->pool);
@@ -68,8 +68,8 @@ shm_pool_buffer_inuse(struct wl_buffer *wl_buffer)
 static void
 wl_buffer_release_notify(void *data, struct wl_buffer *buffer)
 {
-//	fprintf(stderr, "wl_buffer %p is released by server\n", buffer);
 	struct wl_buffer_node *node = (struct wl_buffer_node *)data;
+	node->inuse = false;
 	if (node->userdata &&  node->release)
 		node->release(node->userdata, buffer);
 }
@@ -94,20 +94,9 @@ shm_pool_set_buffer_release_notify(struct wl_buffer *wl_buffer,
 struct wl_buffer *
 shm_pool_alloc_buffer(struct shm_pool *pool, size_t width, size_t height)
 {
-	fprintf(stderr, "size of buffer node is %d\n", list_length(&pool->wl_buffers));
 	size_t stride = stride_of_wl_shm_format(pool->format);
 	size_t size = stride * height * width;
-	{
-		struct wl_buffer_node *v, *n;
-		list_for_each_safe(v, n, &pool->wl_buffers, link) {
-			size_t node_size = v->width * v->height * stride;
-			//only return if found the exact size
-			if (!v->inuse && node_size == size) {
-				v->inuse = true;
-				return v->wl_buffer;
-			}
-		}
-	}
+
 	size_t origin_size = pool->file.size;
 	off_t offset = anonymous_buff_alloc_by_offset(&pool->file, size);
 	if (pool->file.size > origin_size)
@@ -118,24 +107,49 @@ shm_pool_alloc_buffer(struct shm_pool *pool, size_t width, size_t height)
 								pool->format);
 	struct wl_buffer_node *node_buffer = (struct wl_buffer_node *)
 		malloc(sizeof(*node_buffer));
-	list_init(&node_buffer->link);
+	wl_list_init(&node_buffer->link);
 	node_buffer->pool = pool;
 	node_buffer->offset = offset;
 	node_buffer->wl_buffer = wl_buffer;
 	node_buffer->addr = (char *)pool->file.addr + offset;
 	node_buffer->width = width;
 	node_buffer->height = height;
-	node_buffer->inuse = true;
-	list_append(&pool->wl_buffers, &node_buffer->link);
+	node_buffer->inuse = false;
+	wl_list_insert(&pool->wl_buffers, &node_buffer->link);
 	wl_buffer_add_listener(wl_buffer, &buffer_listener, node_buffer);
 	return wl_buffer;
 }
 
-void
+struct shm_pool *
 shm_pool_buffer_free(struct wl_buffer *wl_buffer)
 {
 	struct wl_buffer_node *node = wl_buffer_get_user_data(wl_buffer);
+	struct shm_pool *pool = node->pool;
+
 	node->inuse = false;
+	wl_buffer_destroy(wl_buffer);
+	wl_list_remove(&node->link);
+	free(node);
+
+	return pool;
+}
+
+bool
+shm_pool_release_if_unused(struct shm_pool *pool)
+{
+	struct wl_buffer_node *node, *tmp;
+	wl_list_for_each_safe(node, tmp, &pool->wl_buffers, link) {
+		if (!node->inuse) {
+			wl_list_remove(&node->link);
+			wl_buffer_destroy(node->wl_buffer);
+			free(node);
+		}
+	}
+	if (wl_list_empty(&pool->wl_buffers)) {
+		shm_pool_release(pool);
+		return true;
+	}
+	return false;
 }
 
 void *
