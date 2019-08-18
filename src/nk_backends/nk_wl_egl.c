@@ -408,16 +408,35 @@ _nk_egl_draw_end(struct nk_egl_backend *bkend)
 	nk_buffer_clear(&bkend->cmds);
 }
 
+static int
+nk_egl_resize(struct tw_event *e, int fd)
+{
+	struct app_surface *surf = e->data;
+	if (surf->pending_allocation.w == surf->allocation.w &&
+	    surf->pending_allocation.h == surf->allocation.h)
+		return TW_EVENT_DEL;
+	wl_egl_window_resize(surf->eglwin,
+			     surf->pending_allocation.w * surf->pending_allocation.s,
+			     surf->pending_allocation.h * surf->pending_allocation.s,
+			     0, 0);
+	surf->allocation = surf->pending_allocation;
+	return TW_EVENT_DEL;
+}
 
-static void
+void
 nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 {
-	//we are gonna do this later
-	/* wl_egl_window_resize(surf->eglwin, */
-	/*		     surf->s * e->resize.nw, surf->s *e->resize.nh, */
-	/*		     0, 0); */
-	/* surf->h = e->resize.nh; */
-	/* surf->w = e->resize.nw; */
+	surf->pending_allocation.w = e->resize.nw;
+	surf->pending_allocation.h = e->resize.nh;
+	/* if (ABS(surf->pending_allocation.w - surf->allocation.w) <= 5 && */
+	/*     ABS(surf->pending_allocation.h - surf->allocation.h) <= 5) */
+	/*	return; */
+
+	struct tw_event re = {
+		.data = surf,
+		.cb = nk_egl_resize,
+	};
+	tw_event_queue_add_idle(&surf->wl_globals->event_queue, &re);
 }
 
 

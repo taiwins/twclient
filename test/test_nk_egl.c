@@ -203,7 +203,6 @@ int main(int argc, char *argv[])
 	App.shell_surface = shell_surface;
 
 	App.bkend = nk_egl_create_backend(wl_display);
-	App.surface.shell_surface = shell_surface;
 
 	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, make_bbox_origin(200, 400, 2), 0);
 
