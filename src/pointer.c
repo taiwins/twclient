@@ -325,13 +325,13 @@ resize_pointer_frame(void *data,
 		e.resize.edge = WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT;
 		e.resize.serial = globals->inputs.serial;
 
-		if (app->shell_surface)
-			wl_shell_surface_resize(app->shell_surface,
-						globals->inputs.wl_seat, globals->inputs.serial,
-						WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT);
-		else if (app->xdg_surface)
-			xdg_toplevel_resize(app->xdg_surface, globals->inputs.wl_seat, globals->inputs.serial,
-					    XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_RIGHT);
+		/* if (app->shell_surface) */
+		/*	wl_shell_surface_resize(app->shell_surface, */
+		/*				globals->inputs.wl_seat, globals->inputs.serial, */
+		/*				WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT); */
+		/* else if (app->xdg_surface) */
+		/*	xdg_toplevel_resize(app->xdg_surface, globals->inputs.wl_seat, globals->inputs.serial, */
+		/*			    XDG_TOPLEVEL_RESIZE_EDGE_BOTTOM_RIGHT); */
 		//fprintf(stderr, "we should be resizing at %d, %d\n",
 		//	e.resize.nw, e.resize.nh);
 		app->do_frame(app, &e);

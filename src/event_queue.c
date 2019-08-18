@@ -79,14 +79,22 @@ tw_event_queue_run(struct tw_event_queue *queue)
 
 	//poll->produce-event-or-timeout
 	while (!queue->quit) {
-		if (queue->wl_display) {
-			wl_display_flush(queue->wl_display);
+		//run the idle task first
+		while (!wl_list_empty(&queue->idle_tasks)) {
+			event_source = container_of(queue->idle_tasks.prev,
+						    struct tw_event_source, link);
+			event_source->event.cb(&event_source->event, 0);
+			destroy_event_source(event_source);
 		}
+		/* wl_display_dispatch_pending(queue->wl_display); */
+
+		if (queue->wl_display)
+			wl_display_flush(queue->wl_display);
+
 		int count = epoll_wait(queue->pollfd, events, 32, -1);
 		//right now if we run into any trouble, we just quit, I don't
 		//think it is a good idea
 		queue->quit = queue->quit && (count != -1);
-
 		for (int i = 0; i < count; i++) {
 			event_source = events[i].data.ptr;
 			if (event_source->pre_hook)
@@ -110,6 +118,7 @@ tw_event_queue_init(struct tw_event_queue *queue)
 	if (fd == -1)
 		return false;
 	wl_list_init(&queue->head);
+	wl_list_init(&queue->idle_tasks);
 
 	queue->pollfd = fd;
 	queue->quit = false;
@@ -325,6 +334,7 @@ bool
 tw_event_queue_add_idle(struct tw_event_queue *queue, struct tw_event *event)
 {
 	struct tw_event_source *s = alloc_event_source(event, 0, 0);
+	s->event = *event;
 	wl_list_insert(&queue->idle_tasks, &s->link);
 	return true;
 }
