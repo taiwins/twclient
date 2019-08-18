@@ -11,7 +11,9 @@ app_surface_init_egl(struct app_surface *surf, struct egl_env *env)
 {
 	surf->egldisplay = env->egl_display;
 	surf->eglwin = wl_egl_window_create(surf->wl_surface,
-					    surf->w * surf->s, surf->h * surf->s);
+					    surf->allocation.w * surf->allocation.s,
+					    surf->allocation.h * surf->allocation.s);
+
 	surf->eglsurface =
 		eglCreateWindowSurface(env->egl_display,
 				       env->config,
@@ -44,6 +46,19 @@ app_surface_init(struct app_surface *surf, struct wl_surface *wl_surface,
 	surf->protocol = proxy;
 	wl_surface_set_user_data(wl_surface, surf);
 	surf->wl_globals = globals;
+}
+
+void
+app_surface_release(struct app_surface *surf)
+{
+	if (surf->destroy)
+		surf->destroy(surf);
+	//throw all the callbacks
+	wl_surface_destroy(surf->wl_surface);
+	if (surf->protocol)
+		wl_proxy_destroy(surf->protocol);
+	surf->protocol = NULL;
+	surf->wl_surface = NULL;
 }
 
 
@@ -107,7 +122,7 @@ shm_buffer_surface_swap(struct app_surface *surf, const struct app_event *e)
 		return;
 
 	struct wl_buffer *free_buffer = NULL;
-	int32_t x, y, w, h;
+	struct bbox damage;
 	shm_buffer_draw_t draw_cb = surf->user_data;
 	bool *committed; bool *dirty;
 
@@ -126,8 +141,9 @@ shm_buffer_surface_swap(struct app_surface *surf, const struct app_event *e)
 	if (surf->need_animation)
 		app_surface_request_frame(surf);
 	wl_surface_attach(surf->wl_surface, free_buffer, 0, 0);
-	draw_cb(surf, free_buffer, &x, &y, &w, &h);
-	wl_surface_damage(surf->wl_surface, x, y, w, h);
+	draw_cb(surf, free_buffer, &damage);
+	wl_surface_damage(surf->wl_surface,
+			  damage.x, damage.y, damage.w, damage.h);
 	//if output has transform, we need to add it here as well.
 	//wl_surface_set_buffer_transform && wl_surface_set_buffer_scale
 	wl_surface_commit(surf->wl_surface);
@@ -167,16 +183,17 @@ static struct wl_buffer_listener shm_wl_buffer_impl = {
 
 void
 shm_buffer_impl_app_surface(struct app_surface *surf, struct shm_pool *pool,
-			    shm_buffer_draw_t draw_call, uint32_t w, uint32_t h)
+			    shm_buffer_draw_t draw_call, const struct bbox geo)
 {
 	surf->do_frame = shm_buffer_surface_swap;
 	surf->user_data = draw_call;
 	surf->destroy = shm_buffer_destroy_app_surface;
 	surf->pool = pool;
-	surf->w = w; surf->h = h; surf->s = 1;
-	surf->px = 0; surf->py = 0;
+	surf->allocation = geo;
+	surf->pending_allocation = geo;
+	wl_surface_set_buffer_scale(surf->wl_surface, geo.s);
 	for (int i = 0; i < 2; i++) {
-		surf->wl_buffer[i] = shm_pool_alloc_buffer(pool, w, h);
+		surf->wl_buffer[i] = shm_pool_alloc_buffer(pool, geo.w*geo.s, geo.h*geo.s);
 		wl_buffer_add_listener(surf->wl_buffer[i], &shm_wl_buffer_impl, surf);
 		surf->dirty[i] = false;
 		surf->committed[i] = false;
@@ -203,13 +220,14 @@ embeded_app_surface_do_frame(struct app_surface *surf, const struct app_event *e
 
 void
 embeded_impl_app_surface(struct app_surface *surf, struct app_surface *parent,
-			 uint32_t w, uint32_t h, uint32_t px, uint32_t py)
+			 const struct bbox geo)
+
 {
 	surf->wl_surface = NULL;
 	surf->protocol = NULL;
 	surf->parent = parent;
 	surf->wl_globals = parent->wl_globals;
 	surf->do_frame = embeded_app_surface_do_frame;
-	surf->w = w; surf->h = h; surf->s = 1;
-	surf->px = px; surf->py = py;
+	surf->allocation = geo;
+	surf->pending_allocation = geo;
 }

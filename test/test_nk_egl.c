@@ -202,14 +202,10 @@ int main(int argc, char *argv[])
 	wl_shell_surface_set_toplevel(shell_surface);
 	App.shell_surface = shell_surface;
 
-	App.surface.w = 200;
-	App.surface.h = 400;
-	App.surface.s = 1;
-
 	App.bkend = nk_egl_create_backend(wl_display);
 	App.surface.shell_surface = shell_surface;
 
-	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, 200, 400, 0, 0, 2, 0);
+	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, make_bbox_origin(200, 400, 2), 0);
 
 	/* App.image = load_texture(argv[1]); */
 	app_surface_frame(&App.surface, false);

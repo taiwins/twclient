@@ -412,11 +412,12 @@ _nk_egl_draw_end(struct nk_egl_backend *bkend)
 static void
 nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 {
-	wl_egl_window_resize(surf->eglwin,
-			     surf->s * e->resize.nw, surf->s *e->resize.nh,
-			     0, 0);
-	surf->h = e->resize.nh;
-	surf->w = e->resize.nw;
+	//we are gonna do this later
+	/* wl_egl_window_resize(surf->eglwin, */
+	/*		     surf->s * e->resize.nw, surf->s *e->resize.nh, */
+	/*		     0, 0); */
+	/* surf->h = e->resize.nh; */
+	/* surf->w = e->resize.nw; */
 }
 
 
@@ -427,20 +428,21 @@ nk_wl_render(struct nk_wl_backend *b)
 	struct egl_env *env = &bkend->env;
 	struct app_surface *app = b->app_surface;
 	struct nk_context *ctx = &b->ctx;
+	int width = app->allocation.w;
+	int height = app->allocation.h;
+	int scale  = app->allocation.s;
+
 	if (nk_wl_maybe_skip(b))
 		return;
 	//make current to current
 	eglMakeCurrent(env->egl_display, app->eglsurface,
 		       app->eglsurface, env->egl_context);
-	glViewport(0, 0, app->w * app->s, app->h * app->s);
+	glViewport(0, 0, width * scale, height * scale);
 
 	const struct nk_draw_command *cmd;
 	nk_draw_index *offset = NULL;
 	struct nk_buffer vbuf, ebuf;
 	//be awere of this.
-	int width = b->app_surface->w;
-	int height = b->app_surface->h;
-	int scale  = b->app_surface->s;
 
 	_nk_egl_draw_begin(bkend, &vbuf, &ebuf, width, height);
 	//TODO MESA driver has a problem, the first draw call did not work, we can
@@ -487,13 +489,12 @@ nk_egl_destroy_app_surface(struct app_surface *app)
  * the backend is occupied entirely by this app_surface through his lifetime */
 void
 nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			nk_wl_drawcall_t draw_cb,
-			short w, short h, short x, short y, short s,
+			nk_wl_drawcall_t draw_cb, const struct bbox box,
 			int32_t flags)
 
 {
 	struct nk_egl_backend *b = container_of(bkend, struct nk_egl_backend, base);
-	nk_wl_impl_app_surface(surf, bkend, draw_cb, w, h, x, y, s, 0);
+	nk_wl_impl_app_surface(surf, bkend, draw_cb, box, flags);
 	surf->destroy = nk_egl_destroy_app_surface;
 	//assume it is compiled
 	app_surface_init_egl(surf, &b->env);

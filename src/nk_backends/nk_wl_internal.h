@@ -308,8 +308,8 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 	bool handled_input = false;
 	//here is how we manage the buffer
 	struct nk_wl_backend *bkend = surf->user_data;
-	int width = surf->w;
-	int height = surf->h;
+	int width = surf->allocation.w;
+	int height = surf->allocation.h;
 	switch (e->type) {
 	case TW_FRAME_START:
 	case TW_TIMER:
@@ -397,14 +397,11 @@ nk_wl_maybe_skip(struct nk_wl_backend *bkend)
 /********************************* setup *******************************************/
 static void
 nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-		       nk_wl_drawcall_t draw_cb, short w, short h,
-		       short x, short y, short scale, int32_t flags)
+		       nk_wl_drawcall_t draw_cb, const struct bbox box,
+		       int32_t flags)
 {
-	surf->w = w;
-	surf->h = h;
-	surf->px = x;
-	surf->py = y;
-	surf->s = scale;
+	surf->allocation = box;
+	surf->pending_allocation = box;
 	surf->user_data = bkend;
 	surf->do_frame = nk_wl_new_frame;
 	//change the current state of the backend
@@ -415,11 +412,12 @@ nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 	bkend->post_cb = NULL;
 	bkend->nk_flags = flags;
 
+	wl_surface_set_buffer_scale(surf->wl_surface, box.s);
+
 	if (surf->wl_globals) {
 		nk_wl_apply_color(bkend, &surf->wl_globals->theme);
 		//TODO try to apply the font here as well.
 	}
-	wl_surface_set_buffer_scale(surf->wl_surface, scale);
 }
 
 static void
@@ -474,8 +472,8 @@ NK_API void
 nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app, nk_wl_drawcall_t draw_call)
 {
 	//here is how we manage the buffer
-	int width = app->w;
-	int height = app->h;
+	int width = app->allocation.w;
+	int height = app->allocation.h;
 
 	if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height),
 		     NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) {
