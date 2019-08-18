@@ -735,9 +735,9 @@ _nk_lua_drawcb(struct nk_context *c, float width, float height,
 
 //the last parameter is only useful for cairo_backend
 void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
-		 const char *script, uint32_t scale, struct shm_pool *pool)
+		 const char *script, uint32_t scale)
 {
-	uint32_t w, h;
+	uint32_t w = 200, h = 200;
 	if (L)
 		lua_close(L);
 	L = luaL_newstate();
@@ -784,7 +784,7 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 #if defined (NK_EGL_BACKEND)
 	nk_egl_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w,h,scale), 0 );
 #elif defined (NK_CAIRO_BACKEND)
-	nk_cairo_impl_app_surface(surf, bkend, _nk_lua_drawcb, pool, make_bbox_origin(w, h, scale), 0);
+	nk_cairo_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w, h, scale), 0);
 #elif defined (NK_VK_BACKEND)
 	nk_vulkan_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w, h, scale));
 #endif
@@ -856,7 +856,6 @@ int main(int argc, char *argv[])
 	wl_registry_add_listener(registry, &registry_listener, NULL);
 	App.done = false;
 
-	struct shm_pool pool;
 
 	wl_display_dispatch(wl_display);
 	wl_display_roundtrip(wl_display);
@@ -869,15 +868,13 @@ int main(int argc, char *argv[])
 	wl_shell_surface_set_toplevel(shell_surface);
 	App.shell_surface = shell_surface;
 
-	shm_pool_init(&pool, App.global.shm, 4096, App.global.buffer_format);
 	App.bkend = nk_cairo_create_bkend();
-	nk_lua_impl(&App.surface, App.bkend, argv[1], 1, &pool);
+	nk_lua_impl(&App.surface, App.bkend, argv[1], 1);
 	app_surface_frame(&App.surface, false);
 
 	wl_globals_dispatch_event_queue(&App.global);
 	app_surface_release(&App.surface);
 	nk_cairo_destroy_bkend(App.bkend);
-	shm_pool_release(&pool);
 
 	wl_globals_release(&App.global);
 	wl_registry_destroy(registry);

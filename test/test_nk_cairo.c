@@ -158,7 +158,6 @@ int main(int argc, char *argv[])
 	App.done = false;
 	/* App.image = nk_wl_load_image(argv[1]); */
 
-	struct shm_pool pool;
 
 	wl_display_dispatch(wl_display);
 	wl_display_roundtrip(wl_display);
@@ -171,11 +170,10 @@ int main(int argc, char *argv[])
 	wl_shell_surface_set_toplevel(shell_surface);
 	App.shell_surface = shell_surface;
 
-	shm_pool_init(&pool, App.global.shm, 4096, App.global.buffer_format);
 
 	App.bkend = nk_cairo_create_bkend();
 	//the drawing is easy, but input handler is not
-	nk_cairo_impl_app_surface(&App.surface, App.bkend, sample_widget, &pool,
+	nk_cairo_impl_app_surface(&App.surface, App.bkend, sample_widget,
 				  make_bbox_origin(200, 400, 2), -1);
 
 
@@ -185,7 +183,6 @@ int main(int argc, char *argv[])
 
 	app_surface_release(&App.surface);
 	nk_cairo_destroy_bkend(App.bkend);
-	shm_pool_release(&pool);
 
 	wl_globals_release(&App.global);
 	wl_registry_destroy(registry);

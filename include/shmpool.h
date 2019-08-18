@@ -23,7 +23,7 @@ struct shm_pool {
 	struct anonymous_buff_t file;
 	struct wl_shm *shm;
 	struct wl_shm_pool *pool;
-	list_t wl_buffers;
+	struct wl_list wl_buffers;
 	enum wl_shm_format format;
 };
 
@@ -39,9 +39,13 @@ int shm_pool_init(struct shm_pool *pool, struct wl_shm *shm, size_t size, enum w
 struct wl_buffer *shm_pool_alloc_buffer(struct shm_pool *pool, size_t width, size_t height);
 
 /**
- * /brief declare this buffer is not in use anymore
+ * @brief declare this buffer is not in use anymore
+ * @return return the shm_pool for resource management purpose
  */
-void shm_pool_buffer_free(struct wl_buffer *wl_buffer);
+struct shm_pool *shm_pool_buffer_free(struct wl_buffer *wl_buffer);
+
+bool shm_pool_release_if_unused(struct shm_pool *pool);
+
 
 /**
  * /brief set wl_buffer_release_notify callback here since shm_pool_buffer node
