@@ -199,18 +199,10 @@ typedef void (*frame_t)(struct app_surface *, const struct app_event *e);
 struct app_surface {
 	//the structure to store wl_shell_surface, xdg_shell_surface or tw_ui
 	struct wl_proxy *protocol;
-	//TODO: remove those
-	struct wl_shell_surface *shell_surface;
-	struct xdg_toplevel *xdg_surface;
 
 	//geometry information
 	struct bbox allocation;
 	struct bbox pending_allocation;
-
-	/* unsigned int px, py; //anchor */
-	/* unsigned int w, h; //size */
-	/* unsigned int s; //scale */
-	/* unsigned int pending_w, pending_h; */
 
 	enum APP_SURFACE_TYPE type;
 

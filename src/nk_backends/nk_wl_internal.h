@@ -80,7 +80,7 @@ struct nk_wl_backend {
 	nk_wl_drawcall_t frame;
 	nk_wl_postcall_t post_cb;
 	int32_t nk_flags;
-	bool force_redraw;
+
 
 	//look
 	struct {
@@ -332,7 +332,7 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 		handled_input = true;
 		break;
 	case TW_RESIZE:
-		bkend->force_redraw = true;
+		handled_input = true;
 		nk_wl_resize(surf, e);
 		break;
 	default:
@@ -351,7 +351,6 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 	}
 
 	nk_wl_render(bkend);
-	//text edit has problems, I don't think it is here though
 	nk_clear(&bkend->ctx);
 
 	if (bkend->post_cb) {
@@ -361,7 +360,6 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 	//we will need to remove this
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->cbtn = -1;
-	bkend->force_redraw = false;
 }
 
 static inline bool
@@ -379,8 +377,6 @@ nk_wl_need_redraw(struct nk_wl_backend *bkend)
 static inline bool
 nk_wl_maybe_skip(struct nk_wl_backend *bkend)
 {
-	if (bkend->force_redraw)
-		return false;
 	bool need_redraw = nk_wl_need_redraw(bkend);
 	bool need_commit = need_redraw || bkend->app_surface->need_animation;
 	if (!need_commit)
@@ -391,7 +387,6 @@ nk_wl_maybe_skip(struct nk_wl_backend *bkend)
 	}
 	return false;
 }
-
 
 
 /********************************* setup *******************************************/

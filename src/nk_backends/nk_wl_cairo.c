@@ -759,6 +759,8 @@ nk_cairo_buffer_release(void *data,
 static void
 nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 {
+	surf->pending_allocation.w = e->resize.nw;
+	surf->pending_allocation.h = e->resize.nh;
 	//TODO we would have memory leak here
 	/* for (int i = 0; i < 2; i++) { */
 	/*	//our buffer has to be freed by compositor first, otherwise we are leaking tones of memory */
