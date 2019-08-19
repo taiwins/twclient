@@ -283,6 +283,11 @@ void app_surface_request_frame(struct app_surface *surf);
  */
 void app_surface_frame(struct app_surface *surf, bool anime);
 
+/**
+ * @brief start the resize of app surface.
+ */
+void app_surface_resize(struct app_surface *surf, unsigned int nw, unsigned int nh);
+
 static inline void
 app_surface_end_frame_request(struct app_surface *surf)
 {
@@ -316,7 +321,7 @@ app_surface_from_wl_surface(struct wl_surface *s)
 
 
 /**
- * /brief one of the implementation of app_surface
+ * @brief one of the implementation of app_surface
  *
  * In this case, the user_data is taken and used for callback, so we do not need
  * to allocate new memory, since you won't have extra space for ther other
@@ -327,8 +332,18 @@ typedef void (*shm_buffer_draw_t)(struct app_surface *surf, struct wl_buffer *bu
 				  struct bbox *geo);
 
 void
-shm_buffer_impl_app_surface(struct app_surface *surf, struct shm_pool *pool,
-			    shm_buffer_draw_t draw_call, const struct bbox geo);
+shm_buffer_impl_app_surface(struct app_surface *surf, shm_buffer_draw_t draw_call,
+			    const struct bbox geo);
+
+/**
+ * @brief we can expose part of shm_buffer implementation for any shm_pool
+ * double buffer based implementation
+ */
+void shm_buffer_reallocate(struct app_surface *surf, const struct bbox *geo);
+
+void shm_buffer_resize(struct app_surface *surf, const struct app_event *e);
+
+void shm_buffer_destroy_app_surface(struct app_surface *surf);
 
 
 /**
