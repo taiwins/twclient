@@ -78,6 +78,19 @@ app_surface_frame(struct app_surface *surf, bool anime)
 }
 
 
+void
+app_surface_resize(struct app_surface *surf, unsigned int nw, unsigned int nh)
+{
+	struct app_event e;
+	e.time = surf->wl_globals->inputs.millisec;
+	e.type = TW_RESIZE;
+	e.resize.nw = nw;
+	e.resize.nh = nh;
+	e.resize.edge = WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT;
+	e.resize.serial = surf->wl_globals->inputs.serial;
+	surf->do_frame(surf, &e);
+}
+
 static void
 app_surface_frame_done(void *user_data, struct wl_callback *cb, uint32_t data)
 {
@@ -114,11 +127,111 @@ app_surface_request_frame(struct app_surface *surf)
 /**********************************************************
  *                shm_buffer_impl_surface                 *
  **********************************************************/
+void
+shm_buffer_destroy_app_surface(struct app_surface *surf)
+{
+	for (int i = 0; i < 2; i++) {
+		shm_pool_buffer_free(surf->wl_buffer[i]);
+		surf->dirty[i] = false;
+		surf->committed[i] = false;
+	}
+	shm_pool_release(surf->pool);
+	free(surf->pool);
+	surf->pool = NULL;
+	surf->user_data = NULL;
+}
+
+/* now the method needs to smartly release the buffer, I may have nk_wl_cairo
+ * use this interface as well
+ */
+static void
+shm_wl_buffer_release(void *data, struct wl_buffer *wl_buffer)
+{
+	struct app_surface *surf = (struct app_surface *)data;
+	struct shm_pool *pool = NULL;
+	bool inuse = false;
+	for (int i = 0; i < 2; i++)
+		if (surf->wl_buffer[i] == wl_buffer) {
+			inuse = true;
+			surf->dirty[i] = false;
+			surf->committed[i] = false;
+			break;
+		}
+	if (!inuse) {
+		pool = shm_pool_buffer_free(wl_buffer);
+		if (shm_pool_release_if_unused(pool))
+			free(pool);
+	}
+}
+
+/* setup the pool and buffer, destroy the previous pool if there is
+ */
+void
+shm_buffer_reallocate(struct app_surface *surf, const struct bbox *geo)
+{
+	if (surf->pool && shm_pool_release_if_unused(surf->pool))
+		free(surf->pool);
+	surf->pool = calloc(1, sizeof(struct shm_pool));
+	shm_pool_init(surf->pool, surf->wl_globals->shm, bbox_area(geo) * 2,
+		      surf->wl_globals->buffer_format);
+	for (int i = 0; i < 2; i++) {
+		surf->wl_buffer[i] = shm_pool_alloc_buffer(
+			surf->pool, geo->w * geo->s, geo->h * geo->s);
+		surf->dirty[i] = NULL;
+		surf->committed[i] = NULL;
+		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
+						   shm_wl_buffer_release, surf);
+	}
+}
+
+
+static int
+shm_pool_resize_idle(struct tw_event *e, int fd)
+{
+	struct app_surface *surf = e->data;
+	struct bbox *geo = &surf->pending_allocation;
+
+	if (surf->pending_allocation.w == surf->allocation.w &&
+	    surf->pending_allocation.h == surf->allocation.h)
+		return TW_EVENT_DEL;
+
+	shm_buffer_reallocate(surf, geo);
+	surf->allocation = surf->pending_allocation;
+	return TW_EVENT_DEL;
+}
+
+
+void
+shm_buffer_resize(struct app_surface *surf, const struct app_event *e)
+{
+	surf->pending_allocation.w = e->resize.nw;
+	surf->pending_allocation.h = e->resize.nh;
+	struct tw_event re = {
+		.data = surf,
+		.cb = shm_pool_resize_idle,
+	};
+	tw_event_queue_add_idle(&surf->wl_globals->event_queue, &re);
+}
 
 static void
 shm_buffer_surface_swap(struct app_surface *surf, const struct app_event *e)
 {
-	if (e->type != TW_FRAME_START)
+	//for shm_buffer, if resize is requested, you would want call
+	//app_surface_frame again right after.
+	bool ret = true;
+	switch (e->type) {
+	case TW_FRAME_START:
+		ret = false;
+		break;
+	case TW_RESIZE:
+		ret = true;
+		shm_buffer_resize(surf, e);
+		break;
+	default:
+		ret = true;
+		break;
+	}
+	if (ret)
 		return;
 
 	struct wl_buffer *free_buffer = NULL;
@@ -151,60 +264,20 @@ shm_buffer_surface_swap(struct app_surface *surf, const struct app_event *e)
 	*dirty = false;
 }
 
-static void
-shm_buffer_destroy_app_surface(struct app_surface *surf)
-{
-	for (int i = 0; i < 2; i++) {
-		shm_pool_buffer_free(surf->wl_buffer[i]);
-		surf->dirty[i] = false;
-		surf->committed[i] = false;
-	}
-	surf->pool = NULL;
-	surf->user_data = NULL;
-}
-
-static void
-shm_wl_buffer_release(void *data,
-		      struct wl_buffer *wl_buffer)
-{
-	struct app_surface *surf = (struct app_surface *)data;
-	for (int i = 0; i < 2; i++)
-		if (surf->wl_buffer[i] == wl_buffer) {
-			surf->dirty[i] = false;
-			surf->committed[i] = false;
-			break;
-		}
-}
-
-static struct wl_buffer_listener shm_wl_buffer_impl = {
-	.release = shm_wl_buffer_release,
-};
-
 
 void
-shm_buffer_impl_app_surface(struct app_surface *surf, struct shm_pool *pool,
-			    shm_buffer_draw_t draw_call, const struct bbox geo)
+shm_buffer_impl_app_surface(struct app_surface *surf, shm_buffer_draw_t draw_call,
+			    const struct bbox geo)
 {
 	surf->do_frame = shm_buffer_surface_swap;
 	surf->user_data = draw_call;
 	surf->destroy = shm_buffer_destroy_app_surface;
-	surf->pool = pool;
+	surf->pool = NULL;
 	surf->allocation = geo;
 	surf->pending_allocation = geo;
 	wl_surface_set_buffer_scale(surf->wl_surface, geo.s);
-	for (int i = 0; i < 2; i++) {
-		surf->wl_buffer[i] = shm_pool_alloc_buffer(pool, geo.w*geo.s, geo.h*geo.s);
-		wl_buffer_add_listener(surf->wl_buffer[i], &shm_wl_buffer_impl, surf);
-		surf->dirty[i] = false;
-		surf->committed[i] = false;
-		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
-						   shm_wl_buffer_release, surf);
-	}
-	//TODO we should be able to resize the surface as well.
+	shm_buffer_reallocate(surf, &geo);
 }
-
-
-
 
 
 

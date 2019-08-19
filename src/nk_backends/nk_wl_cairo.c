@@ -740,68 +740,9 @@ nk_wl_render(struct nk_wl_backend *bkend)
 
 
 static void
-nk_cairo_buffer_release(void *data,
-			struct wl_buffer *wl_buffer)
-{
-	struct app_surface *surf = (struct app_surface *)data;
-	struct shm_pool *pool = NULL;
-	bool inuse = false;
-	for (int i = 0; i < 2; i++) {
-		if (surf->wl_buffer[i] == wl_buffer) {
-			surf->dirty[i] = false;
-			surf->committed[i] = false;
-			inuse = true;
-			break;
-		}
-	}
-	/* a more secure way to release the buffers */
-	if (!inuse) {
-		pool = shm_pool_buffer_free(wl_buffer);
-		if (shm_pool_release_if_unused(pool))
-			free(pool);
-	}
-
-
-}
-
-static int
-nk_cairo_resize(struct tw_event *e, int fd)
-{
-	struct app_surface *surf = e->data;
-	struct bbox *geo = &surf->pending_allocation;
-
-	if (surf->pending_allocation.w == surf->allocation.w &&
-	    surf->pending_allocation.h == surf->allocation.h)
-		return TW_EVENT_DEL;
-	if (shm_pool_release_if_unused(surf->pool))
-		free(surf->pool);
-
-	surf->pool = calloc(1, sizeof(struct shm_pool));
-	shm_pool_init(surf->pool, surf->wl_globals->shm, bbox_area(geo) * 2,
-		      surf->wl_globals->buffer_format);
-	for (int i = 0; i < 2; i++) {
-		surf->wl_buffer[i] = shm_pool_alloc_buffer(
-			surf->pool, geo->w * geo->s, geo->h * geo->s);
-		surf->dirty[i] = NULL;
-		surf->committed[i] = NULL;
-		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
-						   nk_cairo_buffer_release, surf);
-	}
-	surf->allocation = surf->pending_allocation;
-	return TW_EVENT_DEL;
-}
-
-
-static void
 nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 {
-	surf->pending_allocation.w = e->resize.nw;
-	surf->pending_allocation.h = e->resize.nh;
-	struct tw_event re = {
-		.data = surf,
-		.cb = nk_cairo_resize,
-	};
-	tw_event_queue_add_idle(&surf->wl_globals->event_queue, &re);
+	shm_buffer_resize(surf, e);
 }
 
 
@@ -811,15 +752,7 @@ nk_cairo_destroy_app_surface(struct app_surface *app)
 {
 	struct nk_wl_backend *b = app->user_data;
 	nk_wl_clean_app_surface(b);
-	app->user_data = NULL;
-	for (int i = 0; i < 2; i++) {
-		app->wl_buffer[i] = NULL;
-		app->dirty[i] = false;
-		app->committed[i] = false;
-	}
-	shm_pool_release(app->pool);
-	free(app->pool);
-	app->pool = NULL;
+	shm_buffer_destroy_app_surface(app);
 }
 
 
@@ -832,19 +765,8 @@ nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 		container_of(bkend, struct nk_cairo_backend, base);
 
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, geo, flags);
+	shm_buffer_reallocate(surf, &geo);
 
-
-	surf->pool = calloc(1, sizeof(struct shm_pool));
-	shm_pool_init(surf->pool, surf->wl_globals->shm, bbox_area(&geo) * 2,
-		      surf->wl_globals->buffer_format);
-	for (int i = 0; i < 2; i++) {
-		surf->wl_buffer[i] = shm_pool_alloc_buffer(
-			surf->pool, geo.w * geo.s, geo.h * geo.s);
-		surf->dirty[i] = NULL;
-		surf->committed[i] = NULL;
-		shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
-						   nk_cairo_buffer_release, surf);
-	}
 	surf->destroy = nk_cairo_destroy_app_surface;
 	//change the font size here,
 	if (b->user_font.size != (int)(bkend->row_size * geo.s))
