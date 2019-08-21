@@ -51,6 +51,8 @@ app_surface_init(struct app_surface *surf, struct wl_surface *wl_surface,
 void
 app_surface_release(struct app_surface *surf)
 {
+	if (!surf)
+		return;
 	if (surf->destroy)
 		surf->destroy(surf);
 	//throw all the callbacks
@@ -197,6 +199,8 @@ shm_pool_resize_idle(struct tw_event *e, int fd)
 
 	shm_buffer_reallocate(surf, geo);
 	surf->allocation = surf->pending_allocation;
+
+	app_surface_frame(surf, surf->need_animation);
 	return TW_EVENT_DEL;
 }
 
