@@ -292,7 +292,18 @@ shm_buffer_impl_app_surface(struct app_surface *surf, shm_buffer_draw_t draw_cal
 static void
 embeded_app_surface_do_frame(struct app_surface *surf, const struct app_event *e)
 {
+	if (!surf->parent)
+		return;
 	surf->parent->do_frame(surf->parent, e);
+}
+
+static void
+embeded_app_unhook(struct app_surface *surf)
+{
+	surf->parent = NULL;
+	surf->wl_globals = NULL;
+	surf->allocation = (struct bbox){0};
+	surf->pending_allocation = (struct bbox){0};
 }
 
 void
@@ -307,4 +318,5 @@ embeded_impl_app_surface(struct app_surface *surf, struct app_surface *parent,
 	surf->do_frame = embeded_app_surface_do_frame;
 	surf->allocation = geo;
 	surf->pending_allocation = geo;
+	surf->destroy = embeded_app_unhook;
 }
