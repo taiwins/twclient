@@ -1,0 +1,41 @@
+<protocol name="taiwins_desktop">
+  <!-- global theme protocol -->
+  <interface name="tw_theme" version="1">
+    <description summary="the global theme protocol">
+      Taiwins provides a global theme configuration at for all the applications,
+      not just shell can take advantage of it, other normal application can also
+      easily take that advantage.
+
+      The protocol is designed to have a START and END event so clients will
+      know when to apply those configurations.
+    </description>
+
+    <event name="main_font">
+      <arg name="name" type="string"/>
+    </event>
+
+    <event name="icon_font">
+      <arg name="path" type="string"/>
+    </event>
+
+    <event name="font_size">
+      <arg name="pt" type="uint" summary="point size"/>
+    </event>
+
+    <event name="base_color">
+      <arg name="red" type="uint"/>
+      <arg name="green" type="uint"/>
+      <arg name="blue" type="uint"/>
+      <arg name="transparency" type="fixed" summary="between 0 and 1"/>
+    </event>
+
+    <event name="start">
+      <description summary="mark the configuration starts"/>
+    </event>
+    <event name="done">
+      <description summary="mark the end of a theme configuration"/>
+    </event>
+
+  </interface>
+
+</protocol>
