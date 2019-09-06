@@ -1,13 +1,5 @@
 include(Wayland)
 
-WAYLAND_ADD_PROTOCOL_CLIENT(proto_xdg_shell_client
-  "${WLPROTO_PATH}/stable/xdg-shell/xdg-shell.xml"
-  xdg-shell)
-
-add_library(xdg_shell_client
-  ${proto_xdg_shell_client}
-  )
-
 add_library(twclient
   client.c
   appsurf.c
@@ -20,11 +12,11 @@ add_library(twclient
   pointer.c)
 
 target_include_directories(twclient PUBLIC
+  ${TWCLIENT_PROTO_INCLUDE_DIR}
   ${TWCLIENT_INCLUDE_DIRS}
   ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(nk_backends)
-
 
 if(NK_EGL_BACKEND)
   set(NK_BACKEND_LIB nk_egl_backend)
@@ -36,6 +28,7 @@ endif()
 
 set(TWCLIENT_LIBRARIES
   twclient
+  twclient_proto_libraries
   ${NK_BACKEND_LIB}
   ${TWCLIENT_TRD_LIB}
   CACHE STRING "twclient libraries"

@@ -90,6 +90,6 @@ set(TWCLIENT_TRD_LIB
   ${FREETYPE_LIBRARIES}
   ${UDEV_LIBRARIES}
   )
-
+add_subdirectory(protocols)
 add_subdirectory(src)
 add_subdirectory(test)
