@@ -413,7 +413,8 @@ nk_egl_resize(struct tw_event *e, int fd)
 {
 	struct app_surface *surf = e->data;
 	if (surf->pending_allocation.w == surf->allocation.w &&
-	    surf->pending_allocation.h == surf->allocation.h)
+	    surf->pending_allocation.h == surf->allocation.h &&
+	    surf->pending_allocation.s == surf->allocation.s)
 		return TW_EVENT_DEL;
 	wl_egl_window_resize(surf->eglwin,
 			     surf->pending_allocation.w * surf->pending_allocation.s,
@@ -428,9 +429,7 @@ nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 {
 	surf->pending_allocation.w = e->resize.nw;
 	surf->pending_allocation.h = e->resize.nh;
-	/* if (ABS(surf->pending_allocation.w - surf->allocation.w) <= 5 && */
-	/*     ABS(surf->pending_allocation.h - surf->allocation.h) <= 5) */
-	/*	return; */
+	surf->pending_allocation.s = e->resize.ns;
 
 	struct tw_event re = {
 		.data = surf,
