@@ -286,7 +286,7 @@ void app_surface_frame(struct app_surface *surf, bool anime);
 /**
  * @brief start the resize of app surface.
  */
-void app_surface_resize(struct app_surface *surf, unsigned int nw, unsigned int nh);
+void app_surface_resize(struct app_surface *surf, uint32_t nw, uint32_t nh, uint32_t ns);
 
 static inline void
 app_surface_end_frame_request(struct app_surface *surf)

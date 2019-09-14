@@ -81,15 +81,20 @@ app_surface_frame(struct app_surface *surf, bool anime)
 
 
 void
-app_surface_resize(struct app_surface *surf, unsigned int nw, unsigned int nh)
+app_surface_resize(struct app_surface *surf,
+		   uint32_t nw, uint32_t nh,
+		   uint32_t ns)
 {
 	struct app_event e;
 	e.time = surf->wl_globals->inputs.millisec;
 	e.type = TW_RESIZE;
 	e.resize.nw = nw;
 	e.resize.nh = nh;
+	e.resize.ns = ns;
 	e.resize.edge = WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT;
 	e.resize.serial = surf->wl_globals->inputs.serial;
+	if (surf->allocation.s != ns)
+		wl_surface_set_buffer_scale(surf->wl_surface, ns);
 	surf->do_frame(surf, &e);
 }
 
@@ -194,7 +199,8 @@ shm_pool_resize_idle(struct tw_event *e, int fd)
 	struct bbox *geo = &surf->pending_allocation;
 
 	if (surf->pending_allocation.w == surf->allocation.w &&
-	    surf->pending_allocation.h == surf->allocation.h)
+	    surf->pending_allocation.h == surf->allocation.h &&
+	    surf->pending_allocation.s == surf->allocation.s)
 		return TW_EVENT_DEL;
 
 	shm_buffer_reallocate(surf, geo);
@@ -210,6 +216,7 @@ shm_buffer_resize(struct app_surface *surf, const struct app_event *e)
 {
 	surf->pending_allocation.w = e->resize.nw;
 	surf->pending_allocation.h = e->resize.nh;
+	surf->pending_allocation.s = e->resize.ns;
 	struct tw_event re = {
 		.data = surf,
 		.cb = shm_pool_resize_idle,
