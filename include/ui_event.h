@@ -79,7 +79,7 @@ struct app_event {
 		struct {
 			//xdg surface and shell surface share the same enum
 			uint32_t edge;
-			uint32_t nw, nh;
+			uint32_t nw, nh, ns;
 			uint32_t serial;
 		} resize;
 	};

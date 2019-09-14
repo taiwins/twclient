@@ -319,7 +319,8 @@ resize_pointer_frame(void *data,
 	if (event & POINTER_MOTION)
 		app_surface_resize(app,
 				   (int)app->allocation.w + globals->inputs.dx,
-				   (int)app->allocation.h + globals->inputs.dy);
+				   (int)app->allocation.h + globals->inputs.dy,
+				   app->allocation.s);
 
 	pointer_event_clean(globals);
 }
