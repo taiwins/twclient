@@ -11,20 +11,15 @@ add_library(twclient
   keyboard.c
   pointer.c)
 
+target_link_libraries(twclient
+  ctype)
+
 target_include_directories(twclient PUBLIC
   ${TWCLIENT_PROTO_INCLUDE_DIR}
   ${TWCLIENT_INCLUDE_DIRS}
   ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(nk_backends)
-
-if(NK_EGL_BACKEND)
-  set(NK_BACKEND_LIB nk_egl_backend)
-elseif(NK_CAIRO_BACKEND)
-  set(NK_BACKEND_LIB nk_cairo_backend)
-elseif(NK_VK_BACKEND)
-  set(NK_BACKEND_LIB nk_vk_backend)
-endif()
 
 set(TWCLIENT_LIBRARIES
   twclient
