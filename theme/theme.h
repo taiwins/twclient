@@ -27,13 +27,13 @@ typedef union {
 	};
 } taiwins_rgba_t;
 
-/* to be fair. It should be a path, but if that is the case. Why don't we just
+/*
+ * to be fair. It should be a path, but if that is the case. Why don't we just
  * create a path with specific name?
  */
 typedef struct {
-	const char *image_name;
+	uint32_t handle;
 } taiwins_image_t;
-
 
 enum taiwins_style_type {
 	TAIWINS_STYLE_COLOR = 0,
@@ -59,6 +59,7 @@ struct taiwins_style_item {
 typedef OPTION(taiwins_rgba_t, rgba) theme_option_rgba;
 typedef OPTION(const char *, path) theme_option_path;
 typedef OPTION(struct taiwins_style_item, style) theme_option_style;
+typedef OPTION(uint32_t, font_size) theme_option_font_size;
 
 struct taiwins_style_text {
 	taiwins_rgba_t color;
@@ -187,8 +188,8 @@ struct taiwins_style_slider {
 	int show_buttons;
 	struct taiwins_style_button inc_button;
 	struct taiwins_style_button dec_button;
-	enum taiwins_symbol_type inc_symbol;
-	enum taiwins_symbol_type dec_symbol;
+	/* enum taiwins_symbol_type inc_symbol; */
+	/* enum taiwins_symbol_type dec_symbol; */
 
 	/* optional user callbacks */
 	/* taiwins_handle userdata; */
@@ -246,215 +247,215 @@ struct taiwins_style_scrollbar {
 	int show_buttons;
 	struct taiwins_style_button inc_button;
 	struct taiwins_style_button dec_button;
+	/* enum taiwins_symbol_type inc_symbol; */
+	/* enum taiwins_symbol_type dec_symbol; */
 
-    /* enum taiwins_symbol_type inc_symbol; */
-    /* enum taiwins_symbol_type dec_symbol; */
-
-    /* optional user callbacks */
-    /* taiwins_handle userdata; */
-    /* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
-    /* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* optional user callbacks */
+	/* taiwins_handle userdata; */
+	/* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
 };
 
 struct taiwins_style_edit {
-    /* background */
-    theme_option_style normal;
-    theme_option_style hover;
-    theme_option_style active;
-    taiwins_rgba_t border_color;
-    struct taiwins_style_scrollbar scrollbar;
+	/* background */
+	theme_option_style normal;
+	theme_option_style hover;
+	theme_option_style active;
+	taiwins_rgba_t border_color;
+	struct taiwins_style_scrollbar scrollbar;
 
-    /* cursor  */
-    taiwins_rgba_t cursor_normal;
-    taiwins_rgba_t cursor_hover;
-    taiwins_rgba_t cursor_text_normal;
-    taiwins_rgba_t cursor_text_hover;
+	/* cursor  */
+	taiwins_rgba_t cursor_normal;
+	taiwins_rgba_t cursor_hover;
+	taiwins_rgba_t cursor_text_normal;
+	taiwins_rgba_t cursor_text_hover;
 
-    /* text (unselected) */
-    taiwins_rgba_t text_normal;
-    taiwins_rgba_t text_hover;
-    taiwins_rgba_t text_active;
+	/* text (unselected) */
+	taiwins_rgba_t text_normal;
+	taiwins_rgba_t text_hover;
+	taiwins_rgba_t text_active;
 
-    /* text (selected) */
-    taiwins_rgba_t selected_normal;
-    taiwins_rgba_t selected_hover;
-    taiwins_rgba_t selected_text_normal;
-    taiwins_rgba_t selected_text_hover;
+	/* text (selected) */
+	taiwins_rgba_t selected_normal;
+	taiwins_rgba_t selected_hover;
+	taiwins_rgba_t selected_text_normal;
+	taiwins_rgba_t selected_text_hover;
 
-    /* properties */
-    float border;
-    float rounding;
-    float cursor_size;
-    taiwins_vec2_t scrollbar_size;
-    taiwins_vec2_t padding;
-    float row_padding;
+	/* properties */
+	float border;
+	float rounding;
+	float cursor_size;
+	taiwins_vec2_t scrollbar_size;
+	taiwins_vec2_t padding;
+	float row_padding;
 };
 
 struct taiwins_style_property {
-    /* background */
-    theme_option_style normal;
-    theme_option_style hover;
-    theme_option_style active;
-    taiwins_rgba_t border_color;
+	/* background */
+	theme_option_style normal;
+	theme_option_style hover;
+	theme_option_style active;
+	taiwins_rgba_t border_color;
 
-    /* text */
-    taiwins_rgba_t label_normal;
-    taiwins_rgba_t label_hover;
-    taiwins_rgba_t label_active;
+	/* text */
+	taiwins_rgba_t label_normal;
+	taiwins_rgba_t label_hover;
+	taiwins_rgba_t label_active;
 
-    /* symbols */
-    enum taiwins_symbol_type sym_left;
-    enum taiwins_symbol_type sym_right;
+	/* symbols */
+	/* enum taiwins_symbol_type sym_left; */
+	/* enum taiwins_symbol_type sym_right; */
 
-    /* properties */
-    float border;
-    float rounding;
-    taiwins_vec2_t padding;
+	/* properties */
+	float border;
+	float rounding;
+	taiwins_vec2_t padding;
 
-    struct taiwins_style_edit edit;
-    struct taiwins_style_button inc_button;
-    struct taiwins_style_button dec_button;
+	struct taiwins_style_edit edit;
+	struct taiwins_style_button inc_button;
+	struct taiwins_style_button dec_button;
 
-    /* optional user callbacks */
-    /* taiwins_handle userdata; */
-    /* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
-    /* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* optional user callbacks */
+	/* taiwins_handle userdata; */
+	/* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
 };
 
 struct taiwins_style_chart {
-    /* colors */
-    theme_option_style background;
-    taiwins_rgba_t border_color;
-    taiwins_rgba_t selected_color;
-    taiwins_rgba_t color;
+	/* colors */
+	theme_option_style background;
+	taiwins_rgba_t border_color;
+	taiwins_rgba_t selected_color;
+	taiwins_rgba_t color;
 
-    /* properties */
-    float border;
-    float rounding;
-    taiwins_vec2_t padding;
+	/* properties */
+	float border;
+	float rounding;
+	taiwins_vec2_t padding;
 };
 
 struct taiwins_style_combo {
-    /* background */
-    theme_option_style normal;
-    theme_option_style hover;
-    theme_option_style active;
-    taiwins_rgba_t border_color;
+	/* background */
+	theme_option_style normal;
+	theme_option_style hover;
+	theme_option_style active;
+	taiwins_rgba_t border_color;
 
-    /* label */
-    taiwins_rgba_t label_normal;
-    taiwins_rgba_t label_hover;
-    taiwins_rgba_t label_active;
+	/* label */
+	taiwins_rgba_t label_normal;
+	taiwins_rgba_t label_hover;
+	taiwins_rgba_t label_active;
 
-    /* symbol */
-    taiwins_rgba_t symbol_normal;
-    taiwins_rgba_t symbol_hover;
-    taiwins_rgba_t symbol_active;
+	/* symbol */
+	taiwins_rgba_t symbol_normal;
+	taiwins_rgba_t symbol_hover;
+	taiwins_rgba_t symbol_active;
 
-    /* button */
-    struct taiwins_style_button button;
-    enum taiwins_symbol_type sym_normal;
-    enum taiwins_symbol_type sym_hover;
-    enum taiwins_symbol_type sym_active;
+	/* button */
+	struct taiwins_style_button button;
+	/* enum taiwins_symbol_type sym_normal; */
+	/* enum taiwins_symbol_type sym_hover; */
+	/* enum taiwins_symbol_type sym_active; */
 
-    /* properties */
-    float border;
-    float rounding;
-    taiwins_vec2_t content_padding;
-    taiwins_vec2_t button_padding;
-    taiwins_vec2_t spacing;
+	/* properties */
+	float border;
+	float rounding;
+	taiwins_vec2_t content_padding;
+	taiwins_vec2_t button_padding;
+	taiwins_vec2_t spacing;
 };
 
 struct taiwins_style_tab {
-    /* background */
-    theme_option_style background;
-    taiwins_rgba_t border_color;
-    taiwins_rgba_t text;
+	/* background */
+	theme_option_style background;
+	taiwins_rgba_t border_color;
+	taiwins_rgba_t text;
 
-    /* button */
-    struct taiwins_style_button tab_maximize_button;
-    struct taiwins_style_button tab_minimize_button;
-    struct taiwins_style_button node_maximize_button;
-    struct taiwins_style_button node_minimize_button;
-    enum taiwins_symbol_type sym_minimize;
-    enum taiwins_symbol_type sym_maximize;
+	/* button */
+	struct taiwins_style_button tab_maximize_button;
+	struct taiwins_style_button tab_minimize_button;
+	struct taiwins_style_button node_maximize_button;
+	struct taiwins_style_button node_minimize_button;
+	/* enum taiwins_symbol_type sym_minimize; */
+	/* enum taiwins_symbol_type sym_maximize; */
 
-    /* properties */
-    float border;
-    float rounding;
-    float indent;
-    taiwins_vec2_t padding;
-    taiwins_vec2_t spacing;
+	/* properties */
+	float border;
+	float rounding;
+	float indent;
+	taiwins_vec2_t padding;
+	taiwins_vec2_t spacing;
 };
 
 enum taiwins_style_header_align {
-    TAIWINS_HEADER_LEFT,
-    TAIWINS_HEADER_RIGHT
+	TAIWINS_HEADER_LEFT,
+	TAIWINS_HEADER_RIGHT
 };
 struct taiwins_style_window_header {
-    /* background */
-    theme_option_style normal;
-    theme_option_style hover;
-    theme_option_style active;
+	/* background */
+	theme_option_style normal;
+	theme_option_style hover;
+	theme_option_style active;
 
-    /* button */
-    struct taiwins_style_button close_button;
-    struct taiwins_style_button minimize_button;
-    enum taiwins_symbol_type close_symbol;
-    enum taiwins_symbol_type minimize_symbol;
-    enum taiwins_symbol_type maximize_symbol;
+	/* button */
+	struct taiwins_style_button close_button;
+	struct taiwins_style_button minimize_button;
+	/* enum taiwins_symbol_type close_symbol; */
+	/* enum taiwins_symbol_type minimize_symbol; */
+	/* enum taiwins_symbol_type maximize_symbol; */
 
-    /* title */
-    taiwins_rgba_t label_normal;
-    taiwins_rgba_t label_hover;
-    taiwins_rgba_t label_active;
+	/* title */
+	taiwins_rgba_t label_normal;
+	taiwins_rgba_t label_hover;
+	taiwins_rgba_t label_active;
 
-    /* properties */
-    enum taiwins_style_header_align align;
-    taiwins_vec2_t padding;
-    taiwins_vec2_t label_padding;
-    taiwins_vec2_t spacing;
+	/* properties */
+	enum taiwins_style_header_align align;
+	taiwins_vec2_t padding;
+	taiwins_vec2_t label_padding;
+	taiwins_vec2_t spacing;
 };
 
 struct taiwins_style_window {
-    struct taiwins_style_window_header header;
-    theme_option_style fixed_background;
-    taiwins_rgba_t background;
+	struct taiwins_style_window_header header;
+	theme_option_style fixed_background;
+	taiwins_rgba_t background;
 
-    taiwins_rgba_t border_color;
-    taiwins_rgba_t popup_border_color;
-    taiwins_rgba_t combo_border_color;
-    taiwins_rgba_t contextual_border_color;
-    taiwins_rgba_t menu_border_color;
-    taiwins_rgba_t group_border_color;
-    taiwins_rgba_t tooltip_border_color;
-    theme_option_style scaler;
+	taiwins_rgba_t border_color;
+	taiwins_rgba_t popup_border_color;
+	taiwins_rgba_t combo_border_color;
+	taiwins_rgba_t contextual_border_color;
+	taiwins_rgba_t menu_border_color;
+	taiwins_rgba_t group_border_color;
+	taiwins_rgba_t tooltip_border_color;
+	theme_option_style scaler;
 
-    float border;
-    float combo_border;
-    float contextual_border;
-    float menu_border;
-    float group_border;
-    float tooltip_border;
-    float popup_border;
-    float min_row_height_padding;
+	float border;
+	float combo_border;
+	float contextual_border;
+	float menu_border;
+	float group_border;
+	float tooltip_border;
+	float popup_border;
+	float min_row_height_padding;
 
-    float rounding;
-    taiwins_vec2_t spacing;
-    taiwins_vec2_t scrollbar_size;
-    taiwins_vec2_t min_size;
+	float rounding;
+	taiwins_vec2_t spacing;
+	taiwins_vec2_t scrollbar_size;
+	taiwins_vec2_t min_size;
 
-    taiwins_vec2_t padding;
-    taiwins_vec2_t group_padding;
-    taiwins_vec2_t popup_padding;
-    taiwins_vec2_t combo_padding;
-    taiwins_vec2_t contextual_padding;
-    taiwins_vec2_t menu_padding;
-    taiwins_vec2_t tooltip_padding;
+	taiwins_vec2_t padding;
+	taiwins_vec2_t group_padding;
+	taiwins_vec2_t popup_padding;
+	taiwins_vec2_t combo_padding;
+	taiwins_vec2_t contextual_padding;
+	taiwins_vec2_t menu_padding;
+	taiwins_vec2_t tooltip_padding;
 };
 
-struct taiwins_style {
-	OPTION(uint32_t, font_size) pending_font_size;
+//server is responsible for creating such a
+struct taiwins_theme {
+	theme_option_font_size pending_font_size;
 	struct taiwins_style_text text;
 	struct taiwins_style_button button;
 	struct taiwins_style_button contextual_button;
@@ -472,8 +473,12 @@ struct taiwins_style {
 	struct taiwins_style_tab tab;
 	struct taiwins_style_combo combo;
 	struct taiwins_style_window window;
+	/* handles for images, which will be mark as start point in the string
+	   pool, it works as a sparse string */
+	struct wl_array handle_pool;
+	/* strings with '\0' at the end. */
+	struct wl_array string_pool;
 };
-
 
 #ifdef __cplusplus
 }
