@@ -8,10 +8,13 @@
       find a good way to do it right now
     </description>
 
-    <event name="new_theme">
-      <description summary="brand new themes, ditch old ones"/>
+    <event name="theme">
+      <description summary="accepting themes">
+	Server sends clients the map of a theme, clients can copy to its own struct
+      </description>
       <arg name="name" type="string"/>
-      <arg name="content" type="string" summary="in json format"/>
+      <arg name="fd" type="fd"/>
+      <arg name="size" type="uint"/>
     </event>
 
     <enum name="section">
