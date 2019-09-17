@@ -57,7 +57,7 @@ struct taiwins_style_item {
 };
 
 typedef OPTION(taiwins_rgba_t, rgba) theme_option_rgba;
-typedef OPTION(const char *, path) theme_option_path;
+typedef OPTION(const uint32_t, handle) theme_option_handle;
 typedef OPTION(struct taiwins_style_item, style) theme_option_style;
 typedef OPTION(uint32_t, font_size) theme_option_font_size;
 
@@ -456,6 +456,8 @@ struct taiwins_style_window {
 //server is responsible for creating such a
 struct taiwins_theme {
 	theme_option_font_size pending_font_size;
+	theme_option_handle text_font;
+	theme_option_handle icon_font;
 	struct taiwins_style_text text;
 	struct taiwins_style_button button;
 	struct taiwins_style_button contextual_button;
