@@ -7,8 +7,8 @@
 
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_rect_pack.h"
-#include "stb_image.h"
+#include <stb/stb_rect_pack.h>
+#include <stb/stb_image.h>
 
 static inline struct nk_color
 nk_color_from_tw(const taiwins_rgba_t *tc)
