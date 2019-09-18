@@ -75,3 +75,14 @@ add_executable(test_udev
 target_link_libraries(test_udev
   ${TWCLIENT_LIBRARIES}
   )
+
+
+add_executable(test_stbimage
+  test_stb_image.c)
+
+target_include_directories(test_stbimage PUBLIC
+  ${TWCLIENT_INCLUDE_DIRS})
+
+target_link_libraries(test_stbimage
+  ${TWCLIENT_LIBRARIES}
+  )
