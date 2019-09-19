@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <cairo/cairo.h>
@@ -39,7 +40,7 @@ load_image(const char *input_path, const char *output_path)
 			((uint32_t)pixel.data.g << 8) +
 			((uint32_t)pixel.data.b);
 	}
-	cairo_surface_t *image_surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1000, 1000);
+	cairo_surface_t *image_surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 100, 100);
 	cairo_surface_t *src = cairo_image_surface_create_for_data(pixels, CAIRO_FORMAT_ARGB32, w, h,
 								   cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, w));
 	cairo_t *cr = cairo_create(image_surf);
@@ -47,7 +48,7 @@ load_image(const char *input_path, const char *output_path)
 	cairo_set_source_rgb(cr, 0, 0, 0);
 	cairo_paint(cr);
 	cairo_set_source_surface(cr, src, 0, 0);
-	cairo_rectangle(cr, 0, 0, 1000, 1000);
+	cairo_rectangle(cr, 0, 0, 100, 100);
 	cairo_fill(cr);
 
 	cairo_destroy(cr);
@@ -64,13 +65,14 @@ copy_as_subimage(unsigned char *dst, const size_t dst_width,
 	union argb pixel;
 	for (int j = 0; j < rect->h; j++)
 		for (int i = 0; i < rect->w; i++) {
-			pixel.code = *(uint32_t*)src;
-			*((uint32_t *)dst +
-			 (rect->y * dst_width + rect->x)) =
+			pixel.code = *((uint32_t*)src + j * rect->w + i);
+			//cairo alpha is pre-multiplied, so we do the same here
+			double alpha = pixel.data.a / 256.0;
+			*((uint32_t *)dst + (rect->y+j) * dst_width + (rect->x+i)) =
 				((uint32_t)pixel.data.a << 24) +
-				((uint32_t)pixel.data.r << 16) +
-				((uint32_t)pixel.data.g << 8) +
-				((uint32_t)pixel.data.b);
+				((uint32_t)(pixel.data.r * alpha) << 16) +
+				((uint32_t)(pixel.data.g * alpha) << 8) +
+				((uint32_t)(pixel.data.b * alpha));
 		}
 }
 
@@ -82,9 +84,9 @@ nk_wl_build_theme_images(struct wl_array *handle_pool, struct wl_array *string_p
 	stbrp_rect *rects = malloc(sizeof(stbrp_rect) * nimages);
 	stbrp_node *nodes = malloc(sizeof(stbrp_node) * 2020);
 	stbrp_context context;
-	stbrp_init_target(&context, 2000, 2000, nodes, 2020);
-	stbrp_setup_allow_out_of_mem(&context, 0);
 	cairo_surface_t *image_surface;
+	stbrp_init_target(&context, 1000, 1000, nodes, 2020);
+	stbrp_setup_allow_out_of_mem(&context, 0);
 
 	//first pass: get the rects in places.
 	for (int i = 0; i < nimages; i++) {
@@ -97,8 +99,7 @@ nk_wl_build_theme_images(struct wl_array *handle_pool, struct wl_array *string_p
 		rects[i].w = x; rects[i].h = y;
 	}
 	stbrp_pack_rects(&context, rects, nimages);
-	image_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 2000, 2000);
-	cairo_t *cr = cairo_create(image_surface);
+	unsigned char *dst = calloc(1, 1000 * 1000 * 4);
 
 	//second pass: load images
 	for (int i = 0; i < nimages; i++) {
@@ -108,14 +109,14 @@ nk_wl_build_theme_images(struct wl_array *handle_pool, struct wl_array *string_p
 		const char *path =
 			(const char *)string_pool->data + pos;
 		unsigned char *pixels = stbi_load(path, &x, &y, &comp, STBI_rgb_alpha);
-		copy_as_subimage(cairo_image_surface_get_data(image_surface), 2000, pixels,
+		copy_as_subimage(dst, 1000, pixels,
 				 &rects[i]);
-
 		stbi_image_free(pixels);
 	}
-	cairo_destroy(cr);
+	image_surface = cairo_image_surface_create_for_data(dst, CAIRO_FORMAT_ARGB32, 1000, 1000, 4000);
 	cairo_surface_write_to_png(image_surface, output_path);
 	cairo_surface_destroy(image_surface);
+	free(dst);
 	free(nodes);
 	free(rects);
 }
@@ -155,6 +156,8 @@ build_image_strings(const char *path, struct wl_array *handle_pool, struct wl_ar
 
 int main(int argc, char *argv[])
 {
+	/* load_image(argv[1], argv[2]); */
+	/* return; */
 	struct wl_array handle_pool, string_pool;
 	build_image_strings(argv[1], &handle_pool, &string_pool);
 	nk_wl_build_theme_images(&handle_pool, &string_pool, argv[2]);
