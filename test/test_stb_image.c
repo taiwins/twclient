@@ -81,25 +81,35 @@ nk_wl_build_theme_images(struct wl_array *handle_pool, struct wl_array *string_p
 			 const char *output_path)
 {
 	size_t nimages = handle_pool->size / sizeof(uint64_t);
+	size_t context_height, context_width = 1000;
+	int row_x = 0, row_y = 0;
+
 	stbrp_rect *rects = malloc(sizeof(stbrp_rect) * nimages);
-	stbrp_node *nodes = malloc(sizeof(stbrp_node) * 2020);
+	stbrp_node *nodes = malloc(sizeof(stbrp_node) * 2000);
 	stbrp_context context;
 	cairo_surface_t *image_surface;
-	stbrp_init_target(&context, 1000, 1000, nodes, 2020);
-	stbrp_setup_allow_out_of_mem(&context, 0);
 
 	//first pass: get the rects in places.
 	for (int i = 0; i < nimages; i++) {
 		int pos;
-		int x, y, comp; //channels
+		int w, h, nchannels; //channels
 		pos = *((uint64_t *)handle_pool->data + i);
 		const char *path =
 			(const char *)string_pool->data + pos;
-		stbi_info(path, &x, &y, &comp);
-		rects[i].w = x; rects[i].h = y;
+		stbi_info(path, &w, &h, &nchannels);
+		rects[i].w = w; rects[i].h = h;
+
+		row_x = (row_x + w > context_width) ?
+			w : row_x + w;
+		row_y = (row_x + w > context_width) ?
+			row_y + h : MAX(row_y, h);
 	}
+	context_height = row_y;
+	stbrp_init_target(&context, context_width, context_height, nodes, 2000);
+	stbrp_setup_allow_out_of_mem(&context, 0);
+
 	stbrp_pack_rects(&context, rects, nimages);
-	unsigned char *dst = calloc(1, 1000 * 1000 * 4);
+	unsigned char *dst = calloc(1, context_width * context_height * 4);
 
 	//second pass: load images
 	for (int i = 0; i < nimages; i++) {
@@ -109,11 +119,14 @@ nk_wl_build_theme_images(struct wl_array *handle_pool, struct wl_array *string_p
 		const char *path =
 			(const char *)string_pool->data + pos;
 		unsigned char *pixels = stbi_load(path, &x, &y, &comp, STBI_rgb_alpha);
-		copy_as_subimage(dst, 1000, pixels,
+		copy_as_subimage(dst, context_width, pixels,
 				 &rects[i]);
 		stbi_image_free(pixels);
 	}
-	image_surface = cairo_image_surface_create_for_data(dst, CAIRO_FORMAT_ARGB32, 1000, 1000, 4000);
+	image_surface = cairo_image_surface_create_for_data(
+		dst, CAIRO_FORMAT_ARGB32,
+		context_width, context_height,
+		cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, context_width));
 	cairo_surface_write_to_png(image_surface, output_path);
 	cairo_surface_destroy(image_surface);
 	free(dst);
