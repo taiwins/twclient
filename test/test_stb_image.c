@@ -57,6 +57,22 @@ load_image(const char *input_path, const char *output_path)
 	stbi_image_free(pixels);
 }
 
+static void
+copy_as_subimage(unsigned char *dst, const size_t dst_width,
+		 const unsigned char *src, const stbrp_rect *rect)
+{
+	union argb pixel;
+	for (int j = 0; j < rect->h; j++)
+		for (int i = 0; i < rect->w; i++) {
+			pixel.code = *(uint32_t*)src;
+			*((uint32_t *)dst +
+			 (rect->y * dst_width + rect->x)) =
+				((uint32_t)pixel.data.a << 24) +
+				((uint32_t)pixel.data.r << 16) +
+				((uint32_t)pixel.data.g << 8) +
+				((uint32_t)pixel.data.b);
+		}
+}
 
 static void
 nk_wl_build_theme_images(struct wl_array *handle_pool, struct wl_array *string_pool,
@@ -84,7 +100,6 @@ nk_wl_build_theme_images(struct wl_array *handle_pool, struct wl_array *string_p
 	image_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 2000, 2000);
 	cairo_t *cr = cairo_create(image_surface);
 
-
 	//second pass: load images
 	for (int i = 0; i < nimages; i++) {
 		intptr_t pos;
@@ -93,18 +108,9 @@ nk_wl_build_theme_images(struct wl_array *handle_pool, struct wl_array *string_p
 		const char *path =
 			(const char *)string_pool->data + pos;
 		unsigned char *pixels = stbi_load(path, &x, &y, &comp, STBI_rgb_alpha);
-		//now we copy the image to desired location
-		cairo_surface_t *source =  cairo_image_surface_create_for_data(
-			pixels, CAIRO_FORMAT_ARGB32, x, y,
-			cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, x));
+		copy_as_subimage(cairo_image_surface_get_data(image_surface), 2000, pixels,
+				 &rects[i]);
 
-		//now use cairo to render to sublocations
-		cairo_set_source_surface(cr, source, 0, 0);
-		cairo_rectangle(cr, rects[i].x, rects[i].y, rects[i].w, rects[i].h);
-		cairo_fill(cr);
-		/* cairo_paint(cr); */
-		/* cairo_surface_flush(image_surface); */
-		cairo_surface_destroy(source);
 		stbi_image_free(pixels);
 	}
 	cairo_destroy(cr);
