@@ -15,6 +15,7 @@ target_link_libraries(twclient
   ctype)
 
 target_include_directories(twclient PUBLIC
+  ${CTYPES_INCLUDE_DIR}
   ${TWCLIENT_PROTO_INCLUDE_DIR}
   ${TWCLIENT_INCLUDE_DIRS}
   ${CMAKE_CURRENT_BINARY_DIR})

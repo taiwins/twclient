@@ -43,18 +43,6 @@ find_package(UDEV REQUIRED)
 find_package(Vulkan REQUIRED)
 
 ###########################################################
-if(CTYPES_INCLUDE_DIR AND CTYPES_LIBRARIES)
-  #check whether we include
-  if(CTYPES_INCLUDE_DIR MATCHES "${CMAKE_CURRENT_LIST_DIR}/ctypes/src")
-    message("using self contained ctypes library")
-    add_subdirectory(ctypes)
-  else()
-    message("using external ctypes library")
-  endif()
-else()
-  message("using self contained ctypes library")
-  add_subdirectory(ctypes)
-endif()
 
 set(TWCLIENT_INCLUDE_DIRS
   ${CTYPES_INCLUDE_DIR}
@@ -91,6 +79,7 @@ set(TWCLIENT_TRD_LIB
   ${UDEV_LIBRARIES}
   )
 
+add_subdirectory(ctypes)
 add_subdirectory(protocols)
 add_subdirectory(src)
 add_subdirectory(test)
