@@ -108,6 +108,10 @@ struct nk_wl_backend {
 
 #include "nk_wl_input.h"
 
+/******************************* wl_shell ***************************************/
+
+#include "nk_wl_shell.h"
+
 /******************************** render *******************************************/
 static void nk_wl_render(struct nk_wl_backend *bkend);
 static void nk_wl_resize(struct app_surface *app, const struct app_event *e);
