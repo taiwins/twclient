@@ -803,28 +803,3 @@ nk_cairo_destroy_bkend(struct nk_wl_backend *bkend)
 	//unused_val = nk_sqrt(unused_val);
 	//(void)unused_val;
 }
-
-
-NK_API struct nk_image
-nk_wl_load_image(const char *path)
-{
-	struct nk_image handle = {
-		.handle = {0}
-	};
-
-	cairo_surface_t *im = cairo_image_surface_create_from_png(path);
-	if (cairo_image_surface_get_format(im) == CAIRO_FORMAT_INVALID)
-		return handle;
-	handle.w = cairo_image_surface_get_width(im);
-	handle.w = cairo_image_surface_get_height(im);
-	handle.handle.ptr = im;
-
-	return handle;
-}
-
-NK_API void
-nk_wl_free_image(struct nk_image *im)
-{
-	cairo_surface_t *img = im->handle.ptr;
-	cairo_surface_destroy(img);
-}
