@@ -38,14 +38,23 @@ app_surface_clean_egl(struct app_surface *surf, struct egl_env *env)
 
 void
 app_surface_init(struct app_surface *surf, struct wl_surface *wl_surface,
-		 struct wl_proxy *proxy, struct wl_globals *globals)
+		 struct wl_proxy *proxy, struct wl_globals *globals,
+		 enum app_surface_type type, const uint32_t flags)
 {
-
 	*surf = (struct app_surface){0};
 	surf->wl_surface = wl_surface;
 	surf->protocol = proxy;
+	surf->type = type;
+	surf->flags = flags;
 	wl_surface_set_user_data(wl_surface, surf);
 	surf->wl_globals = globals;
+}
+
+void
+app_surface_init_default(struct app_surface *app, struct wl_surface *surf,
+			 struct wl_proxy *p, struct wl_globals *g)
+{
+	app_surface_init(app, surf, p, g, APP_SURFACE_APP, 0);
 }
 
 void
@@ -62,7 +71,6 @@ app_surface_release(struct app_surface *surf)
 	surf->protocol = NULL;
 	surf->wl_surface = NULL;
 }
-
 
 void
 app_surface_frame(struct app_surface *surf, bool anime)
@@ -85,6 +93,8 @@ app_surface_resize(struct app_surface *surf,
 		   uint32_t nw, uint32_t nh,
 		   uint32_t ns)
 {
+	if (surf->flags & APP_SURFACE_NORESIZABLE)
+		return;
 	struct app_event e;
 	e.time = surf->wl_globals->inputs.millisec;
 	e.type = TW_RESIZE;

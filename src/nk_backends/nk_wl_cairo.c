@@ -758,13 +758,12 @@ nk_cairo_destroy_app_surface(struct app_surface *app)
 
 void
 nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			  nk_wl_drawcall_t draw_cb,
-			  struct bbox geo, int32_t flags)
+			  nk_wl_drawcall_t draw_cb, struct bbox geo)
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
 
-	nk_wl_impl_app_surface(surf, bkend, draw_cb, geo, flags);
+	nk_wl_impl_app_surface(surf, bkend, draw_cb, geo);
 	shm_buffer_reallocate(surf, &geo);
 
 	surf->destroy = nk_cairo_destroy_app_surface;
@@ -780,7 +779,6 @@ nk_cairo_create_bkend(void)
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
 	b->base.theme_hash = 0;
 	b->base.L = NULL;
-	b->base.nk_flags = -1;
 	nk_init_default(&b->base.ctx, &b->user_font.nk_font);
 	nk_cairo_font_init(&b->user_font, NULL, NULL);
 	nk_cairo_font_set_size(&b->user_font, 16, 1.0);
