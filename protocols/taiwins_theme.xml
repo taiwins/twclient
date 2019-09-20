@@ -1,40 +1,59 @@
-<protocol name="taiwins_desktop">
+<protocol name="taiwins_theme">
   <!-- global theme protocol -->
   <interface name="tw_theme" version="1">
     <description summary="the global theme protocol">
-      Taiwins provides a global theme configuration at for all the applications,
-      not just shell can take advantage of it, other normal application can also
-      easily take that advantage.
-
-      The protocol is designed to have a START and END event so clients will
-      know when to apply those configurations.
+      All taiwins applications can receive this themes from server.
+      The detailed theme is a tree structure with many folds. To give exactly
+      draw commands(color, bottom image) seems impossible right now. I did not
+      find a good way to do it right now
     </description>
 
-    <event name="main_font">
+    <event name="theme">
+      <description summary="accepting themes">
+	Server sends clients the map of a theme, clients can copy to its own struct
+      </description>
       <arg name="name" type="string"/>
+      <arg name="fd" type="fd"/>
+      <arg name="size" type="uint"/>
     </event>
 
-    <event name="icon_font">
-      <arg name="path" type="string"/>
-    </event>
+    <enum name="section">
+      <!-- main sections -->
+      <entry name="text" value="0"/>
+      <entry name="button" value="1"/>
+      <entry name="context_button" value="2"/>
+      <entry name="menu_button" value="3"/>
+      <entry name="option" value="4"/>
+      <entry name="checkbox" value="5"/>
+      <entry name="selectable" value="6"/>
+      <entry name="slider" value="7"/>
+      <entry name="progress" value="8"/>
+      <entry name="property" value="9"/>
+      <entry name="text_edit" value="10"/>
+      <entry name="chart" value="11"/>
+      <entry name="vertical_scroll" value="12"/>
+      <entry name="horizontal_scroll" value="13"/>
+      <entry name="tab" value="14"/>
+      <entry name="combo_box" value="15"/>
+    </enum>
 
-    <event name="font_size">
-      <arg name="pt" type="uint" summary="point size"/>
-    </event>
-
-    <event name="base_color">
+    <event name="color">
+      <description summary="a configuration of a color"/>
+      <arg name="section" type="uint"/>
       <arg name="red" type="uint"/>
       <arg name="green" type="uint"/>
       <arg name="blue" type="uint"/>
-      <arg name="transparency" type="fixed" summary="between 0 and 1"/>
+      <arg name="alpha" type="uint"/>
     </event>
 
-    <event name="start">
-      <description summary="mark the configuration starts"/>
+    <event name="padding">
+      <arg name="padding" type="fixed"/>
     </event>
+
     <event name="done">
       <description summary="mark the end of a theme configuration"/>
     </event>
+
 
   </interface>
 

@@ -18,6 +18,7 @@
 #include <wayland-xdg-shell-client-protocol.h>
 #include <sequential.h>
 #include "ui_event.h"
+#include "theme.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,52 +29,12 @@ extern "C" {
 //////////////////////////////////////////////////////////////////////////////////////////
 struct shm_pool;
 
-struct tw_rgba_t {
-	uint8_t r,g,b,a;
-};
-
-struct widget_colors {
-	struct tw_rgba_t normal;
-	struct tw_rgba_t hover;
-	struct tw_rgba_t active;
-};
-
-/* the simpler version of style config, it is not gonna be as fancy as
- * nuklear(supporting nk_style_time(image or color) for all gui elements), but
- * it will have a consistent look, the taiwins_theme struct is kinda a big blob,
- * TODO we need a hashing technique to quick check if the theme is the same
- * nuklear has a MumurHash function, we can use that actually
- *
- * I should rename it to widget_theme
- */
-struct taiwins_theme {
-	uint32_t row_size; //this defines the text size as well
-	struct tw_rgba_t window_color;
-	struct tw_rgba_t border_color;
-	//text colors
-	struct tw_rgba_t text_color; //text_edit_cursor as well
-	struct tw_rgba_t text_active_color;
-	//widget color
-	struct widget_colors button;
-	struct widget_colors toggle;
-	struct widget_colors select;
-	struct tw_rgba_t slider_bg_color;
-	struct widget_colors slider;
-	struct widget_colors chart;
-	struct tw_rgba_t combo_color;
-	//we can contain a font name here. eventually the icon font is done by
-	//searching all the svg in the widgets
-	char font[64];
-};
-
-extern const struct taiwins_theme taiwins_dark_theme;
-extern const struct taiwins_theme taiwins_light_theme;
-
+extern const struct taiwins_theme_color taiwins_dark_theme;
 
 /**
  * this function exams the theme(color and fonts are valid and do some convert)
  */
-bool tw_validate_theme(struct taiwins_theme *);
+bool tw_validate_theme(struct taiwins_theme_color *);
 
 /* return -1 if path is not long enough, even if you feed a empty string we should return a font */
 int tw_find_font_path(const char *font_name, char *path, size_t path_size);
