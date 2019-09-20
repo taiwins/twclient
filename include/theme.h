@@ -453,7 +453,9 @@ struct taiwins_style_window {
 	taiwins_vec2_t tooltip_padding;
 };
 
-//server is responsible for creating such a
+/* we don't need to follow exactly what nuklear does, many of the elements are
+ * redundent, we can certainly clean it up later
+ */
 struct taiwins_theme {
 	theme_option_font_size pending_font_size;
 	theme_option_handle text_font;
@@ -481,6 +483,33 @@ struct taiwins_theme {
 	/* strings with '\0' at the end. */
 	struct wl_array string_pool;
 };
+
+struct widget_colors {
+	taiwins_rgba_t normal;
+	taiwins_rgba_t hover;
+	taiwins_rgba_t active;
+};
+
+struct taiwins_theme_color {
+	uint32_t row_size; //this defines the text size as well
+	taiwins_rgba_t window_color;
+	taiwins_rgba_t border_color;
+	//text colors
+	taiwins_rgba_t text_color; //text_edit_cursor as well
+	taiwins_rgba_t text_active_color;
+	//widget color
+	struct widget_colors button;
+	struct widget_colors toggle;
+	struct widget_colors select;
+	taiwins_rgba_t slider_bg_color;
+	struct widget_colors slider;
+	struct widget_colors chart;
+	taiwins_rgba_t combo_color;
+	//we can contain a font name here. eventually the icon font is done by
+	//searching all the svg in the widgets
+	char font[64];
+};
+
 
 #ifdef __cplusplus
 }
