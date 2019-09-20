@@ -507,12 +507,11 @@ nk_egl_destroy_app_surface(struct app_surface *app)
  * the backend is occupied entirely by this app_surface through his lifetime */
 void
 nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			nk_wl_drawcall_t draw_cb, const struct bbox box,
-			int32_t flags)
+			nk_wl_drawcall_t draw_cb, const struct bbox box)
 
 {
 	struct nk_egl_backend *b = container_of(bkend, struct nk_egl_backend, base);
-	nk_wl_impl_app_surface(surf, bkend, draw_cb, box, flags);
+	nk_wl_impl_app_surface(surf, bkend, draw_cb, box);
 	surf->destroy = nk_egl_destroy_app_surface;
 	//assume it is compiled
 	app_surface_init_egl(surf, &b->env);
@@ -539,7 +538,6 @@ nk_egl_create_backend(const struct wl_display *display)
 	bkend->base.L = NULL;
 	bkend->font_size = 0;
 	bkend->font_tex = 0;
-	bkend->base.nk_flags = -1;
 
 	bkend->compiled = false;
 	//depends on the implementation, we can init backend in different wey

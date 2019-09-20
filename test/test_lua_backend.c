@@ -308,16 +308,17 @@ nk_lua_layout_row(lua_State *L)
 			ratio_param = 4;
 		}
 	}
-	float spans[ncols+1];
+	(void)layout_format;
+	/* float spans[ncols+1]; */
 	for (int i = 0; i < ncols; i++) {
 		if (use_ratio) {
 			lua_rawgeti(L, ratio_param, i);
-			float ratio = (float)lua_tonumber(L, -1);
+			/* float ratio = (float)lua_tonumber(L, -1); */
 			lua_pop(L, 1);
-			spans[i] = ratio;
+			/* spans[i] = ratio; */
 		} else {
-			float ratio = (layout_format == NK_STATIC) ? (float)lua_tonumber(L, ratio_param) : 1.0 / ncols;
-			spans[i] = ratio;
+			/* float ratio = (layout_format == NK_STATIC) ? (float)lua_tonumber(L, ratio_param) : 1.0 / ncols; */
+			/* spans[i] = ratio; */
 		}
 	}
 	//TODO this won't work because the spans has to be present util the frame is done
@@ -716,7 +717,6 @@ _nk_lua_drawcb(struct nk_context *c, float width, float height,
 	       struct app_surface *app)
 {
 	//now you need to decide whether to include a lua_state in the internal or not
-	struct nk_wl_backend *b = app->user_data;
 	lua_getglobal(L, "draw_frame");
 	lua_getfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
 	struct lua_user_data *user_data = (struct lua_user_data *)lua_touserdata(L, -1);
@@ -744,8 +744,8 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 
 	//create the user data with the backend
 	luaL_openlibs(L);
-	struct lua_user_data *d = (struct lua_user_data *)
-		lua_newuserdata(L, sizeof(struct lua_user_data));
+	/* struct lua_user_data *d = (struct lua_user_data *) */
+	/*	lua_newuserdata(L, sizeof(struct lua_user_data)); */
 	//create the metatable then bind all the functions in
 	luaL_newmetatable(L, "_context");
 	lua_pushvalue(L, -1);
@@ -773,7 +773,8 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	lua_setfield(L, LUA_REGISTRYINDEX, "_nk_userdata");
 
 	//in the end, we need a do file operation
-	luaL_dofile(L, script);
+	if(luaL_dofile(L, script))
+		luaL_error(L, "error in run files");
 	//then get the width, height, and draw_calls
 	lua_getglobal(L, "width");
 	lua_getglobal(L, "height");
@@ -782,9 +783,9 @@ void nk_lua_impl(struct app_surface *surf, struct nk_wl_backend *bkend,
 	lua_pop(L, 2);
 	//mostly this is what
 #if defined (NK_EGL_BACKEND)
-	nk_egl_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w,h,scale), 0 );
+	nk_egl_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w,h,scale));
 #elif defined (NK_CAIRO_BACKEND)
-	nk_cairo_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w, h, scale), 0);
+	nk_cairo_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w, h, scale));
 #elif defined (NK_VK_BACKEND)
 	nk_vulkan_impl_app_surface(surf, bkend, _nk_lua_drawcb, make_bbox_origin(w, h, scale));
 #endif
@@ -862,7 +863,7 @@ int main(int argc, char *argv[])
 
 	struct wl_surface *wl_surface = wl_compositor_create_surface(App.global.compositor);
 	struct wl_shell_surface *shell_surface = wl_shell_get_shell_surface(App.shell, wl_surface);
-	app_surface_init(&App.surface, wl_surface, (struct wl_proxy *)shell_surface, &App.global);
+	app_surface_init_default(&App.surface, wl_surface, (struct wl_proxy *)shell_surface, &App.global);
 
 	wl_shell_surface_add_listener(shell_surface, &pingpong, NULL);
 	wl_shell_surface_set_toplevel(shell_surface);
