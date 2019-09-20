@@ -346,8 +346,10 @@ _nk_egl_draw_begin(struct nk_egl_backend *bkend,
 	//use program
 	glUseProgram(bkend->glprog);
 	glValidateProgram(bkend->glprog);
-	glClearColor(bkend->base.main_color.r, bkend->base.main_color.g,
-		     bkend->base.main_color.b, bkend->base.main_color.a);
+	glClearColor(bkend->base.main_color.r / 255.0,
+		     bkend->base.main_color.g / 255.0,
+		     bkend->base.main_color.b / 255.0,
+		     bkend->base.main_color.a / 255.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	//switches
 	glEnable(GL_BLEND);
