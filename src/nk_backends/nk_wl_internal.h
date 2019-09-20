@@ -101,220 +101,12 @@ struct nk_wl_backend {
 	};
 };
 
-
-
 /******************************** nuklear colors ***********************************/
-static inline struct nk_color
-nk_color_from_tw(const taiwins_rgba_t *tc)
-{
-	struct nk_color nc;
-	nc.r = tc->r; nc.g = tc->g;
-	nc.b = tc->b; nc.a = tc->a;
-	return nc;
-}
-
-static inline nk_hash
-nk_wl_hash_theme(const struct taiwins_theme_color* theme)
-{
-	return nk_murmur_hash(theme, sizeof(struct taiwins_theme), NK_FLAG(7));
-}
-
-static void
-nk_wl_apply_color(struct nk_wl_backend *bkend,
-		  const struct taiwins_theme_color *theme)
-{
-	nk_hash thash = nk_wl_hash_theme(theme);
-	if (theme->row_size == 0 || thash == bkend->theme_hash)
-		return;
-	bkend->theme_hash = thash;
-	bkend->row_size = theme->row_size;
-	//TODO this is a shitty hack, somehow the first draw call did not work, we
-	//have to hack it in the background color
-	bkend->main_color = nk_color_from_tw(&theme->window_color);
-	struct nk_color table[NK_COLOR_COUNT];
-
-	table[NK_COLOR_TEXT] =
-		nk_color_from_tw(&theme->text_color);
-	table[NK_COLOR_WINDOW] =
-		nk_color_from_tw(&theme->window_color);
-	//header
-	table[NK_COLOR_HEADER] =
-		nk_color_from_tw(&theme->window_color);
-	table[NK_COLOR_BORDER] =
-		nk_color_from_tw(&theme->border_color);
-	//button
-
-	table[NK_COLOR_BUTTON] =
-		nk_color_from_tw(&theme->button.normal);
-	table[NK_COLOR_BUTTON_HOVER] =
-		nk_color_from_tw(&theme->button.hover);
-	table[NK_COLOR_BUTTON_ACTIVE] =
-		nk_color_from_tw(&theme->button.active);
-	//toggle
-	table[NK_COLOR_TOGGLE] =
-		nk_color_from_tw(&theme->toggle.normal);
-	table[NK_COLOR_TOGGLE_HOVER] =
-		nk_color_from_tw(&theme->toggle.hover);
-	table[NK_COLOR_TOGGLE_CURSOR] =
-		nk_color_from_tw(&theme->toggle.active);
-	//select
-	table[NK_COLOR_SELECT] =
-		nk_color_from_tw(&theme->select.normal);
-	table[NK_COLOR_SELECT_ACTIVE] =
-		nk_color_from_tw(&theme->select.active);
-	//slider
-	table[NK_COLOR_SLIDER] =
-		nk_color_from_tw(&theme->slider_bg_color);
-	table[NK_COLOR_SLIDER_CURSOR] =
-		nk_color_from_tw(&theme->slider.normal);
-	table[NK_COLOR_SLIDER_CURSOR_HOVER] =
-		nk_color_from_tw(&theme->slider.hover);
-	table[NK_COLOR_SLIDER_CURSOR_ACTIVE] =
-		nk_color_from_tw(&theme->slider.active);
-	//property
-	table[NK_COLOR_PROPERTY] = table[NK_COLOR_SLIDER];
-	//edit
-	table[NK_COLOR_EDIT] =
-		nk_color_from_tw(&theme->text_active_color);
-	table[NK_COLOR_EDIT_CURSOR] =
-		nk_color_from_tw(&theme->text_color);
-	//combo
-	table[NK_COLOR_COMBO] =
-		nk_color_from_tw(&theme->combo_color);
-	//chart
-	table[NK_COLOR_CHART] =
-		nk_color_from_tw(&theme->chart.normal);
-	table[NK_COLOR_CHART_COLOR] =
-		nk_color_from_tw(&theme->chart.active);
-	table[NK_COLOR_CHART_COLOR_HIGHLIGHT] =
-		nk_color_from_tw(&theme->chart.hover);
-	//scrollbar
-	table[NK_COLOR_SCROLLBAR] = table[NK_COLOR_WINDOW];
-	table[NK_COLOR_SCROLLBAR_CURSOR] = table[NK_COLOR_WINDOW];
-	table[NK_COLOR_SCROLLBAR_CURSOR_ACTIVE] = table[NK_COLOR_WINDOW];
-	table[NK_COLOR_SCROLLBAR_CURSOR_HOVER] = table[NK_COLOR_WINDOW];
-	table[NK_COLOR_TAB_HEADER] = table[NK_COLOR_WINDOW];
-	nk_style_from_table(&bkend->ctx, table);
-}
+#include "nk_wl_theme.h"
 
 /********************************* input ****************************************/
 
-/* Clear the retained input state
- *
- * unfortunatly we have to reset the input after the input so we do get retained
- * intput state
- */
-static inline void
-nk_input_reset(struct nk_context *ctx)
-{
-	nk_input_begin(ctx);
-	nk_input_end(ctx);
-}
-
-//this is so verbose
-
-static void
-nk_keycb(struct app_surface *surf, const struct app_event *e)
-	 /* xkb_keysym_t keysym, uint32_t modifier, int state) */
-{
-	//nk_input_key and nk_input_unicode are different, you kinda need to
-	//registered all the keys
-	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
-	uint32_t keycode = xkb_keysym_to_utf32(e->key.sym);
-	uint32_t keysym = e->key.sym;
-	uint32_t modifier = e->key.mod;
-	bool state = e->key.state;
-	nk_input_begin(&bkend->ctx);
-
-	//now we deal with the ctrl-keys
-	if (modifier & TW_CTRL) {
-		//the emacs keybindings
-		nk_input_key(&bkend->ctx, NK_KEY_TEXT_LINE_START, (keysym == XKB_KEY_a) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_TEXT_LINE_END, (keysym == XKB_KEY_e) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_LEFT, (keysym == XKB_KEY_b) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_RIGHT, (keysym == XKB_KEY_f) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_TEXT_UNDO, (keysym == XKB_KEY_slash) && state);
-		//we should also support the clipboard later
-	}
-	else if (modifier & TW_ALT) {
-		nk_input_key(&bkend->ctx, NK_KEY_TEXT_WORD_LEFT, (keysym == XKB_KEY_b) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_TEXT_WORD_RIGHT, (keysym == XKB_KEY_f) && state);
-	}
-	//no tabs, we don't essentially need a buffer here, give your own buffer. That is it.
-	else if (keycode >= 0x20 && keycode < 0x7E && state)
-		nk_input_unicode(&bkend->ctx, keycode);
-	else {
-		nk_input_key(&bkend->ctx, NK_KEY_DEL, (keysym == XKB_KEY_Delete) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_ENTER, (keysym == XKB_KEY_Return) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_TAB, keysym == XKB_KEY_Tab && state);
-		nk_input_key(&bkend->ctx, NK_KEY_BACKSPACE, (keysym == XKB_KEY_BackSpace) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_UP, (keysym == XKB_KEY_UP) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_DOWN, (keysym == XKB_KEY_DOWN) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_SHIFT, (keysym == XKB_KEY_Shift_L ||
-							 keysym == XKB_KEY_Shift_R) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_TEXT_LINE_START, (keysym == XKB_KEY_Home) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_TEXT_LINE_END, (keysym == XKB_KEY_End) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_LEFT, (keysym == XKB_KEY_Left) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_RIGHT, (keysym == XKB_KEY_Right) && state);
-	}
-	if (state)
-		bkend->ckey = keysym;
-	else
-		bkend->ckey = XKB_KEY_NoSymbol;
-	nk_input_end(&bkend->ctx);
-}
-
-static void
-nk_pointron(struct app_surface *surf, const struct app_event *e)
-{
-	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
-	nk_input_begin(&bkend->ctx);
-	nk_input_motion(&bkend->ctx, e->ptr.x, e->ptr.y);
-	nk_input_end(&bkend->ctx);
-	bkend->sx = e->ptr.x;
-	bkend->sy = e->ptr.y;
-}
-
-static void
-nk_pointrbtn(struct app_surface *surf, const struct app_event *e)
-{
-	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
-	enum nk_buttons b;
-	switch (e->ptr.btn) {
-	case BTN_LEFT:
-		b = NK_BUTTON_LEFT;
-		break;
-	case BTN_RIGHT:
-		b = NK_BUTTON_RIGHT;
-		break;
-	case BTN_MIDDLE:
-		b = NK_BUTTON_MIDDLE;
-		break;
-		//case TWBTN_DCLICK:
-		//b = NK_BUTTON_DOUBLE;
-		//break;
-	default:
-		b = NK_BUTTON_MAX;
-		break;
-	}
-
-	nk_input_begin(&bkend->ctx);
-	nk_input_button(&bkend->ctx, b, e->ptr.x, e->ptr.y, e->ptr.state);
-	nk_input_end(&bkend->ctx);
-
-	/* bkend->cbtn = (state) ? b : -2; */
-	/* bkend->sx = sx; */
-	/* bkend->sy = sy; */
-}
-
-static void
-nk_pointraxis(struct app_surface *surf, const struct app_event *e)
-{
-	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
-	nk_input_begin(&bkend->ctx);
-	nk_input_scroll(&bkend->ctx, nk_vec2(e->axis.dx, e->axis.dy));
-	nk_input_end(&bkend->ctx);
-}
+#include "nk_wl_input.h"
 
 /******************************** render *******************************************/
 static void nk_wl_render(struct nk_wl_backend *bkend);
@@ -460,9 +252,9 @@ nk_wl_clean_app_surface(struct nk_wl_backend *bkend)
 }
 
 /********************************* shared_api *******************************************/
-NK_API struct nk_image nk_wl_load_image(const char *path);
+/* NK_API struct nk_image nk_wl_load_image(const char *path); */
 
-NK_API void nk_wl_free_image(struct nk_image *img);
+/* NK_API void nk_wl_free_image(struct nk_image *img); */
 
 
 NK_API xkb_keysym_t
@@ -512,10 +304,6 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app, nk_wl_draw
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->cbtn = -1;
 }
-
-
-//there are quite a few code we can write here for sure.
-
 
 
 /********************************* unicode ****************************************/
