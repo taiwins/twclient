@@ -74,16 +74,14 @@ struct nk_wl_backend {
 	nk_hash theme_hash;
 	nk_rune *unicode_range;
 	uint32_t row_size; //current row size for the backend
-
-	//update to date information
-	struct app_surface *app_surface;
-	nk_wl_drawcall_t frame;
-	nk_wl_postcall_t post_cb;
-	int32_t nk_flags;
-
-
 	//look
 	struct {
+		//update to date information
+		struct app_surface *app_surface;
+		nk_wl_drawcall_t frame;
+		nk_wl_postcall_t post_cb;
+
+
 		xkb_keysym_t ckey; //cleaned up every frame
 		int32_t cbtn; //clean up every frame
 		uint32_t sx;
@@ -310,6 +308,7 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 	struct nk_wl_backend *bkend = surf->user_data;
 	int width = surf->allocation.w;
 	int height = surf->allocation.h;
+	int nk_flags = 0;
 	switch (e->type) {
 	case TW_FRAME_START:
 	case TW_TIMER:
@@ -340,12 +339,27 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 	}
 	if (!handled_input)
 		return;
-
-	if (bkend->nk_flags == -1) {
+	if ((surf->flags & APP_SURFACE_COMPOSITE) &&
+	    (surf->type == APP_SURFACE_APP))
 		bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
-	} else {
-		if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height),
-			     bkend->nk_flags)) {
+	else {
+		switch (surf->type) {
+		case APP_SURFACE_BACKGROUND:
+			break;
+		case APP_SURFACE_PANEL:
+		case APP_SURFACE_LOCKER:
+			nk_flags = NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR;
+			break;
+		case APP_SURFACE_WIDGET:
+			nk_flags = NK_WINDOW_BORDER | NK_WINDOW_SCROLL_AUTO_HIDE;
+			break;
+		case APP_SURFACE_APP:
+			nk_flags = NK_WINDOW_BORDER | NK_WINDOW_CLOSABLE |
+			NK_WINDOW_TITLE | NK_WINDOW_SCROLL_AUTO_HIDE;
+			break;
+		}
+		if (nk_begin(&bkend->ctx, "nuklear_app", nk_rect(0, 0, width, height),
+			     nk_flags)) {
 			bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
 		} nk_end(&bkend->ctx);
 	}
@@ -392,8 +406,7 @@ nk_wl_maybe_skip(struct nk_wl_backend *bkend)
 /********************************* setup *******************************************/
 static void
 nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-		       nk_wl_drawcall_t draw_cb, const struct bbox box,
-		       int32_t flags)
+		       nk_wl_drawcall_t draw_cb, const struct bbox box)
 {
 	surf->allocation = box;
 	surf->pending_allocation = box;
@@ -405,7 +418,6 @@ nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->app_surface = surf;
 	bkend->post_cb = NULL;
-	bkend->nk_flags = flags;
 
 	wl_surface_set_buffer_scale(surf->wl_surface, box.s);
 

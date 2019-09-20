@@ -157,11 +157,12 @@ make_bbox_origin(uint16_t w, uint16_t h, uint16_t s)
 ///////////////////////////////////////APPSURFACE/////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 
-enum APP_SURFACE_TYPE {
-	APP_BACKGROUND,
-	APP_PANEL,
-	APP_WIDGET,
-	APP_LOCKER,
+enum app_surface_type {
+	APP_SURFACE_BACKGROUND,
+	APP_SURFACE_PANEL,
+	APP_SURFACE_WIDGET, /* no header, max/minimize button, no title */
+	APP_SURFACE_LOCKER,
+	APP_SURFACE_APP, /* desktop like application with panel, button, title */
 };
 
 enum taiwins_modifier_mask {
@@ -170,6 +171,13 @@ enum taiwins_modifier_mask {
 	TW_CTRL = 2,
 	TW_SUPER = 4,
 	TW_SHIFT = 8,
+};
+
+enum app_surface_flag {
+	APP_SURFACE_NORESIZABLE = 1 << 0,
+	/* complex gui with multiple sub window inside */
+	APP_SURFACE_COMPOSITE = 1 << 1,
+	APP_SURFACE_NOINPUT = 1 << 2,
 };
 
 
@@ -199,12 +207,12 @@ typedef void (*frame_t)(struct app_surface *, const struct app_event *e);
 struct app_surface {
 	//the structure to store wl_shell_surface, xdg_shell_surface or tw_ui
 	struct wl_proxy *protocol;
+	enum app_surface_type type;
+	uint32_t flags;
 
 	//geometry information
 	struct bbox allocation;
 	struct bbox pending_allocation;
-
-	enum APP_SURFACE_TYPE type;
 
 	struct wl_globals *wl_globals;
 	struct wl_output *wl_output;
@@ -252,10 +260,17 @@ struct app_surface {
  */
 
 /**
- * /brief clean start a new appsurface
+ * @brief clean start a new appsurface
  */
-void app_surface_init(struct app_surface *surf, struct wl_surface *, struct wl_proxy *proxy,
-	struct wl_globals *globals);
+void app_surface_init(struct app_surface *app, struct wl_surface *surf,
+		      struct wl_proxy *p, struct wl_globals *g,
+		      enum app_surface_type type, const uint32_t flags);
+
+/**
+ * @breif create a default desktop like application
+ */
+void app_surface_init_default(struct app_surface *, struct wl_surface *,
+			      struct wl_proxy *p, struct wl_globals *g);
 
 /**
  * /brief the universal release function
@@ -293,8 +308,6 @@ app_surface_end_frame_request(struct app_surface *surf)
 {
 	surf->need_animation = false;
 }
-
-
 
 /**
  * /brief a helper function if you have egl_env
