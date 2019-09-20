@@ -87,7 +87,8 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app,
 		nk_wl_drawcall_t draw_call);
 
 NK_API struct nk_image
-nk_wl_load_image(const char *path);
+nk_wl_load_image(const char *path, enum wl_shm_format format,
+		 int width, int height);
 
 NK_API void
 nk_wl_free_image(struct nk_image *img);

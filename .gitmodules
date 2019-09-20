@@ -4,3 +4,6 @@
 [submodule "nk_backends/nuklear"]
 	path = include/nuklear
 	url = https://github.com/vurtun/nuklear
+[submodule "include/stb"]
+	path = include/stb
+	url = https://github.com/nothings/stb
