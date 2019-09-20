@@ -151,38 +151,6 @@ single_widget(struct nk_context *ctx, float width, float height, struct app_surf
 }
 
 
-static
-void
-handle_ping(void *data,
-		     struct wl_shell_surface *wl_shell_surface,
-		     uint32_t serial)
-{
-	fprintf(stderr, "ping!!!\n");
-	wl_shell_surface_pong(wl_shell_surface, serial);
-}
-
-
-static void
-handle_popup_done(void *data, struct wl_shell_surface *shell_surface)
-{
-}
-
-static void
-handle_configure(void *data, struct wl_shell_surface *shell_surface,
-		 uint32_t edges, int32_t width, int32_t height)
-{
-	fprintf(stderr, "shell_surface has configure: %d, %d, %d\n", edges, width, height);
-
-}
-
-struct wl_shell_surface_listener pingpong = {
-	.ping = handle_ping,
-	.configure = handle_configure,
-	.popup_done = handle_popup_done
-};
-
-
-
 int main(int argc, char *argv[])
 {
 	struct wl_display *wl_display = wl_display_connect(NULL);
@@ -206,7 +174,7 @@ int main(int argc, char *argv[])
 			 (struct wl_proxy *)shell_surface, &App.global, APP_SURFACE_APP,
 			 APP_SURFACE_COMPOSITE);
 
-	wl_shell_surface_add_listener(shell_surface, &pingpong, NULL);
+	nk_wl_impl_wl_shell_surface(&App.surface);
 	wl_shell_surface_set_toplevel(shell_surface);
 	App.shell_surface = shell_surface;
 
