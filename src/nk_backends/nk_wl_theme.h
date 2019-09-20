@@ -1,23 +1,21 @@
-/* this file is included by backends */
+#ifndef NK_WL_THEME_H
+#define NK_WL_THEME_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <assert.h>
 #include <cairo/cairo.h>
-#include <nuklear/nuklear.h>
+#include <helpers.h>
 #include <theme.h>
-
-/* #include "nk_wl_internal.h" */
-
-
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_rect_pack.h>
 #include <stb/stb_image.h>
 
-#ifndef MAX
-#define MAX(a, b) \
-	({ __typeof__ (a) _a = (a); \
-		__typeof__ (b) _b = (b); \
-		_a > _b ? _a : _b; })
-#endif
+//include itself
+#include "nk_wl_internal.h"
 
 
 ////////////////////////// inlines ////////////////////////////////
@@ -88,7 +86,6 @@ copy_as_subimage(unsigned char *dst, const size_t dst_width,
 		}
 }
 
-/* this really needs to be in another thread */
 struct nk_image *
 nk_wl_build_theme_images(struct taiwins_theme *theme)
 {
@@ -146,6 +143,7 @@ nk_wl_build_theme_images(struct taiwins_theme *theme)
 	return subimages;
 }
 
+/******************************** build themes ***********************************/
 
 static void
 nk_button_style_from_tw(struct nk_style_button *button,
@@ -674,13 +672,11 @@ nk_window_style_from_tw(struct nk_style_window *style,
 	style->min_size = nk_vec2_from_tw(&src_style->min_size);
 }
 
-
-void
-nk_style_init_from_tw(struct nk_context *ctx,
+static void
+nk_style_init_from_tw(struct nk_style *style,
 		      const struct taiwins_theme *theme,
 		      const struct nk_image *images)
 {
-	struct nk_style *style;
 	struct nk_style_text *text;
 	struct nk_style_button *button;
 	struct nk_style_toggle *toggle;
@@ -695,9 +691,8 @@ nk_style_init_from_tw(struct nk_context *ctx,
 	struct nk_style_tab *tab;
 	struct nk_style_window *win;
 
-	assert(ctx);
-	if (!ctx) return;
-	style = &ctx->style;
+	assert(style);
+	if (!style) return;
 
 	/* default text */
 	text = &style->text;
@@ -759,10 +754,116 @@ nk_style_init_from_tw(struct nk_context *ctx,
 	tab = &style->tab;
 	nk_tab_style_from_tw(tab, &theme->tab, images);
 
-
 	/* window */
 	win = &style->window;
 	nk_window_header_style_from_tw(&win->header, &theme->window.header, images);
 	nk_window_style_from_tw(win, &theme->window, images);
-
 }
+
+static inline nk_hash
+nk_wl_hash_theme(const struct taiwins_theme_color* theme)
+{
+	return nk_murmur_hash(theme, sizeof(struct taiwins_theme_color), NK_FLAG(7));
+}
+
+static void
+nk_wl_apply_color(struct nk_wl_backend *bkend,
+		  const struct taiwins_theme_color *theme)
+{
+	nk_hash thash = nk_wl_hash_theme(theme);
+	if (theme->row_size == 0 || thash == bkend->theme_hash)
+		return;
+	bkend->theme_hash = thash;
+	bkend->row_size = theme->row_size;
+	//TODO this is a shitty hack, somehow the first draw call did not work, we
+	//have to hack it in the background color
+	bkend->main_color = nk_color_from_tw(&theme->window_color);
+	struct nk_color table[NK_COLOR_COUNT];
+
+	table[NK_COLOR_TEXT] =
+		nk_color_from_tw(&theme->text_color);
+	table[NK_COLOR_WINDOW] =
+		nk_color_from_tw(&theme->window_color);
+	//header
+	table[NK_COLOR_HEADER] =
+		nk_color_from_tw(&theme->window_color);
+	table[NK_COLOR_BORDER] =
+		nk_color_from_tw(&theme->border_color);
+	//button
+
+	table[NK_COLOR_BUTTON] =
+		nk_color_from_tw(&theme->button.normal);
+	table[NK_COLOR_BUTTON_HOVER] =
+		nk_color_from_tw(&theme->button.hover);
+	table[NK_COLOR_BUTTON_ACTIVE] =
+		nk_color_from_tw(&theme->button.active);
+	//toggle
+	table[NK_COLOR_TOGGLE] =
+		nk_color_from_tw(&theme->toggle.normal);
+	table[NK_COLOR_TOGGLE_HOVER] =
+		nk_color_from_tw(&theme->toggle.hover);
+	table[NK_COLOR_TOGGLE_CURSOR] =
+		nk_color_from_tw(&theme->toggle.active);
+	//select
+	table[NK_COLOR_SELECT] =
+		nk_color_from_tw(&theme->select.normal);
+	table[NK_COLOR_SELECT_ACTIVE] =
+		nk_color_from_tw(&theme->select.active);
+	//slider
+	table[NK_COLOR_SLIDER] =
+		nk_color_from_tw(&theme->slider_bg_color);
+	table[NK_COLOR_SLIDER_CURSOR] =
+		nk_color_from_tw(&theme->slider.normal);
+	table[NK_COLOR_SLIDER_CURSOR_HOVER] =
+		nk_color_from_tw(&theme->slider.hover);
+	table[NK_COLOR_SLIDER_CURSOR_ACTIVE] =
+		nk_color_from_tw(&theme->slider.active);
+	//property
+	table[NK_COLOR_PROPERTY] = table[NK_COLOR_SLIDER];
+	//edit
+	table[NK_COLOR_EDIT] =
+		nk_color_from_tw(&theme->text_active_color);
+	table[NK_COLOR_EDIT_CURSOR] =
+		nk_color_from_tw(&theme->text_color);
+	//combo
+	table[NK_COLOR_COMBO] =
+		nk_color_from_tw(&theme->combo_color);
+	//chart
+	table[NK_COLOR_CHART] =
+		nk_color_from_tw(&theme->chart.normal);
+	table[NK_COLOR_CHART_COLOR] =
+		nk_color_from_tw(&theme->chart.active);
+	table[NK_COLOR_CHART_COLOR_HIGHLIGHT] =
+		nk_color_from_tw(&theme->chart.hover);
+	//scrollbar
+	table[NK_COLOR_SCROLLBAR] = table[NK_COLOR_WINDOW];
+	table[NK_COLOR_SCROLLBAR_CURSOR] = table[NK_COLOR_WINDOW];
+	table[NK_COLOR_SCROLLBAR_CURSOR_ACTIVE] = table[NK_COLOR_WINDOW];
+	table[NK_COLOR_SCROLLBAR_CURSOR_HOVER] = table[NK_COLOR_WINDOW];
+	table[NK_COLOR_TAB_HEADER] = table[NK_COLOR_WINDOW];
+	nk_style_from_table(&bkend->ctx, table);
+}
+
+/******************************************************************************
+ * APIS
+ *****************************************************************************/
+
+NK_API struct nk_image
+nk_wl_load_image(const char *path, enum wl_shm_format format,
+		 int width, int height)
+{
+	struct nk_image image = {0};
+	cairo_format_t cairo_format = translate_wl_shm_format(format);
+	if (cairo_format == CAIRO_FORMAT_INVALID)
+		goto err_format;
+
+
+err_format:
+	return image;
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* EOF */
