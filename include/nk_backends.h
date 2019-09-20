@@ -34,9 +34,19 @@ struct nk_style;
 #define NK_INCLUDE_STANDARD_VARARGS
 
 #include "nuklear/nuklear.h"
+struct xdg_toplevel;
+struct xdg_surface;
 
 typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct app_surface *app);
 typedef void (*nk_wl_postcall_t)(struct app_surface *app);
+
+/*******************************************************************************
+ * desktop shell implementation
+ ******************************************************************************/
+struct xdg_toplevel *nk_wl_impl_xdg_shell_surface(struct app_surface *app);
+
+void nk_wl_impl_wl_shell_surface(struct app_surface *app);
+
 
 /* cairo_backend */
 struct nk_wl_backend *nk_cairo_create_bkend(void);
