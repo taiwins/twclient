@@ -1,8 +1,9 @@
 /* this file is included by backends */
 #include <assert.h>
 #include <cairo/cairo.h>
-#include "../../theme/theme.h"
 #include <nuklear/nuklear.h>
+#include <theme.h>
+
 /* #include "nk_wl_internal.h" */
 
 

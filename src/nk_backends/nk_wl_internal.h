@@ -17,6 +17,18 @@
 #include <lua.h>
 #include <lauxlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if defined (__GNUC__)
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#elif defined (__clang__)
+#pragma clang diagnostic ignored "-Wunused-but-set-variable"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 /* we include this so we do not need to deal with namespace collision, in the
  * mean time, for the sake private implementation, all the function declared
  * here should be declared as static.
@@ -69,7 +81,7 @@ struct nk_wl_backend {
 	struct nk_buffer cmds;
 	lua_State *L;
 	//theme size
-	struct nk_colorf main_color;
+	struct nk_color main_color;
 	//we now use this to determine if we are using the same theme
 	nk_hash theme_hash;
 	nk_rune *unicode_range;
@@ -94,28 +106,24 @@ struct nk_wl_backend {
 
 
 /******************************** nuklear colors ***********************************/
-static inline void
-nk_color_from_tw_rgba(struct nk_color *nc, const struct tw_rgba_t *tc)
+static inline struct nk_color
+nk_color_from_tw(const taiwins_rgba_t *tc)
 {
-	nc->r = tc->r; nc->g = tc->g;
-	nc->b = tc->b; nc->a = tc->a;
-}
-
-static inline void
-nk_colorf_from_tw_rgba(struct nk_colorf *nc, const struct tw_rgba_t *tc)
-{
-	nc->r = (float)tc->r/255.0; nc->g = (float)tc->g/255.0;
-	nc->b = (float)tc->b/255.0; nc->a = (float)tc->a/255.0;
+	struct nk_color nc;
+	nc.r = tc->r; nc.g = tc->g;
+	nc.b = tc->b; nc.a = tc->a;
+	return nc;
 }
 
 static inline nk_hash
-nk_wl_hash_theme(const struct taiwins_theme* theme)
+nk_wl_hash_theme(const struct taiwins_theme_color* theme)
 {
 	return nk_murmur_hash(theme, sizeof(struct taiwins_theme), NK_FLAG(7));
 }
 
 static void
-nk_wl_apply_color(struct nk_wl_backend *bkend, const struct taiwins_theme *theme)
+nk_wl_apply_color(struct nk_wl_backend *bkend,
+		  const struct taiwins_theme_color *theme)
 {
 	nk_hash thash = nk_wl_hash_theme(theme);
 	if (theme->row_size == 0 || thash == bkend->theme_hash)
@@ -124,52 +132,64 @@ nk_wl_apply_color(struct nk_wl_backend *bkend, const struct taiwins_theme *theme
 	bkend->row_size = theme->row_size;
 	//TODO this is a shitty hack, somehow the first draw call did not work, we
 	//have to hack it in the background color
-	nk_colorf_from_tw_rgba(&bkend->main_color, &theme->window_color);
+	bkend->main_color = nk_color_from_tw(&theme->window_color);
 	struct nk_color table[NK_COLOR_COUNT];
-	nk_color_from_tw_rgba(&table[NK_COLOR_TEXT], &theme->text_color);
-	nk_color_from_tw_rgba(&table[NK_COLOR_WINDOW], &theme->window_color);
-	//no header
-	nk_color_from_tw_rgba(&table[NK_COLOR_HEADER], &theme->window_color);
-	nk_color_from_tw_rgba(&table[NK_COLOR_BORDER], &theme->border_color);
+
+	table[NK_COLOR_TEXT] =
+		nk_color_from_tw(&theme->text_color);
+	table[NK_COLOR_WINDOW] =
+		nk_color_from_tw(&theme->window_color);
+	//header
+	table[NK_COLOR_HEADER] =
+		nk_color_from_tw(&theme->window_color);
+	table[NK_COLOR_BORDER] =
+		nk_color_from_tw(&theme->border_color);
 	//button
-	nk_color_from_tw_rgba(&table[NK_COLOR_BUTTON], &theme->button.normal);
-	nk_color_from_tw_rgba(&table[NK_COLOR_BUTTON_HOVER],
-			      &theme->button.hover);
-	nk_color_from_tw_rgba(&table[NK_COLOR_BUTTON_ACTIVE],
-			      &theme->button.active);
+
+	table[NK_COLOR_BUTTON] =
+		nk_color_from_tw(&theme->button.normal);
+	table[NK_COLOR_BUTTON_HOVER] =
+		nk_color_from_tw(&theme->button.hover);
+	table[NK_COLOR_BUTTON_ACTIVE] =
+		nk_color_from_tw(&theme->button.active);
 	//toggle
-	nk_color_from_tw_rgba(&table[NK_COLOR_TOGGLE],
-			      &theme->toggle.normal);
-	nk_color_from_tw_rgba(&table[NK_COLOR_TOGGLE_HOVER],
-			      &theme->toggle.hover);
-	nk_color_from_tw_rgba(&table[NK_COLOR_TOGGLE_CURSOR],
-			      &theme->toggle.active);
+	table[NK_COLOR_TOGGLE] =
+		nk_color_from_tw(&theme->toggle.normal);
+	table[NK_COLOR_TOGGLE_HOVER] =
+		nk_color_from_tw(&theme->toggle.hover);
+	table[NK_COLOR_TOGGLE_CURSOR] =
+		nk_color_from_tw(&theme->toggle.active);
 	//select
-	nk_color_from_tw_rgba(&table[NK_COLOR_SELECT],
-			      &theme->select.normal);
-	nk_color_from_tw_rgba(&table[NK_COLOR_SELECT_ACTIVE],
-			      &theme->select.active);
+	table[NK_COLOR_SELECT] =
+		nk_color_from_tw(&theme->select.normal);
+	table[NK_COLOR_SELECT_ACTIVE] =
+		nk_color_from_tw(&theme->select.active);
 	//slider
-	nk_color_from_tw_rgba(&table[NK_COLOR_SLIDER],
-			      &theme->slider_bg_color);
-	nk_color_from_tw_rgba(&table[NK_COLOR_SLIDER_CURSOR],
-			      &theme->slider.normal);
-	nk_color_from_tw_rgba(&table[NK_COLOR_SLIDER_CURSOR_HOVER],
-			      &theme->slider.hover);
-	nk_color_from_tw_rgba(&table[NK_COLOR_SLIDER_CURSOR_ACTIVE],
-			      &theme->slider.active);
+	table[NK_COLOR_SLIDER] =
+		nk_color_from_tw(&theme->slider_bg_color);
+	table[NK_COLOR_SLIDER_CURSOR] =
+		nk_color_from_tw(&theme->slider.normal);
+	table[NK_COLOR_SLIDER_CURSOR_HOVER] =
+		nk_color_from_tw(&theme->slider.hover);
+	table[NK_COLOR_SLIDER_CURSOR_ACTIVE] =
+		nk_color_from_tw(&theme->slider.active);
 	//property
 	table[NK_COLOR_PROPERTY] = table[NK_COLOR_SLIDER];
 	//edit
-	nk_color_from_tw_rgba(&table[NK_COLOR_EDIT], &theme->text_active_color);
-	nk_color_from_tw_rgba(&table[NK_COLOR_EDIT_CURSOR], &theme->text_color);
+	table[NK_COLOR_EDIT] =
+		nk_color_from_tw(&theme->text_active_color);
+	table[NK_COLOR_EDIT_CURSOR] =
+		nk_color_from_tw(&theme->text_color);
 	//combo
-	nk_color_from_tw_rgba(&table[NK_COLOR_COMBO], &theme->combo_color);
+	table[NK_COLOR_COMBO] =
+		nk_color_from_tw(&theme->combo_color);
 	//chart
-	nk_color_from_tw_rgba(&table[NK_COLOR_CHART], &theme->chart.normal);
-	nk_color_from_tw_rgba(&table[NK_COLOR_CHART_COLOR], &theme->chart.active);
-	nk_color_from_tw_rgba(&table[NK_COLOR_CHART_COLOR_HIGHLIGHT],
-			      &theme->chart.hover);
+	table[NK_COLOR_CHART] =
+		nk_color_from_tw(&theme->chart.normal);
+	table[NK_COLOR_CHART_COLOR] =
+		nk_color_from_tw(&theme->chart.active);
+	table[NK_COLOR_CHART_COLOR_HIGHLIGHT] =
+		nk_color_from_tw(&theme->chart.hover);
 	//scrollbar
 	table[NK_COLOR_SCROLLBAR] = table[NK_COLOR_WINDOW];
 	table[NK_COLOR_SCROLLBAR_CURSOR] = table[NK_COLOR_WINDOW];
@@ -558,6 +578,9 @@ merge_unicode_range(const nk_rune *left, const nk_rune *right, nk_rune *out)
 #endif /* NK_INCLUDE_FONT_BAKING */
 
 
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* EOF */

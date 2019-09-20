@@ -690,8 +690,10 @@ nk_cairo_render(struct wl_buffer *buffer, struct nk_cairo_backend *b,
 	//1) clean this buffer using its background color, or maybe nuklear does
 	//that already
 	cairo_push_group(cr);
-	cairo_set_source_rgb(cr, bkend->main_color.r, bkend->main_color.g,
-			     bkend->main_color.b);
+	cairo_set_source_rgb(cr,
+			     bkend->main_color.r / 255.0,
+			     bkend->main_color.g / 255.0,
+			     bkend->main_color.b / 255.0);
 	cairo_paint(cr);
 	cairo_scale(cr, s, s);
 	nk_foreach(cmd, &bkend->ctx) {
