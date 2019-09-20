@@ -22,7 +22,7 @@ union argb {
 	uint32_t code;
 };
 
-static void
+void
 load_image(const char *input_path, const char *output_path)
 {
 	int w, h, channels;
