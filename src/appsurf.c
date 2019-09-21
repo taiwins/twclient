@@ -48,6 +48,7 @@ app_surface_init(struct app_surface *surf, struct wl_surface *wl_surface,
 	surf->flags = flags;
 	wl_surface_set_user_data(wl_surface, surf);
 	surf->wl_globals = globals;
+	wl_list_init(&surf->filter_head);
 }
 
 void
@@ -70,6 +71,19 @@ app_surface_release(struct app_surface *surf)
 		wl_proxy_destroy(surf->protocol);
 	surf->protocol = NULL;
 	surf->wl_surface = NULL;
+	wl_list_init(&surf->filter_head);
+}
+
+void
+_app_surface_run_frame(struct app_surface *surf, const struct app_event *e)
+{
+	struct app_event_filter *f;
+	wl_list_for_each(f, &surf->filter_head, link) {
+		if (f->type == e->type &&
+		    f->intercept(surf, e))
+			return;
+	}
+	surf->do_frame(surf, e);
 }
 
 void
@@ -84,7 +98,7 @@ app_surface_frame(struct app_surface *surf, bool anime)
 	surf->need_animation = anime;
 	if (anime)
 		app_surface_request_frame(surf);
-	surf->do_frame(surf, &e);
+	_app_surface_run_frame(surf, &e);
 }
 
 
@@ -105,7 +119,7 @@ app_surface_resize(struct app_surface *surf,
 	e.resize.serial = surf->wl_globals->inputs.serial;
 	if (surf->allocation.s != ns)
 		wl_surface_set_buffer_scale(surf->wl_surface, ns);
-	surf->do_frame(surf, &e);
+	_app_surface_run_frame(surf, &e);
 }
 
 static void
@@ -122,7 +136,7 @@ app_surface_frame_done(void *user_data, struct wl_callback *cb, uint32_t data)
 	struct app_surface *surf = (struct app_surface *)user_data;
 	if (surf->need_animation)
 		app_surface_request_frame(surf);
-	surf->do_frame(surf, &e);
+	_app_surface_run_frame(surf, &e);
 
 	surf->last_serial = data;
 }
@@ -336,4 +350,5 @@ embeded_impl_app_surface(struct app_surface *surf, struct app_surface *parent,
 	surf->allocation = geo;
 	surf->pending_allocation = geo;
 	surf->destroy = embeded_app_unhook;
+	wl_list_init(&surf->filter_head);
 }

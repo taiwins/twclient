@@ -117,6 +117,10 @@ make_bbox_origin(uint16_t w, uint16_t h, uint16_t s)
 //////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////APPSURFACE/////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
+struct wl_globals;
+struct app_surface;
+struct egl_env;
+struct app_surface;
 
 enum app_surface_type {
 	APP_SURFACE_BACKGROUND,
@@ -141,29 +145,30 @@ enum app_surface_flag {
 	APP_SURFACE_NOINPUT = 1 << 2,
 };
 
-
-struct wl_globals;
-struct app_surface;
-struct egl_env;
-
 typedef void (*frame_t)(struct app_surface *, const struct app_event *e);
+
+
+struct app_event_filter {
+	struct wl_list link;
+	enum app_event_type type;
+	bool (*intercept)(struct app_surface *, const struct app_event *e);
+};
+
 
 /**
  * /brief Abstract wl_surface container
  *
+ * @brief Abstract wl_surface container
+ *
  * The design goal of the surface is to use app_surface as general wl_surface
- * handler for both buffer based application and graphics based
- * application. User no longer need to explictly call
- * wl_surface_damage/attach/commit. Instead, user will use the fixed routine
- * app_surface_frame to draw a frame.
+ * handler to take care the tedious work and also provides necessary
+ * flexibilities. When one backend implements app_surface, usually user has very
+ * little to do.
  *
- * In the passive mode, the app_surface should draw on input. But there are case
- * you want to drive the frame, wayland provides this facility, then the input
- * is accumulated and the frame callback apply the input. Sadly, the appsurface
- * does not apply to this structure now. We will need the actual refactoring for
- * that.
- *
- * Also, you need to use the timer to us
+ * By default app_surface runs in passive mode which it only runs on events,
+ * default action is the frame callback (if you do not have any grab) and
+ * backends usually take care of the frame callback. Users can intercept those
+ * events by providing custom grabs(in rare cases).
  */
 struct app_surface {
 	//the structure to store wl_shell_surface, xdg_shell_surface or tw_ui
@@ -207,7 +212,7 @@ struct app_surface {
 			VkSurfaceKHR vksurf;
 		};
 	};
-
+	struct wl_list filter_head;
 	frame_t do_frame;
 
 	//destructor
