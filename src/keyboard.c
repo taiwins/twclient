@@ -14,6 +14,7 @@
 #include <ui.h>
 #include <client.h>
 
+extern void _app_surface_run_frame(struct app_surface *surf, const struct app_event *e);
 
 static inline uint32_t
 tw_mod_mask_from_xkb_state(struct xkb_state *state)
@@ -45,7 +46,7 @@ handle_key_repeat(struct tw_event *e, int fd)
 
 	if (globals && surf->do_frame &&
 	    globals->inputs.key_pressed &&
-		e->arg.u == globals->inputs.keysym) {
+	    e->arg.u == globals->inputs.keysym) {
 		//there are two ways to generate press and release
 
 		//1) giving two do_frame event, but in this way we may get
@@ -63,9 +64,9 @@ handle_key_repeat(struct tw_event *e, int fd)
 				.state = false,
 			},
 		};
-		surf->do_frame(surf, &ae);
+		_app_surface_run_frame(surf, &ae);
 		ae.key.state = true;
-		surf->do_frame(surf, &ae);
+		_app_surface_run_frame(surf, &ae);
 		return TW_EVENT_NOOP;
 	} else
 		return TW_EVENT_DEL;
@@ -123,7 +124,7 @@ handle_key(void *data,
 					 &globals->inputs.repeat_info,
 					 &repeat_event);
 	}
-	appsurf->do_frame(appsurf, &e);
+	_app_surface_run_frame(appsurf, &e);
 }
 
 static

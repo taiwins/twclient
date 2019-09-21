@@ -21,6 +21,8 @@
 static struct wl_pointer_listener pointer_listener = {0};
 static void default_pointer_grab(struct wl_pointer_listener *);
 static void resize_pointer_grab(struct wl_pointer_listener *);
+extern void _app_surface_run_frame(struct app_surface *surf, const struct app_event *e);
+
 
 enum POINTER_EVENT_CODE {
   // focus, unfocus
@@ -253,7 +255,7 @@ pointer_frame(void *data,
 		e.ptr.x = globals->inputs.sx;
 		e.ptr.y = globals->inputs.sy;
 		e.ptr.mod = globals->inputs.modifiers;
-		appsurf->do_frame(appsurf, &e);
+		_app_surface_run_frame(appsurf, &e);
 	}
 	if (event & POINTER_BTN) {
 		e.type = TW_POINTER_BTN;
@@ -262,7 +264,7 @@ pointer_frame(void *data,
 		e.ptr.y = globals->inputs.sy;;
 		e.ptr.state = globals->inputs.btn_pressed;
 		e.ptr.mod = globals->inputs.modifiers;
-		appsurf->do_frame(appsurf, &e);
+		_app_surface_run_frame(appsurf, &e);
 	}
 	pointer_event_clean(globals);
 }
