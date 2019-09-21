@@ -50,41 +50,6 @@ stride_of_wl_shm_format(enum wl_shm_format format)
 	}
 }
 
-/** load image to texture and free all the context */
-unsigned char *
-load_image(const char *path, const enum wl_shm_format wlformat,
-	   int width, int height, unsigned char *data)
-{
-	cairo_format_t format = translate_wl_shm_format(wlformat);
-	if (format == CAIRO_FORMAT_INVALID)
-		goto err_format;
-	cairo_t *memcr;
-	cairo_surface_t *pngsurface = cairo_image_surface_create_from_png(path);
-	if (cairo_surface_status(pngsurface) != CAIRO_STATUS_SUCCESS)
-		goto err_loadimg;
-
-	int stride = cairo_format_stride_for_width(format, width);
-	cairo_surface_t *memsurface = cairo_image_surface_create_for_data(data, format, width, height, stride);
-	memcr = cairo_create(memsurface);
-	//lol, I need to scale before I set the source
-	fprintf(stderr, "we got image with dimension %d %d\n",
-		cairo_image_surface_get_width(pngsurface), cairo_image_surface_get_height(pngsurface));
-	cairo_scale(memcr, (double)width / cairo_image_surface_get_width(pngsurface) ,
-		    (double)height / cairo_image_surface_get_height(pngsurface));
-	cairo_set_source_surface(memcr, pngsurface, 0, 0);
-	cairo_paint(memcr);
-	//TODO, free memory
-	cairo_destroy(memcr);
-	cairo_surface_destroy(pngsurface);
-	cairo_surface_destroy(memsurface);
-	return data;
-
-err_loadimg:
-	cairo_surface_destroy(pngsurface);
-err_format:
-	return NULL;
-}
-
 static bool
 validate_theme_font(struct taiwins_theme_color *theme)
 {
