@@ -59,23 +59,6 @@ set(TWCLIENT_INCLUDE_DIRS
 
 list(REMOVE_DUPLICATES TWCLIENT_INCLUDE_DIRS)
 
-#you should be needing cache variables.
-set(TWCLIENT_TRD_LIB
-  ${CTYPES_LIBRARIES}
-  ${XKBCOMMON_LIBRARIES}
-  ${WAYLAND_CLIENT_LIBRARIES}
-  ${CAIRO_LIBRARIES}
-  ${WAYLAND_EGL_LIBRARIES}
-  ${WAYLAND_CURSOR_LIBRARIES}
-  OpenGL::EGL
-  OpenGL::OpenGL
-  Vulkan::Vulkan
-  ${PIXMAN_LIBRARIES}
-  ${FONTCONFIG_LIBRARIES}
-  ${FREETYPE_LIBRARIES}
-  ${UDEV_LIBRARIES}
-  m
-  )
 
 add_subdirectory(ctypes)
 add_subdirectory(protocols)

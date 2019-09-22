@@ -12,7 +12,15 @@ add_library(twclient
   pointer.c)
 
 target_link_libraries(twclient
-  ctype)
+  ctype
+  ${XKBCOMMON_LIBRARIES}
+  ${WAYLAND_CLIENT_LIBRARIES}
+  ${CAIRO_LIBRARIES}
+  ${WAYLAND_EGL_LIBRARIES}
+  ${WAYLAND_CURSOR_LIBRARIES}
+  ${PIXMAN_LIBRARIES}
+  ${UDEV_LIBRARIES}
+  )
 
 target_include_directories(twclient PUBLIC
   ${CTYPES_INCLUDE_DIR}
@@ -20,12 +28,31 @@ target_include_directories(twclient PUBLIC
   ${TWCLIENT_INCLUDE_DIRS}
   ${CMAKE_CURRENT_BINARY_DIR})
 
-add_subdirectory(nk_backends)
-
 set(TWCLIENT_LIBRARIES
   twclient
+  ctype
   twclient_proto_libraries
-  ${NK_BACKEND_LIB}
-  ${TWCLIENT_TRD_LIB}
   CACHE STRING "twclient libraries"
   )
+
+#library used for
+set(TWCLIENT_TRD_LIB
+  ${CTYPES_LIBRARIES}
+  ${XKBCOMMON_LIBRARIES}
+  ${WAYLAND_CLIENT_LIBRARIES}
+  ${CAIRO_LIBRARIES}
+  ${WAYLAND_EGL_LIBRARIES}
+  ${WAYLAND_CURSOR_LIBRARIES}
+  OpenGL::EGL
+  OpenGL::OpenGL
+  Vulkan::Vulkan
+  ${PIXMAN_LIBRARIES}
+  ${FONTCONFIG_LIBRARIES}
+  ${FREETYPE_LIBRARIES}
+  ${UDEV_LIBRARIES}
+  m
+
+  PARENT_SCOPE
+  )
+
+add_subdirectory(nk_backends)

@@ -9,7 +9,6 @@ WAYLAND_ADD_PROTOCOL_CLIENT(proto_xdg_shell_client
   "${WLPROTO_PATH}/stable/xdg-shell/xdg-shell.xml"
   xdg-shell)
 
-
 add_library(twclient_proto_libraries STATIC
   ${proto_twtheme_client}
   ${proto_xdg_shell_client}
