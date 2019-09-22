@@ -19,10 +19,6 @@
 #include <wayland-egl.h>
 #include <stdbool.h>
 #include <cairo/cairo.h>
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
-
 #include <client.h>
 #include <egl.h>
 
