@@ -14,7 +14,6 @@ target_link_libraries(nk_egl_backend
 add_library(nk_cairo_backend STATIC
   nk_wl_cairo.c)
 
-
 target_include_directories(nk_cairo_backend PUBLIC
   ${TWCLIENT_PROTO_INCLUDE_DIR}
   ${TWCLIENT_INCLUDE_DIRS})
