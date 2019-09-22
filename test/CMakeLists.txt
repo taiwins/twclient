@@ -36,32 +36,6 @@ target_link_libraries(test_nk_egl
   ${TWCLIENT_TRD_LIB}
   )
 
-
-add_executable(test_multi_lua
-  test_multi_lua.c
-  )
-
-target_include_directories(test_multi_lua PUBLIC
-  ${LUA_INCLUDE_DIR}
-  )
-
-target_link_libraries(test_multi_lua
-  ${LUA_LIBRARIES}
-  )
-
-
-add_executable(test_lua_wrapper
-  test_lua_backend.c)
-
-target_include_directories(test_lua_wrapper PUBLIC
-  ${LUA_INCLUDE_DIR}
-  )
-
-target_link_libraries(test_lua_wrapper
-  nk_cairo_backend
-  ${LUA_LIBRARIES})
-
-
 add_executable(test_event_queue
   test_event_queue.c)
 
@@ -75,7 +49,6 @@ add_executable(test_udev
 target_link_libraries(test_udev
   ${TWCLIENT_LIBRARIES}
   )
-
 
 add_executable(test_stbimage
   test_stb_image.c)

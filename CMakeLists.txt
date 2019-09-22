@@ -35,7 +35,6 @@ find_package(Wayland REQUIRED)
 find_package(WaylandProtocols REQUIRED)
 find_package(Cairo REQUIRED)
 find_package(OpenGL REQUIRED COMPONENTS EGL OpenGL)
-find_package(LuaJIT REQUIRED)
 find_package(NVEGL)
 find_package(fontconfig REQUIRED)
 find_package(Freetype REQUIRED)
@@ -51,7 +50,6 @@ set(TWCLIENT_INCLUDE_DIRS
   ${CAIRO_INCLUDE_DIRS}
   ${WAYLAND_CURSOR_INCLUDE_DIR}
   ${WAYLAND_EGL_INCLUDE_DIR}
-  ${LUA_INCLUDE_DIR}
   ${PIXMAN_INCLUDE_DIRS}
   ${FONTCONFIG_INCLUDE_DIR}
   ${FREETYPE_INCLUDE_DIRS}
@@ -69,7 +67,6 @@ set(TWCLIENT_TRD_LIB
   ${CAIRO_LIBRARIES}
   ${WAYLAND_EGL_LIBRARIES}
   ${WAYLAND_CURSOR_LIBRARIES}
-  ${LUA_LIBRARIES}
   OpenGL::EGL
   OpenGL::OpenGL
   Vulkan::Vulkan
@@ -77,6 +74,7 @@ set(TWCLIENT_TRD_LIB
   ${FONTCONFIG_LIBRARIES}
   ${FREETYPE_LIBRARIES}
   ${UDEV_LIBRARIES}
+  m
   )
 
 add_subdirectory(ctypes)
