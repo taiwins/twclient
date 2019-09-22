@@ -16,7 +16,6 @@ add_executable(test_nk_cairo
 target_include_directories(test_nk_cairo PUBLIC
   ${TWCLIENT_INCLUDE_DIRS})
 
-
 target_link_libraries(test_nk_cairo
   twclient
   nk_cairo_backend
@@ -41,6 +40,7 @@ add_executable(test_event_queue
 
 target_link_libraries(test_event_queue
   ${TWCLIENT_LIBRARIES}
+  ${TWCLIENT_TRD_LIB}
   )
 
 add_executable(test_udev
@@ -48,6 +48,7 @@ add_executable(test_udev
 
 target_link_libraries(test_udev
   ${TWCLIENT_LIBRARIES}
+  ${TWCLIENT_TRD_LIB}
   )
 
 add_executable(test_stbimage
@@ -58,4 +59,5 @@ target_include_directories(test_stbimage PUBLIC
 
 target_link_libraries(test_stbimage
   ${TWCLIENT_LIBRARIES}
+  m
   )
