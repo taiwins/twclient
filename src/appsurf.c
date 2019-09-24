@@ -66,7 +66,8 @@ app_surface_release(struct app_surface *surf)
 	if (surf->destroy)
 		surf->destroy(surf);
 	//throw all the callbacks
-	wl_surface_destroy(surf->wl_surface);
+	if (surf->wl_surface)
+		wl_surface_destroy(surf->wl_surface);
 	if (surf->protocol)
 		wl_proxy_destroy(surf->protocol);
 	surf->protocol = NULL;
