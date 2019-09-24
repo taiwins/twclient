@@ -14,8 +14,6 @@
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <wayland-client.h>
-#include <lua.h>
-#include <lauxlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,7 +77,6 @@ struct nk_wl_backend {
 	//consistant size
 	struct nk_context ctx;
 	struct nk_buffer cmds;
-	lua_State *L;
 	//theme size
 	struct nk_color main_color;
 	//we now use this to determine if we are using the same theme
