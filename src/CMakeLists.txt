@@ -13,6 +13,7 @@ add_library(twclient
 
 target_link_libraries(twclient
   ctype
+  OpenGL::EGL
   ${XKBCOMMON_LIBRARIES}
   ${WAYLAND_CLIENT_LIBRARIES}
   ${CAIRO_LIBRARIES}
@@ -20,6 +21,8 @@ target_link_libraries(twclient
   ${WAYLAND_CURSOR_LIBRARIES}
   ${PIXMAN_LIBRARIES}
   ${UDEV_LIBRARIES}
+  ${WAYLAND_EGL_LIBRARIES}
+  ${FONTCONFIG_LIBRARIES}
   )
 
 target_include_directories(twclient PUBLIC
