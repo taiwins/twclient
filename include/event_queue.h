@@ -38,8 +38,16 @@ struct tw_event_queue {
 
 void tw_event_queue_run(struct tw_event_queue *queue);
 bool tw_event_queue_init(struct tw_event_queue *queue);
+
+
 /**
- * /brief add directly a epoll fd to event queue
+ * @brief remove items from event queue
+ *
+ */
+void tw_event_queue_remove_source(struct tw_event_queue *queue, struct tw_event *e);
+
+/**
+ * @brief add directly a epoll fd to event queue
  *
  * epoll fd are usually stream files, for normal files (except procfs and
  * sysfs), use `tw_event_queue_add_file`
@@ -47,7 +55,7 @@ bool tw_event_queue_init(struct tw_event_queue *queue);
 bool tw_event_queue_add_source(struct tw_event_queue *queue, int fd,
 			       struct tw_event *event, uint32_t mask);
 /**
- * /brief add a file to inotify watch system
+ * @brief add a file to inotify watch system
  *
  * this adds a inotify fd to event queue, this does not work for sysfs
  */
@@ -55,7 +63,7 @@ bool tw_event_queue_add_file(struct tw_event_queue *queue, const char *path,
 			     struct tw_event *e, uint32_t mask);
 
 /**
- * /brief add a device to udev monitoring system
+ * @brief add a device to udev monitoring system
  *
  * subsystem shouldn't be none.
  */
@@ -63,7 +71,7 @@ bool tw_event_queue_add_device(struct tw_event_queue *queue, const char *subsyst
 			  const char *devname, struct tw_event *e);
 
 /**
- * /brief returns an allocated udev_device
+ * @brief returns an allocated udev_device
  *
  * you have the responsibility to free the allocated `udev_device` by calling
  * `udev_device_unref`. And you should only call this function with udev event,

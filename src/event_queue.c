@@ -30,6 +30,9 @@ struct tw_event_source {
 	};
 
 };
+//file local storage
+static struct udev *UDEV = NULL;
+
 
 static void close_fd(struct tw_event_source *s)
 {
@@ -92,8 +95,7 @@ tw_event_queue_run(struct tw_event_queue *queue)
 			wl_display_flush(queue->wl_display);
 
 		int count = epoll_wait(queue->pollfd, events, 32, -1);
-		//right now if we run into any trouble, we just quit, I don't
-		//think it is a good idea
+		//right now if we run into any trouble, we just quit
 		queue->quit = queue->quit && (count != -1);
 		for (int i = 0; i < count; i++) {
 			event_source = events[i].data.ptr;
@@ -102,12 +104,20 @@ tw_event_queue_run(struct tw_event_queue *queue)
 			int output = event_source->event.cb(
 				&event_source->event,
 				event_source->fd);
-			if (output == TW_EVENT_DEL)
+			if (output == TW_EVENT_DEL) {
+				epoll_ctl(queue->pollfd, EPOLL_CTL_DEL,
+					  event_source->fd, NULL);
 				destroy_event_source(event_source);
+			}
 		}
 
 	}
 	tw_event_queue_close(queue);
+	//udev object is global here. So we destroy it by hand
+	if (UDEV) {
+		udev_unref(UDEV);
+		UDEV = NULL;
+	}
 	return;
 }
 
@@ -142,6 +152,17 @@ close_inotify_watch(struct tw_event_source *s)
 	close(s->fd);
 }
 
+void
+tw_event_queue_remove_source(struct tw_event_queue *queue, struct tw_event *e)
+{
+	struct tw_event_source *pos, *tmp;
+	wl_list_for_each_safe(pos, tmp, &queue->head, link) {
+		if (pos->event.data == e->data) {
+			epoll_ctl(queue->pollfd, EPOLL_CTL_DEL, pos->fd, NULL);
+			destroy_event_source(pos);
+		}
+	}
+}
 
 bool
 tw_event_queue_add_file(struct tw_event_queue *queue, const char *path,
@@ -171,11 +192,7 @@ static void
 close_udev_monitor(struct tw_event_source *src)
 {
 	struct udev_monitor *mon = src->mon;
-	struct udev *udev = udev_monitor_get_udev(mon);
-	//destroy the resources, if we only have one monitor, we should be
-	//destroying
 	udev_monitor_unref(mon);
-	udev_unref(udev);
 }
 
 struct udev_device *
@@ -193,19 +210,12 @@ bool
 tw_event_queue_add_device(struct tw_event_queue *queue, const char *subsystem,
 			  const char *devname, struct tw_event *e)
 {
-	static struct udev *udev = NULL;
-
 	if (!subsystem)
 		return false;
-	if (!udev)
-		udev = udev_new();
-	else {
-		//in other case, we should add 1 to udev monitor, indicate that
-		//we have
-		udev_ref(udev);
-	}
+	if (!UDEV)
+		UDEV = udev_new();
 
-	struct udev_monitor *mon = udev_monitor_new_from_netlink(udev, "udev");
+	struct udev_monitor *mon = udev_monitor_new_from_netlink(UDEV, "udev");
 	udev_monitor_filter_add_match_subsystem_devtype(mon, subsystem, NULL);
 	udev_monitor_enable_receiving(mon);
 	int fd = udev_monitor_get_fd(mon);
@@ -333,7 +343,7 @@ tw_event_queue_add_wl_display(struct tw_event_queue *queue, struct wl_display *d
 bool
 tw_event_queue_add_idle(struct tw_event_queue *queue, struct tw_event *event)
 {
-	struct tw_event_source *s = alloc_event_source(event, 0, 0);
+	struct tw_event_source *s = alloc_event_source(event, 0, -1);
 	s->event = *event;
 	wl_list_insert(&queue->idle_tasks, &s->link);
 	return true;
