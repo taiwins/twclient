@@ -46,19 +46,23 @@ extern "C" {
  * in L1 Cache
  */
 struct wl_globals {
-	struct wl_shm *shm;
-	enum wl_shm_format buffer_format;
 	struct wl_compositor *compositor;
 	struct wl_display *display;
+	struct wl_shm *shm;
+	struct wl_data_device_manager *wl_data_device_manager;
+	enum wl_shm_format buffer_format;
 	struct wl_inputs {
 		struct wl_seat *wl_seat;
 		struct wl_keyboard *wl_keyboard;
 		struct wl_pointer *wl_pointer;
 		struct wl_touch *wl_touch;
+		struct wl_data_device *wl_data_device;
+		struct wl_data_offer *wl_data_offer;
 		struct itimerspec repeat_info;
 		char name[64]; //seat name
 		uint32_t millisec;
 		uint32_t serial;
+		uint32_t mime_offered;
 		//keyboard
 		struct {
 			struct xkb_context *kcontext;

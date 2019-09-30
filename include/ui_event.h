@@ -44,6 +44,8 @@ enum app_event_type {
 	TW_RESIZE,
 	TW_FULLSCREEN,
 	TW_MINIMIZE,
+	//clipboard managing
+	TW_PASTE,
 };
 
 struct app_event {
@@ -82,6 +84,11 @@ struct app_event {
 			uint32_t nw, nh, ns;
 			uint32_t serial;
 		} resize;
+
+		struct {
+			void *data;
+			size_t size;
+		} clipboard;
 	};
 };
 
