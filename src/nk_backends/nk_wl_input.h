@@ -24,8 +24,12 @@ static void
 nk_wl_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
 	struct app_surface *app = usr.ptr;
+	struct nk_wl_backend *bkend = app->user_data;
 	struct wl_globals *globals = app->wl_globals;
-	if (globals->inputs.wl_data_offer)
+	if (bkend->internal_clipboard) {
+		const char *text = bkend->internal_clipboard;
+		nk_textedit_paste(edit, text, nk_strlen(text));
+	} else if (globals->inputs.wl_data_offer)
 		wl_globals_receive_data_offer(globals->inputs.wl_data_offer,
 					      app->wl_surface, false);
 }
@@ -34,7 +38,10 @@ static void
 nk_wl_clipboard_copy(nk_handle usr, const char *text, int len)
 {
 	struct app_surface *app = usr.ptr;
-	(void)app;
+	struct nk_wl_backend *bkend = app->user_data;
+	if (bkend->internal_clipboard)
+		free(bkend->internal_clipboard);
+	bkend->internal_clipboard = strndup(text, len);
 }
 
 //this is so verbose
