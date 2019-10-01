@@ -140,6 +140,21 @@ enum app_surface_flag {
 	APP_SURFACE_NOINPUT = 1 << 2,
 };
 
+enum app_surface_mime_type {
+	MIME_TYPE_TEXT = 0,
+	MIME_TYPE_AUDIO = 1,
+	MIME_TYPE_VIDEO = 2,
+	MIME_TYPE_IMAGE = 3,
+	MIME_TYPE_APPLICATION = 4,
+	MIME_TYPE_MAX = 5,
+};
+
+
+struct app_mime {
+	const char *mime_strs[MIME_TYPE_MAX];
+};
+
+
 typedef void (*frame_t)(struct app_surface *, const struct app_event *e);
 
 
@@ -174,6 +189,8 @@ struct app_surface {
 	//geometry information
 	struct bbox allocation;
 	struct bbox pending_allocation;
+
+	struct app_mime pattern;
 
 	struct wl_globals *wl_globals;
 	struct wl_output *wl_output;
@@ -290,7 +307,8 @@ stride_of_wl_shm_format(enum wl_shm_format format);
 static inline struct app_surface *
 app_surface_from_wl_surface(struct wl_surface *s)
 {
-	return (struct app_surface *)wl_surface_get_user_data(s);
+	return s ? (struct app_surface *)wl_surface_get_user_data(s) :
+		NULL;
 }
 
 

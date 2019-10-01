@@ -135,6 +135,16 @@ static struct wl_seat_listener seat_listener = {
  * wl_data_device
  ******************************************************************************/
 
+/* A few different major mime type list here. The only useful one right now is
+ * text
+ */
+static char *MIME_TYPES[] = {
+	"text/",
+	"audio/",
+	"video/",
+	"image/",
+};
+
 struct data_offer_data {
 	struct wl_globals *globals;
 	struct wl_data_offer *wl_data_offer;
@@ -143,28 +153,10 @@ struct data_offer_data {
 	uint32_t action_received; //bitfield
 	uint32_t serial;
 	int fd;
+	struct app_mime matched;
 };
 
 
-/* A few different major mime type list here. The only useful one right now is
- * text
- */
-enum data_mime_type {
-	MIME_TYPE_TEXT = 0,
-	MIME_TYPE_AUDIO = 1,
-	MIME_TYPE_VIDEO = 2,
-	MIME_TYPE_IMAGE = 3,
-	MIME_TYPE_APPLICATION = 4,
-	MIME_TYPE_MAX = 5,
-};
-
-static char *MIME_TYPES[] = {
-	"text/",
-	"audio/",
-	"video/",
-	"image/",
-	"application/"
-};
 
 static void
 data_offer_offered(void *data,
@@ -172,9 +164,18 @@ data_offer_offered(void *data,
 	     const char *mime_type)
 {
 	struct data_offer_data *offer_data = data;
+	struct wl_surface *surface = offer_data->surface ?
+		offer_data->surface : offer_data->globals->inputs.keyboard_focused;
+	struct app_surface *app =
+		app_surface_from_wl_surface(surface);
+	(void)app;
+
 	for (int i = 0; i < MIME_TYPE_MAX; i++)
-		if (strstr(mime_type, MIME_TYPES[i]) == mime_type)
-			offer_data->mime_offered &= 1 << i;
+		if (strstr(mime_type, MIME_TYPES[i]) == mime_type) {
+			offer_data->mime_offered |= 1 << i;
+			wl_data_offer_accept(wl_data_offer, offer_data->serial, mime_type);
+			break;
+		}
 }
 
 static void
@@ -213,13 +214,14 @@ static inline void
 data_offer_create(struct wl_data_offer *offer, struct wl_globals *globals)
 {
 	struct data_offer_data *offer_data =
-		malloc(sizeof(offer_data));
+		malloc(sizeof(struct data_offer_data));
 	offer_data->globals = globals;
 	offer_data->action_received = 0;
 	offer_data->mime_offered = 0;
 	offer_data->serial = 0;
 	offer_data->fd = -1;
 	offer_data->wl_data_offer = offer;
+	offer_data->surface = NULL;
 	wl_data_offer_add_listener(offer, &data_offer_listener, offer_data);
 }
 
@@ -239,6 +241,8 @@ data_offer(void *data,
 	   struct wl_data_offer *id)
 {
 	struct wl_globals *globals = data;
+	if (globals->inputs.wl_data_offer)
+		data_offer_destroy(globals->inputs.wl_data_offer);
 	globals->inputs.wl_data_offer = id;
 	data_offer_create(id, globals);
 }
@@ -254,6 +258,7 @@ data_enter(void *data,
 {
 	struct wl_globals *globals = data;
 	struct wl_data_offer *offer = globals->inputs.wl_data_offer;
+	assert(id == offer);
 	struct data_offer_data *offer_data =
 		wl_data_offer_get_user_data(offer);
 	offer_data->serial = serial;
@@ -284,18 +289,33 @@ data_motion(void *data,
 static int
 data_write_finished(struct tw_event *event, int fd)
 {
-	char buff[1024];
+	size_t offset = 0, size = 0;
+	struct anonymous_buff_t buffer;
 	struct data_offer_data *data = event->data;
+	//if selection
+	struct wl_surface *surface = data->surface ?
+		data->surface : data->globals->inputs.keyboard_focused;
 	struct app_surface *app =
-		app_surface_from_wl_surface(data->surface);
-	while (read(fd, buff, 1024) != 0) {
-		struct app_event e = {
-			.type = TW_PASTE,
-			.clipboard.data = buff,
-			.clipboard.size = 1024,
-		};
-		_app_surface_run_frame(app, &e);
+		app_surface_from_wl_surface(surface);
+
+	assert(data->fd == fd);
+	//write to a whole buffer so user avoids keep reading
+	anonymous_buff_new(&buffer, 4096, PROT_READ | PROT_WRITE, MAP_SHARED);
+	while ((size = read(fd, (char *)buffer.addr + offset, 4096)) != 0) {
+		offset += size;
+		if (offset >= buffer.size)
+			anonymous_buff_resize(&buffer, buffer.size + 4096);
+		if (offset >= buffer.size)
+			break;
 	}
+	struct app_event e = {
+		.type = TW_PASTE,
+		.clipboard.data = buffer.addr,
+		.clipboard.size = offset,
+	};
+	_app_surface_run_frame(app, &e);
+	anonymous_buff_close_file(&buffer);
+
 	//finish the this data offer
 	wl_data_offer_finish(data->wl_data_offer);
 	data_offer_destroy(data->wl_data_offer);
@@ -345,7 +365,23 @@ static void
 data_selection(void *data,
 	       struct wl_data_device *wl_data_device,
 	       struct wl_data_offer *id)
-{}
+{
+	struct wl_globals *globals = data;
+	if (id == NULL)
+		return;
+	if (globals->inputs.wl_data_offer &&
+	    id != globals->inputs.wl_data_offer) {
+		data_offer_destroy(globals->inputs.wl_data_offer);
+		globals->inputs.wl_data_offer = id;
+		data_offer_create(id, globals);
+	}
+	wl_data_offer_set_actions(globals->inputs.wl_data_offer,
+				  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
+				  WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE,
+				  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
+	//for selection purpose, you need probably just
+	//data_offered is done here
+}
 
 static struct wl_data_device_listener data_device_listener = {
 	.data_offer = data_offer,

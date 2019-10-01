@@ -45,6 +45,7 @@ enum app_event_type {
 	TW_FULLSCREEN,
 	TW_MINIMIZE,
 	//clipboard managing
+	TW_COPY,
 	TW_PASTE,
 };
 
@@ -89,6 +90,11 @@ struct app_event {
 			void *data;
 			size_t size;
 		} clipboard;
+		struct {
+			const char *mime_type;
+			int write_fd;
+		} clipboard_source;
+
 	};
 };
 
