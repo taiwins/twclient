@@ -89,7 +89,8 @@ struct nk_wl_backend {
 		struct app_surface *app_surface;
 		nk_wl_drawcall_t frame;
 		nk_wl_postcall_t post_cb;
-
+		struct wl_data_source *copy_source;
+		char *internal_clipboard;
 
 		xkb_keysym_t ckey; //cleaned up every frame
 		int32_t cbtn; //clean up every frame
@@ -252,7 +253,8 @@ nk_wl_clean_app_surface(struct nk_wl_backend *bkend)
 	bkend->app_surface->do_frame = NULL;
 	bkend->app_surface->user_data = NULL;
 	bkend->app_surface = NULL;
-
+	if (bkend->internal_clipboard)
+		free(bkend->internal_clipboard);
 }
 
 /********************************* shared_api *******************************************/
