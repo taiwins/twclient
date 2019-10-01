@@ -149,10 +149,7 @@ enum app_surface_mime_type {
 	MIME_TYPE_MAX = 5,
 };
 
-
-struct app_mime {
-	const char *mime_strs[MIME_TYPE_MAX];
-};
+typedef const char * app_mime[MIME_TYPE_MAX];
 
 
 typedef void (*frame_t)(struct app_surface *, const struct app_event *e);
@@ -190,8 +187,7 @@ struct app_surface {
 	struct bbox allocation;
 	struct bbox pending_allocation;
 
-	struct app_mime pattern;
-
+	app_mime known_mimes;
 	struct wl_globals *wl_globals;
 	struct wl_output *wl_output;
 	struct wl_surface *wl_surface;

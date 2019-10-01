@@ -20,6 +20,23 @@ nk_input_reset(struct nk_context *ctx)
 	nk_input_end(ctx);
 }
 
+static void
+nk_wl_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
+{
+	struct app_surface *app = usr.ptr;
+	struct wl_globals *globals = app->wl_globals;
+	if (globals->inputs.wl_data_offer)
+		wl_globals_receive_data_offer(globals->inputs.wl_data_offer,
+					      app->wl_surface, false);
+}
+
+static void
+nk_wl_clipboard_copy(nk_handle usr, const char *text, int len)
+{
+	struct app_surface *app = usr.ptr;
+	(void)app;
+}
+
 //this is so verbose
 
 static void
@@ -43,6 +60,9 @@ nk_keycb(struct app_surface *surf, const struct app_event *e)
 		nk_input_key(&bkend->ctx, NK_KEY_LEFT, (keysym == XKB_KEY_b) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_RIGHT, (keysym == XKB_KEY_f) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_TEXT_UNDO, (keysym == XKB_KEY_slash) && state);
+		nk_input_key(&bkend->ctx, NK_KEY_CUT, (keysym == XKB_KEY_z) && state);
+		nk_input_key(&bkend->ctx, NK_KEY_COPY, (keysym == XKB_KEY_c) && state);
+		nk_input_key(&bkend->ctx, NK_KEY_PASTE, (keysym == XKB_KEY_v) && state);
 		//we should also support the clipboard later
 	}
 	else if (modifier & TW_ALT) {
@@ -55,6 +75,7 @@ nk_keycb(struct app_surface *surf, const struct app_event *e)
 	else {
 		nk_input_key(&bkend->ctx, NK_KEY_DEL, (keysym == XKB_KEY_Delete) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_ENTER, (keysym == XKB_KEY_Return) && state);
+		nk_input_key(&bkend->ctx, NK_KEY_TEXT_INSERT_MODE, (keysym == XKB_KEY_Insert) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_TAB, keysym == XKB_KEY_Tab && state);
 		nk_input_key(&bkend->ctx, NK_KEY_BACKSPACE, (keysym == XKB_KEY_BackSpace) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_UP, (keysym == XKB_KEY_UP) && state);

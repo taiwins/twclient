@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 	nk_wl_impl_wl_shell_surface(&App.surface);
 	wl_shell_surface_set_toplevel(shell_surface);
 	App.shell_surface = shell_surface;
-
+	App.surface.known_mimes[MIME_TYPE_TEXT] = "text/";
 	App.bkend = nk_cairo_create_bkend();
 	//the drawing is easy, but input handler is not
 	nk_cairo_impl_app_surface(&App.surface, App.bkend, sample_widget,
