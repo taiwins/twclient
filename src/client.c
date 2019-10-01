@@ -134,48 +134,56 @@ static struct wl_seat_listener seat_listener = {
 /*******************************************************************************
  * wl_data_device
  ******************************************************************************/
-
-/* A few different major mime type list here. The only useful one right now is
- * text
- */
-static char *MIME_TYPES[] = {
-	"text/",
-	"audio/",
-	"video/",
-	"image/",
-};
-
 struct data_offer_data {
 	struct wl_globals *globals;
 	struct wl_data_offer *wl_data_offer;
 	struct wl_surface *surface;
-	uint32_t mime_offered; //bitfield
+	struct wl_array mime_offered;
+	bool dnd;
+	const char *mime_accepted;
 	uint32_t action_received; //bitfield
 	uint32_t serial;
 	int fd;
-	struct app_mime matched;
 };
 
-
+static void
+data_offer_match_mimes(struct wl_data_offer *offer,
+		       struct wl_surface *surface)
+{
+	struct data_offer_data *offer_data =
+		wl_data_offer_get_user_data(offer);
+	struct app_surface *app = app_surface_from_wl_surface(surface);
+	const char **p;
+	for (int i = 0; i < MIME_TYPE_MAX; i++) {
+		if (!app->known_mimes[i])
+			continue;
+		wl_array_for_each(p, &offer_data->mime_offered) {
+			if (strstr(*p, app->known_mimes[i]) == *p) {
+				offer_data->mime_accepted =
+					strdup(*p);
+				wl_data_offer_accept(offer, offer_data->serial, *p);
+				goto out;
+			}
+		}
+	}
+out:
+	if (!offer_data->mime_accepted)
+		wl_data_offer_accept(offer, offer_data->serial, NULL);
+	wl_array_for_each(p, &offer_data->mime_offered)
+		free((void *)*p);
+	wl_array_release(&offer_data->mime_offered);
+	wl_array_init(&offer_data->mime_offered);
+}
 
 static void
 data_offer_offered(void *data,
-	     struct wl_data_offer *wl_data_offer,
-	     const char *mime_type)
+		   struct wl_data_offer *wl_data_offer,
+		   const char *mime_type)
 {
 	struct data_offer_data *offer_data = data;
-	struct wl_surface *surface = offer_data->surface ?
-		offer_data->surface : offer_data->globals->inputs.keyboard_focused;
-	struct app_surface *app =
-		app_surface_from_wl_surface(surface);
-	(void)app;
-
-	for (int i = 0; i < MIME_TYPE_MAX; i++)
-		if (strstr(mime_type, MIME_TYPES[i]) == mime_type) {
-			offer_data->mime_offered |= 1 << i;
-			wl_data_offer_accept(wl_data_offer, offer_data->serial, mime_type);
-			break;
-		}
+	char **p;
+	p = wl_array_add(&offer_data->mime_offered, sizeof(*p));
+	*p = strdup(mime_type);
 }
 
 static void
@@ -214,10 +222,11 @@ static inline void
 data_offer_create(struct wl_data_offer *offer, struct wl_globals *globals)
 {
 	struct data_offer_data *offer_data =
-		malloc(sizeof(struct data_offer_data));
+		calloc(1, sizeof(struct data_offer_data));
+	wl_array_init(&offer_data->mime_offered);
 	offer_data->globals = globals;
 	offer_data->action_received = 0;
-	offer_data->mime_offered = 0;
+	offer_data->mime_accepted = NULL;
 	offer_data->serial = 0;
 	offer_data->fd = -1;
 	offer_data->wl_data_offer = offer;
@@ -230,7 +239,13 @@ data_offer_destroy(struct wl_data_offer *offer)
 {
 	struct data_offer_data *data =
 		wl_data_offer_get_user_data(offer);
+	const char *p = data->mime_accepted;
+
 	data->globals->inputs.wl_data_offer = NULL;
+	free((void *)p);
+	wl_array_for_each(p, &data->mime_offered)
+		free((void *)p);
+	wl_array_release(&data->mime_offered);
 	free(data);
 	wl_data_offer_destroy(offer);
 }
@@ -258,11 +273,12 @@ data_enter(void *data,
 {
 	struct wl_globals *globals = data;
 	struct wl_data_offer *offer = globals->inputs.wl_data_offer;
-	assert(id == offer);
 	struct data_offer_data *offer_data =
 		wl_data_offer_get_user_data(offer);
 	offer_data->serial = serial;
 	offer_data->surface = surface;
+	data_offer_match_mimes(id, surface);
+	assert(id == offer);
 	wl_data_offer_set_actions(offer,
 				  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
 				  WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE,
@@ -286,44 +302,6 @@ data_motion(void *data,
 	    wl_fixed_t y)
 {}
 
-static int
-data_write_finished(struct tw_event *event, int fd)
-{
-	size_t offset = 0, size = 0;
-	struct anonymous_buff_t buffer;
-	struct data_offer_data *data = event->data;
-	//if selection
-	struct wl_surface *surface = data->surface ?
-		data->surface : data->globals->inputs.keyboard_focused;
-	struct app_surface *app =
-		app_surface_from_wl_surface(surface);
-
-	assert(data->fd == fd);
-	//write to a whole buffer so user avoids keep reading
-	anonymous_buff_new(&buffer, 4096, PROT_READ | PROT_WRITE, MAP_SHARED);
-	while ((size = read(fd, (char *)buffer.addr + offset, 4096)) != 0) {
-		offset += size;
-		if (offset >= buffer.size)
-			anonymous_buff_resize(&buffer, buffer.size + 4096);
-		if (offset >= buffer.size)
-			break;
-	}
-	struct app_event e = {
-		.type = TW_PASTE,
-		.clipboard.data = buffer.addr,
-		.clipboard.size = offset,
-	};
-	_app_surface_run_frame(app, &e);
-	anonymous_buff_close_file(&buffer);
-
-	//finish the this data offer
-	wl_data_offer_finish(data->wl_data_offer);
-	data_offer_destroy(data->wl_data_offer);
-	data->globals->inputs.wl_data_offer = NULL;
-
-	return TW_EVENT_DEL;
-}
-
 static void
 data_drop(void *data,
 	  struct wl_data_device *wl_data_device)
@@ -332,34 +310,9 @@ data_drop(void *data,
 	struct wl_data_offer *offer = globals->inputs.wl_data_offer;
 	struct data_offer_data *offer_data =
 		wl_data_offer_get_user_data(offer);
-	struct tw_event_queue *queue = &globals->event_queue;
-	struct tw_event event = {
-		.data = offer_data,
-		.cb = data_write_finished,
-	};
-
-	uint32_t best_option = ffs(offer_data->mime_offered);
-	if (best_option && (offer_data->action_received &
-	    (WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
-	     WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE))) {
-		int pipef[2];
-		if (pipe2(pipef, O_CLOEXEC))
-			goto cancel_receive;
-		offer_data->fd = pipef[0];
-		wl_data_offer_receive(offer,
-				      MIME_TYPES[best_option],
-				      pipef[1]);
-		close(pipef[1]);
-		tw_event_queue_add_source(queue, pipef[0], &event, EPOLLIN);
-
-		return;
-	}
-cancel_receive:
-	wl_data_offer_accept(offer, offer_data->serial, NULL);
-	wl_data_offer_destroy(offer);
-	offer_data->globals->inputs.wl_data_offer = NULL;
-	free(offer_data);
+	wl_globals_receive_data_offer(offer, offer_data->surface, true);
 }
+
 
 static void
 data_selection(void *data,
@@ -375,6 +328,7 @@ data_selection(void *data,
 		globals->inputs.wl_data_offer = id;
 		data_offer_create(id, globals);
 	}
+	data_offer_match_mimes(id, globals->inputs.keyboard_focused);
 	wl_data_offer_set_actions(globals->inputs.wl_data_offer,
 				  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
 				  WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE,
@@ -391,6 +345,87 @@ static struct wl_data_device_listener data_device_listener = {
 	.drop = data_drop,
 	.selection = data_selection,
 };
+
+/******************************************************************************/
+static int
+data_write_finished(struct tw_event *event, int fd)
+{
+	size_t offset = 0, size = 0;
+	struct wl_globals *globals = event->data;
+	struct anonymous_buff_t buffer;
+	struct wl_data_offer *offer = globals->inputs.wl_data_offer;
+	struct data_offer_data *data = (offer) ?
+		wl_data_offer_get_user_data(offer) : NULL;
+	if (!offer)
+		return TW_EVENT_DEL;
+
+	//if selection
+	struct app_surface *app =
+		app_surface_from_wl_surface(data->surface);
+
+	assert(data->fd == fd);
+	//write to entire buffer
+	anonymous_buff_new(&buffer, 4096, PROT_READ | PROT_WRITE, MAP_SHARED);
+	while ((size = read(fd, (char *)buffer.addr + offset, 4096)) != 0) {
+		offset += size;
+		if (offset >= buffer.size)
+			anonymous_buff_resize(&buffer, buffer.size + 4096);
+		if (offset >= buffer.size)
+			break;
+	}
+	struct app_event e = {
+		.type = TW_PASTE,
+		.clipboard.data = buffer.addr,
+		.clipboard.size = offset,
+	};
+	_app_surface_run_frame(app, &e);
+	anonymous_buff_close_file(&buffer);
+	//finish the this data offer
+	if (data->dnd)
+		wl_data_offer_finish(data->wl_data_offer);
+	data_offer_destroy(data->wl_data_offer);
+	data->globals->inputs.wl_data_offer = NULL;
+
+	return TW_EVENT_DEL;
+}
+
+void
+wl_globals_receive_data_offer(struct wl_data_offer *offer,
+			      struct wl_surface *wl_surface,
+			      bool drag_n_drop)
+{
+	struct data_offer_data *offer_data =
+		wl_data_offer_get_user_data(offer);
+	struct wl_globals *globals = offer_data->globals;
+	struct tw_event_queue *queue = &globals->event_queue;
+	struct tw_event event = {
+		.data = globals,
+		.cb = data_write_finished,
+	};
+
+	offer_data->dnd = drag_n_drop;
+	offer_data->surface = wl_surface;
+
+	if (offer_data->mime_accepted &&
+	    (offer_data->action_received &
+	    (WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
+	     WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE))) {
+		int pipef[2];
+		if (pipe2(pipef, O_CLOEXEC))
+			goto cancel_receive;
+		offer_data->fd = pipef[0];
+		wl_data_offer_receive(offer,
+				      offer_data->mime_accepted,
+				      pipef[1]);
+		close(pipef[1]);
+		tw_event_queue_add_source(queue, pipef[0], &event, EPOLLIN);
+		return;
+	}
+cancel_receive:
+	wl_data_offer_destroy(offer);
+	offer_data->globals->inputs.wl_data_offer = NULL;
+	free(offer_data);
+}
 
 
 /*******************************************************************************
