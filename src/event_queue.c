@@ -248,7 +248,6 @@ tw_event_queue_add_source(struct tw_event_queue *queue, int fd,
 		destroy_event_source(s);
 		return false;
 	}
-	e->cb(e->data, s->fd);
 	return true;
 }
 

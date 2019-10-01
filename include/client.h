@@ -129,6 +129,11 @@ bool is_shm_format_valid(uint32_t format);
 void wl_globals_get_input_state(const struct wl_globals *globals);
 //you will have a few functions
 
+void wl_globals_receive_data_offer(struct wl_data_offer *offer,
+				   struct wl_surface *surface,
+				   bool drag_n_drop);
+
+
 
 #ifdef __cplusplus
 }

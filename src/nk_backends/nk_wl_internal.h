@@ -231,6 +231,9 @@ nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->app_surface = surf;
 	bkend->post_cb = NULL;
+	bkend->ctx.clip.copy = nk_wl_clipboard_copy;
+	bkend->ctx.clip.paste = nk_wl_clipboard_paste;
+	bkend->ctx.clip.userdata = nk_handle_ptr(surf);
 
 	wl_surface_set_buffer_scale(surf->wl_surface, box.s);
 
