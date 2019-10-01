@@ -44,6 +44,16 @@ nk_wl_clipboard_copy(nk_handle usr, const char *text, int len)
 	bkend->internal_clipboard = strndup(text, len);
 }
 
+static inline void
+nk_wl_copyto_clipboard(struct app_surface *surf, const struct app_event *e)
+{
+	if (!surf->known_mimes[MIME_TYPE_TEXT])
+		return;
+	nk_wl_clipboard_copy(nk_handle_ptr(surf), e->clipboard.data,
+			     e->clipboard.size);
+}
+
+
 //this is so verbose
 
 static void

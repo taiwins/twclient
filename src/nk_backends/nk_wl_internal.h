@@ -148,6 +148,9 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 		handled_input = true;
 		nk_wl_resize(surf, e);
 		break;
+	case TW_PASTE:
+		nk_wl_copyto_clipboard(surf, e);
+		break;
 	default:
 		break;
 	}
