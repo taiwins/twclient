@@ -154,6 +154,7 @@ pointer_button(void *data,
 	       uint32_t button,
 	       uint32_t state)
 {
+
 	struct wl_globals *globals = data;
 	struct app_surface *app =
 		pointer_button_meta(globals, serial, time, button,
