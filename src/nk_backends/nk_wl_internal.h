@@ -150,14 +150,14 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 		break;
 	case TW_PASTE:
 		nk_wl_copyto_clipboard(surf, e);
+		handled_input = true;
 		break;
 	default:
 		break;
 	}
 	if (!handled_input)
 		return;
-	if ((surf->flags & APP_SURFACE_COMPOSITE) &&
-	    (surf->type == APP_SURFACE_APP))
+	if ((surf->flags & APP_SURFACE_COMPOSITE))
 		bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
 	else {
 		switch (surf->type) {

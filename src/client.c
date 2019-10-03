@@ -373,6 +373,8 @@ data_write_finished(struct tw_event *event, int fd)
 		if (offset >= buffer.size)
 			break;
 	}
+	//clean off the wl_data_offer here so users will not think it has copy to do
+	data->globals->inputs.wl_data_offer = NULL;
 	struct app_event e = {
 		.type = TW_PASTE,
 		.clipboard.data = buffer.addr,
@@ -384,7 +386,6 @@ data_write_finished(struct tw_event *event, int fd)
 	if (data->dnd)
 		wl_data_offer_finish(data->wl_data_offer);
 	data_offer_destroy(data->wl_data_offer);
-	data->globals->inputs.wl_data_offer = NULL;
 
 	return TW_EVENT_DEL;
 }
