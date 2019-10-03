@@ -150,6 +150,7 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 		break;
 	case TW_PASTE:
 		nk_wl_copyto_clipboard(surf, e);
+		handled_input = true;
 		break;
 	default:
 		break;

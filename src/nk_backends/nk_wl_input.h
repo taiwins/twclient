@@ -26,12 +26,14 @@ nk_wl_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 	struct app_surface *app = usr.ptr;
 	struct nk_wl_backend *bkend = app->user_data;
 	struct wl_globals *globals = app->wl_globals;
-	if (bkend->internal_clipboard) {
-		const char *text = bkend->internal_clipboard;
-		nk_textedit_paste(edit, text, nk_strlen(text));
-	} else if (globals->inputs.wl_data_offer)
+
+	if (globals->inputs.wl_data_offer) {
 		wl_globals_receive_data_offer(globals->inputs.wl_data_offer,
 					      app->wl_surface, false);
+	} else if (bkend->internal_clipboard) {
+		const char *text = bkend->internal_clipboard;
+		nk_textedit_paste(edit, text, nk_strlen(text));
+	}
 }
 
 static void
@@ -45,12 +47,16 @@ nk_wl_clipboard_copy(nk_handle usr, const char *text, int len)
 }
 
 static inline void
-nk_wl_copyto_clipboard(struct app_surface *surf, const struct app_event *e)
+nk_wl_copyto_clipboard(struct app_surface *app, const struct app_event *e)
 {
-	if (!surf->known_mimes[MIME_TYPE_TEXT])
+	struct nk_wl_backend *bkend = app->user_data;
+	if (!app->known_mimes[MIME_TYPE_TEXT])
 		return;
-	nk_wl_clipboard_copy(nk_handle_ptr(surf), e->clipboard.data,
+	nk_wl_clipboard_copy(nk_handle_ptr(app), e->clipboard.data,
 			     e->clipboard.size);
+	nk_input_begin(&bkend->ctx);
+	nk_input_key(&bkend->ctx, NK_KEY_PASTE, true);
+	nk_input_end(&bkend->ctx);
 }
 
 
