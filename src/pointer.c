@@ -89,7 +89,8 @@ pointer_enter(void *data,
 	globals->inputs.pointer_focused = surface;
 	globals->inputs.enter_serial = serial;
 	globals->inputs.serial = serial;
-	app->wl_globals = globals;
+	if (app)
+		app->wl_globals = globals;
 
 	globals->inputs.pointer_events = POINTER_ENTER;
 	//this works only if you have one surface, we may need to set cursor
