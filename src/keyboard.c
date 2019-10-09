@@ -193,7 +193,8 @@ handle_keyboard_enter(void *data,
 	struct wl_globals *globals = (struct wl_globals *)data;
 	globals->inputs.keyboard_focused = surface;
 	struct app_surface *app = app_surface_from_wl_surface(surface);
-	app->wl_globals = globals;
+	if (app)
+		app->wl_globals = globals;
 	fprintf(stderr, "keyboard has\n");
 }
 
