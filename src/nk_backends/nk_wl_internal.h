@@ -157,8 +157,7 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 	}
 	if (!handled_input)
 		return;
-	if ((surf->flags & APP_SURFACE_COMPOSITE) &&
-	    (surf->type == APP_SURFACE_APP))
+	if ((surf->flags & APP_SURFACE_COMPOSITE))
 		bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
 	else {
 		switch (surf->type) {
