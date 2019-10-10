@@ -101,12 +101,11 @@ int main(int argc, char *argv[])
 	struct wl_surface *wl_surface = wl_compositor_create_surface(App.global.compositor);
 	struct wl_shell_surface *shell_surface = wl_shell_get_shell_surface(App.shell, wl_surface);
 	app_surface_init(&App.surface, wl_surface,
-			 (struct wl_proxy *)shell_surface, &App.global);
-
+			 &App.global);
 
 	struct nk_wl_backend *backend = nk_vulkan_backend_create();
 	nk_vulkan_impl_app_surface(&App.surface, backend, sample_widget, make_bbox_origin(200, 200, 1));
-
+	wl_shell_surface_destroy(shell_surface);
 	app_surface_release(&App.surface);
 	nk_vulkan_backend_destroy(backend);
 
