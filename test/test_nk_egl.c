@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 	struct wl_surface *wl_surface = wl_compositor_create_surface(App.global.compositor);
 	struct wl_shell_surface *shell_surface = wl_shell_get_shell_surface(App.shell, wl_surface);
 	app_surface_init_default(&App.surface, wl_surface,
-			 (struct wl_proxy *)shell_surface, &App.global);
+			 &App.global);
 
 	nk_wl_impl_wl_shell_surface(&App.surface);
 	wl_shell_surface_set_toplevel(shell_surface);
@@ -179,6 +179,8 @@ int main(int argc, char *argv[])
 
 	fprintf(stdout, "here\n");
 	wl_globals_dispatch_event_queue(&App.global);
+
+	wl_shell_surface_destroy(shell_surface);
 	app_surface_release(&App.surface);
 	nk_egl_destroy_backend(App.bkend);
 	wl_globals_release(&App.global);

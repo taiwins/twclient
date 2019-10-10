@@ -179,7 +179,7 @@ struct app_event_filter {
  */
 struct app_surface {
 	//the structure to store wl_shell_surface, xdg_shell_surface or tw_ui
-	struct wl_proxy *protocol;
+	/* struct wl_proxy *protocol; */
 	enum app_surface_type type;
 	uint32_t flags;
 
@@ -237,17 +237,20 @@ struct app_surface {
  * @brief clean start a new appsurface
  */
 void app_surface_init(struct app_surface *app, struct wl_surface *surf,
-		      struct wl_proxy *p, struct wl_globals *g,
+		      struct wl_globals *g,
 		      enum app_surface_type type, const uint32_t flags);
 
 /**
  * @breif create a default desktop like application
  */
 void app_surface_init_default(struct app_surface *, struct wl_surface *,
-			      struct wl_proxy *p, struct wl_globals *g);
+			      struct wl_globals *g);
 
 /**
- * /brief the universal release function
+ * @brief the universal release function
+ *
+ * It releases all the resources but user is responsible for destroy the proxy
+ * first before calling this method
  */
 void
 app_surface_release(struct app_surface *surf);
