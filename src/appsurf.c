@@ -43,7 +43,6 @@ app_surface_init(struct app_surface *surf, struct wl_surface *wl_surface,
 {
 	*surf = (struct app_surface){0};
 	surf->wl_surface = wl_surface;
-	/* surf->protocol = proxy; */
 	surf->type = type;
 	surf->flags = flags;
 	wl_surface_set_user_data(wl_surface, surf);
@@ -68,7 +67,6 @@ app_surface_release(struct app_surface *surf)
 	//throw all the callbacks
 	if (surf->wl_surface)
 		wl_surface_destroy(surf->wl_surface);
-	/* surf->protocol = NULL; */
 	surf->wl_surface = NULL;
 	wl_list_init(&surf->filter_head);
 }
