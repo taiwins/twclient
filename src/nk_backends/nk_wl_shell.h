@@ -38,9 +38,10 @@ static struct wl_shell_surface_listener nk_wl_shell_impl = {
 
 
 NK_API void
-nk_wl_impl_wl_shell_surface(struct app_surface *app)
+nk_wl_impl_wl_shell_surface(struct app_surface *app,
+			    struct wl_shell_surface *protocol)
 {
-	wl_shell_surface_add_listener((struct wl_shell_surface *)app->protocol,
+	wl_shell_surface_add_listener(protocol,
 				      &nk_wl_shell_impl, app);
 }
 
@@ -51,9 +52,13 @@ nk_wl_impl_xdg_configure(void *data,
 			 int32_t height,
 			 struct wl_array *states)
 {
-	struct app_surface *app = data;
+
+	struct xdg_surface *xdg_surface = data;
+	struct app_surface *app =
+		xdg_surface_get_user_data(xdg_surface);
 	app_surface_resize(app, width, height, app->allocation.s);
-	xdg_surface_ack_configure((struct xdg_surface *)app->protocol,
+	/* xdg_top */
+	xdg_surface_ack_configure(xdg_surface,
 				  app->wl_globals->inputs.serial);
 }
 
@@ -61,7 +66,12 @@ static void
 nk_wl_xdg_toplevel_close(void *data,
 			 struct xdg_toplevel *xdg_toplevel)
 {
-	struct app_surface *app = data;
+	struct xdg_surface *xdg_surface = data;
+	struct app_surface *app =
+		xdg_surface_get_user_data(xdg_surface);
+
+	xdg_toplevel_destroy(xdg_toplevel);
+	xdg_surface_destroy(xdg_surface);
 	app_surface_release(app);
 }
 
@@ -84,14 +94,15 @@ static struct xdg_surface_listener nk_wl_xdgsurface_impl = {
 };
 
 NK_API struct xdg_toplevel *
-nk_wl_impl_xdg_shell_surface(struct app_surface *app)
+nk_wl_impl_xdg_shell_surface(struct app_surface *app,
+			     struct xdg_surface *xdg_surface)
 {
 	struct xdg_toplevel *toplevel = xdg_surface_get_toplevel(
-		(struct xdg_surface *)app->protocol);
-	xdg_surface_add_listener((struct xdg_surface*)app->protocol,
+		xdg_surface);
+	xdg_surface_add_listener(xdg_surface,
 				 &nk_wl_xdgsurface_impl, app);
 	xdg_toplevel_add_listener(toplevel, &nk_wl_xdgtoplevel_impl,
-				  app);
+				  xdg_surface);
 	return toplevel;
 }
 

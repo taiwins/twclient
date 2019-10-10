@@ -38,12 +38,12 @@ app_surface_clean_egl(struct app_surface *surf, struct egl_env *env)
 
 void
 app_surface_init(struct app_surface *surf, struct wl_surface *wl_surface,
-		 struct wl_proxy *proxy, struct wl_globals *globals,
+		 struct wl_globals *globals,
 		 enum app_surface_type type, const uint32_t flags)
 {
 	*surf = (struct app_surface){0};
 	surf->wl_surface = wl_surface;
-	surf->protocol = proxy;
+	/* surf->protocol = proxy; */
 	surf->type = type;
 	surf->flags = flags;
 	wl_surface_set_user_data(wl_surface, surf);
@@ -53,9 +53,9 @@ app_surface_init(struct app_surface *surf, struct wl_surface *wl_surface,
 
 void
 app_surface_init_default(struct app_surface *app, struct wl_surface *surf,
-			 struct wl_proxy *p, struct wl_globals *g)
+			 struct wl_globals *g)
 {
-	app_surface_init(app, surf, p, g, APP_SURFACE_APP, 0);
+	app_surface_init(app, surf, g, APP_SURFACE_APP, 0);
 }
 
 void
@@ -68,9 +68,7 @@ app_surface_release(struct app_surface *surf)
 	//throw all the callbacks
 	if (surf->wl_surface)
 		wl_surface_destroy(surf->wl_surface);
-	if (surf->protocol)
-		wl_proxy_destroy(surf->protocol);
-	surf->protocol = NULL;
+	/* surf->protocol = NULL; */
 	surf->wl_surface = NULL;
 	wl_list_init(&surf->filter_head);
 }
@@ -344,7 +342,7 @@ embeded_impl_app_surface(struct app_surface *surf, struct app_surface *parent,
 
 {
 	surf->wl_surface = NULL;
-	surf->protocol = NULL;
+	/* surf->protocol = NULL; */
 	surf->parent = parent;
 	surf->wl_globals = parent->wl_globals;
 	surf->do_frame = embeded_app_surface_do_frame;
