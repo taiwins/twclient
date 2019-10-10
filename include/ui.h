@@ -178,8 +178,6 @@ struct app_event_filter {
  * events by providing custom grabs(in rare cases).
  */
 struct app_surface {
-	//the structure to store wl_shell_surface, xdg_shell_surface or tw_ui
-	/* struct wl_proxy *protocol; */
 	enum app_surface_type type;
 	uint32_t flags;
 
