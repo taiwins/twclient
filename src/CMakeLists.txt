@@ -7,11 +7,13 @@ add_library(twclient
   egl.c
   buffer.c
   event_queue.c
+  image_cache.c
   #inputs
   keyboard.c
   pointer.c)
 
 target_link_libraries(twclient
+  m
   ctype
   OpenGL::EGL
   ${XKBCOMMON_LIBRARIES}
