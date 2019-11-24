@@ -61,3 +61,15 @@ target_link_libraries(test_stbimage
   ${TWCLIENT_LIBRARIES}
   m
   )
+
+add_executable(test_desktop_entry
+  test_dot_desktop.c)
+
+target_include_directories(test_desktop_entry PRIVATE
+  ${TWCLIENT_INCLUDE_DIRS}
+  )
+
+target_link_libraries(test_desktop_entry
+  twclient
+  m
+  )
