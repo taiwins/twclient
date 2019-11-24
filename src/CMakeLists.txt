@@ -8,6 +8,7 @@ add_library(twclient
   buffer.c
   event_queue.c
   image_cache.c
+  desktop_entry.c
   #inputs
   keyboard.c
   pointer.c)
