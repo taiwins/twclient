@@ -3,11 +3,12 @@
 #include <stdlib.h>
 #include <dirent.h>
 
+#include <strops.h>
 #include <helpers.h>
 #include <os/file.h>
 #include <desktop_entry.h>
 
-#define MAX_ENTRY_LEN 127
+#define MAX_ENTRY_LEN 128
 
 
 enum xdg_app_section_type {
@@ -39,22 +40,6 @@ is_empty_line(const char *line)
 	return strlen(line) == 0;
 }
 
-static inline void
-rtrim(char *line)
-{
-	char *ptr = line + strlen(line) - 1;
-	while(ptr >= line && *ptr && isspace(*ptr)) *ptr-- = '\0';
-}
-
-static inline char *
-ltrim(char *line)
-{
-	char *ptr = line;
-	while (*ptr && isspace(*ptr)) ptr++;
-	return ptr;
-}
-
-
 static inline bool
 xdg_app_entry_empty(const struct xdg_app_entry *entry)
 {
@@ -80,7 +65,7 @@ xdg_app_entry_from_file(const char *path, struct xdg_app_entry *entry)
 	strcpy(entry->path, "/");
 	entry->terminal_app =false;
 	while ((len = getline(&rawline, &allocated, file)) != -1) {
-		char *line = ltrim(rawline); rtrim(line);
+		char *line = strop_ltrim(rawline); strop_rtrim(line);
 		//get rid of comments first
 		char *comment_point = strstr(line, "#");
 		char *equal = NULL;
@@ -105,19 +90,16 @@ xdg_app_entry_from_file(const char *path, struct xdg_app_entry *entry)
 		char *value = equal + 1;
 		bool name_to_long = false;
 
-		rtrim(value);
+		strop_rtrim(value);
 		//get the entries
 		if (strcasecmp(key, "name") == 0) {
-			strncpy(entry->name, value,
-				MIN(MAX_ENTRY_LEN, strlen(value)));
+			strop_ncpy(entry->name, value, MAX_ENTRY_LEN);
 			name_to_long |= strlen(value) > MAX_ENTRY_LEN;
 		} else if (strcasecmp(key, "exec") == 0) {
-			strncpy(entry->exec, value,
-				MIN(MAX_ENTRY_LEN, strlen(value)));
+			strop_ncpy(entry->exec, value, MAX_ENTRY_LEN);
 			name_to_long |= strlen(value) > MAX_ENTRY_LEN;
 		} else if (strcasecmp(key, "icon") == 0) {
-			strncpy(entry->icon, value,
-				MIN(MAX_ENTRY_LEN, strlen(value)));
+			strop_ncpy(entry->icon, value, MAX_ENTRY_LEN);
 			name_to_long |= strlen(value) > MAX_ENTRY_LEN;
 		} else if (strcasecmp(key, "path") == 0 &&
 			   strlen(value) < MAX_ENTRY_LEN) {

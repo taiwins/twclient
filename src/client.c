@@ -15,6 +15,7 @@
 #include <wayland-cursor.h>
 #include <wayland-util.h>
 
+#include <strops.h>
 #include <sequential.h>
 #include <os/buffer.h>
 #include <os/file.h>
@@ -85,8 +86,7 @@ static void
 seat_name(void *data, struct wl_seat *wl_seat, const char *name)
 {
 	struct wl_globals *globals = (struct wl_globals *)data;
-	strncpy(globals->inputs.name, name,
-		MIN(NUMOF(globals->inputs.name), strlen(name)));
+	strop_ncpy(globals->inputs.name, name, 64);
 	fprintf(stderr, "we have this seat with a name called %s\n", name);
 }
 
