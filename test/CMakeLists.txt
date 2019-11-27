@@ -73,3 +73,12 @@ target_link_libraries(test_desktop_entry
   twclient
   m
   )
+
+add_executable(test_readtheme
+  test_read_theme.c)
+
+target_include_directories(test_readtheme PRIVATE
+  ${TWCLIENT_INCLUDE_DIRS})
+
+target_link_libraries(test_readtheme
+  twclient)
