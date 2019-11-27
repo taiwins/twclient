@@ -4,19 +4,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cairo.h>
+#include <librsvg/rsvg.h>
 
 #include <image_cache.h>
+#include <os/file.h>
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include <stb/stb_rect_pack.h>
 
 static void
-copy_as_subimage(unsigned char *dst, const size_t dst_width,
-		 const unsigned char *src, const stbrp_rect *rect)
+copy_subimage(unsigned char *dst, const unsigned char *src,
+	      const uint32_t dst_width, const stbrp_rect *rect)
 {
-	//stb loads image in rgba byte order.
-	//cairo has argb in the uint32_t, which is bgra in byte order
+	uint32_t *row = NULL;
+	uint32_t *row_src = NULL;
+	for (int j = 0; j < rect->h; j++) {
+		row = (uint32_t *)dst + (rect->y + j) * dst_width + (rect->x);
+		row_src = (uint32_t *)src + j * rect->w;
+		memcpy(row, row_src, rect->w * sizeof(uint32_t));
+	}
+}
+
+//cairo has argb in uin32_t, which is bgra in byte order
+static void
+rgba_to_argb(unsigned char *dst, const unsigned char *src,
+             const int w, const int h)
+{
 	union argb {
 		//byte order readed
 		struct {
@@ -26,11 +40,11 @@ copy_as_subimage(unsigned char *dst, const size_t dst_width,
 	};
 	//cairo alpha is pre-multiplied, we need do the same here
 	union argb pixel;
-	for (int j = 0; j < rect->h; j++)
-		for (int i = 0; i < rect->w; i++) {
-			pixel.code = *((uint32_t*)src + j * rect->w + i);
+	for (int j = 0; j < h; j++)
+		for (int i = 0; i < w; i++) {
+			pixel.code = *((uint32_t*)src + j * w + i);
 			double alpha = pixel.data.a / 256.0;
-			*((uint32_t *)dst + (rect->y+j) * dst_width + (rect->x+i)) =
+			*((uint32_t *)dst + j * w + i) =
 				((uint32_t)pixel.data.a << 24) +
 				((uint32_t)(pixel.data.r * alpha) << 16) +
 				((uint32_t)(pixel.data.g * alpha) << 8) +
@@ -38,6 +52,53 @@ copy_as_subimage(unsigned char *dst, const size_t dst_width,
 		}
 }
 
+static inline void
+image_info(const char *path, int *w, int *h, int *nchannels)
+{
+	//take a wild guess on svgs(since most of cases they are icons)
+	if (is_file_type(path, ".svg")) {
+		*w = 128; *h = 128; *nchannels = 4;
+	} else
+		stbi_info(path, w, h, nchannels);
+}
+
+static unsigned char *
+image_load(const char *path, int *w, int *h, int *nchannels)
+{
+	unsigned char *imgdata = NULL;
+
+	if (is_file_type(path, ".svg")) {
+		cairo_surface_t *renderimg = NULL;
+		cairo_t *cr = NULL;
+		RsvgDimensionData dimension;
+		RsvgHandle *svg = NULL;
+
+		if ((svg = rsvg_handle_new_from_file(path, NULL)) == NULL)
+			return NULL;
+
+		rsvg_handle_get_dimensions(svg, &dimension);
+		imgdata = calloc(1, 128 * cairo_format_stride_for_width(
+			                      CAIRO_FORMAT_ARGB32, 128));
+		renderimg = cairo_image_surface_create_for_data(
+			imgdata, CAIRO_FORMAT_ARGB32, 128, 128,
+			cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, 128));
+		cr = cairo_create(renderimg);
+		cairo_scale(cr, 128.0/ dimension.width,
+		            128.0 / dimension.height);
+		rsvg_handle_render_cairo(svg, cr);
+		g_object_unref(svg);
+		/* rsvg_handle_close(svg, NULL); */
+		cairo_destroy(cr);
+		cairo_surface_destroy(renderimg);
+	} else {
+		unsigned char *pixels =
+			stbi_load(path, w, h, nchannels, STBI_rgb_alpha);
+		imgdata = malloc(*w * *h * 4);
+		rgba_to_argb(imgdata, pixels, *w, *h);
+		stbi_image_free(pixels);
+	}
+	return imgdata;
+}
 
 struct image_cache
 image_cache_from_arrays(const struct wl_array *handle_array,
@@ -52,6 +113,10 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 	stbrp_rect *rects = malloc(sizeof(stbrp_rect) * nimages);
 	stbrp_node *nodes = malloc(sizeof(stbrp_node) * (context_width + 10));
 	stbrp_context context;
+	cairo_surface_t *atlas_surface;
+	cairo_t *cr = NULL;
+	cairo_format_t format = CAIRO_FORMAT_ARGB32;
+
 	//initialize cache.
 	wl_array_init(&cache.handles);
 	wl_array_init(&cache.strings);
@@ -61,8 +126,7 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 		int w, h, nchannels;
 		off_t handle = *((uint64_t *)handle_array->data + i);
 		const char *path = (char *)str_array->data + handle;
-		//assuming it is just images
-		stbi_info(path, &w, &h, &nchannels);
+		image_info(path, &w, &h, &nchannels);
 		rects[i].w = w;
 		rects[i].h = h;
 		//advance in tile. If current row still works, we go forward.
@@ -89,6 +153,11 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 	//create image data
 	cache.atlas = calloc(1, context_width * context_height *
 			     sizeof(uint32_t));
+	atlas_surface = cairo_image_surface_create_for_data(
+		cache.atlas, format, context_width, context_height,
+		cairo_format_stride_for_width(format, context_width));
+	cr = cairo_create(atlas_surface);
+
 	cache.dimension = make_bbox_origin(context_width, context_height, 1);
 	wl_array_add(&cache.image_boxes, sizeof(struct bbox) * nimages);
 	//pass 2 copy images
@@ -97,20 +166,23 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 		off_t handle = *((uint64_t *)handle_array->data + i);
 		const char *path = (const char *)str_array->data + handle;
 		struct bbox *subimage = (struct bbox *)cache.image_boxes.data+i;
-		unsigned char *pixels =
-			stbi_load(path, &w, &h, &nchannels, STBI_rgb_alpha);
-		//copy the image onto the canvas(pre-alpha applied).
-		copy_as_subimage(cache.atlas, context_width, pixels, &rects[i]);
-		stbi_image_free(pixels);
+		unsigned char *pixels = image_load(path, &w, &h, &nchannels);
+		if (!pixels)
+			continue;
+
+		copy_subimage(cache.atlas, pixels, context_width, &rects[i]);
+		free(pixels);
+		/* stbi_image_free(pixels); */
 		*subimage = make_bbox(rects[i].x, rects[i].y, w, h, 1);
 	}
+	cairo_destroy(cr);
+	cairo_surface_destroy(atlas_surface);
 
 	free(nodes);
 	free(rects);
 
 	return cache;
 }
-
 
 void
 image_cache_release(struct image_cache *cache)
