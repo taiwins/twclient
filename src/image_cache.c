@@ -5,13 +5,11 @@
 #include <stdlib.h>
 #include <cairo.h>
 
-
 #include <image_cache.h>
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include <stb/stb_rect_pack.h>
-
 
 static void
 copy_as_subimage(unsigned char *dst, const size_t dst_width,
