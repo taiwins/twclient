@@ -8,6 +8,7 @@ add_library(twclient
   buffer.c
   event_queue.c
   image_cache.c
+  icon_search.c
   desktop_entry.c
   #inputs
   keyboard.c
@@ -26,6 +27,7 @@ target_link_libraries(twclient
   ${UDEV_LIBRARIES}
   ${WAYLAND_EGL_LIBRARIES}
   ${FONTCONFIG_LIBRARIES}
+  ${LibRSVG_LIBRARIES}
   )
 
 target_include_directories(twclient PUBLIC
