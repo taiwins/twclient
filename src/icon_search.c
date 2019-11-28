@@ -104,12 +104,7 @@ static inline bool
 is_size_right(const int min_res, const int max_res,
 	      const struct size_state *curr)
 {
-	bool inbound = INBOUND(curr->curr_size, min_res, max_res);
-	if (curr->curr_max_size == -1 || curr->curr_max_size == -1)
-		return inbound;
-	bool minmax = curr->curr_min_size >= min_res &&
-		curr->curr_max_size <= max_res;
-	return inbound && minmax;
+	return INBOUND(curr->curr_size, min_res, max_res);
 }
 
 static inline void
@@ -131,15 +126,18 @@ cmp_icon_dir(const void *l, const void *r)
 
 
 static bool
-filename_exists(const char *filename,
-		const struct wl_array *handle_pool,
-		const struct wl_array *string_pool)
+obj_exists(const char *filename,
+           const struct wl_array *handle_pool,
+           const struct wl_array *string_pool)
 {
 	off_t *off;
+	char namecpy[strlen(filename)+1];
+	strcpy(namecpy, filename);
+	*strrchr(namecpy, '.') = '\0';
 	const char *ptr = string_pool->data;
 	wl_array_for_each(off, handle_pool) {
 		const char *path = ptr + *off;
-		if (strstr(path, filename))
+		if (strstr(path, namecpy))
 			return true;
 	}
 	return false;
@@ -162,7 +160,7 @@ search_icon_subdir(const char *dir_path,
 		    (!is_file_type(entry->d_name, ".svg") &&
 		     !is_file_type(entry->d_name, ".png")))
 			continue;
-		if (filename_exists(entry->d_name, handle_pool, string_pool))
+		if (obj_exists(entry->d_name, handle_pool, string_pool))
 			continue;
 		if (strlen(entry->d_name) + strlen(dir_path) + 1 >= 1024)
 			continue;
