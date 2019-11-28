@@ -135,15 +135,6 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 			w : row_x + w;
 		row_y = (row_x + w > context_width) ?
 			row_y + h : MAX(row_y, h);
-		//convert the path to other handles if ncessary.
-		if (convert) {
-			convert(objname, path);
-			path = objname;
-		}
-		//otherwise, copy the image path directly
-		char *tocpy = wl_array_add(&cache.strings, sizeof(path)+1);
-		*(off_t *)wl_array_add(&cache.handles, sizeof(off_t)) =
-			(tocpy - (char *)cache.strings.data);
 	}
 	context_height = row_y;
 	stbrp_init_target(&context, context_width, context_height, nodes,
@@ -157,23 +148,35 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 		cache.atlas, format, context_width, context_height,
 		cairo_format_stride_for_width(format, context_width));
 	cr = cairo_create(atlas_surface);
-
 	cache.dimension = make_bbox_origin(context_width, context_height, 1);
-	wl_array_add(&cache.image_boxes, sizeof(struct bbox) * nimages);
 	//pass 2 copy images
 	for (int i = 0; i < nimages; i++) {
+		if (rects[i].was_packed == 0)
+			continue;
 		int w, h, nchannels; // channels
 		off_t handle = *((uint64_t *)handle_array->data + i);
 		const char *path = (const char *)str_array->data + handle;
-		struct bbox *subimage = (struct bbox *)cache.image_boxes.data+i;
 		unsigned char *pixels = image_load(path, &w, &h, &nchannels);
+
 		if (!pixels)
 			continue;
 
 		copy_subimage(cache.atlas, pixels, context_width, &rects[i]);
 		free(pixels);
-		/* stbi_image_free(pixels); */
-		*subimage = make_bbox(rects[i].x, rects[i].y, w, h, 1);
+		//convert the path to other handles if ncessary.
+		if (convert) {
+			convert(objname, path);
+			path = objname;
+		}
+		//otherwise, copy the image path directly
+		char *tocpy = wl_array_add(&cache.strings, sizeof(path)+1);
+		*(off_t *)wl_array_add(&cache.handles, sizeof(off_t)) =
+			(tocpy - (char *)cache.strings.data);
+		*(struct bbox *)wl_array_add(&cache.image_boxes,
+		                            sizeof(struct bbox)) =
+			make_bbox(rects[i].x, rects[i].y, w, h, 1);
+
+
 	}
 	cairo_destroy(cr);
 	cairo_surface_destroy(atlas_surface);
