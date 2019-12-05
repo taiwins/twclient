@@ -11,7 +11,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_BINARY_DIR "${CMAKE_SOURCE_DIR}/build")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-################### compiler flags ########################
+################################################################################
+# compiler flags
+################################################################################
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
@@ -26,43 +28,41 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -O2")
 endif()
 
+################################################################################
+# find packages
+################################################################################
 
-###################### packages ###########################
+find_package(PkgConfig REQUIRED)
 find_package(Pixman REQUIRED)
-find_package(PkgConfig)
 find_package(XKBCommon REQUIRED)
 find_package(Wayland REQUIRED)
 find_package(WaylandProtocols REQUIRED)
 find_package(Cairo REQUIRED)
 find_package(OpenGL REQUIRED COMPONENTS EGL OpenGL)
 find_package(NVEGL)
-find_package(fontconfig REQUIRED)
+find_package(Fontconfig REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(UDEV REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(LibRSVG REQUIRED)
 
-###########################################################
-
-set(TWCLIENT_INCLUDE_DIRS
-  ${CTYPES_INCLUDE_DIR}
-  ${XKBCOMMON_INCLUDE_DIRS}
-  ${WAYLAND_CLIENT_INCLUDE_DIR}
-  ${CAIRO_INCLUDE_DIRS}
-  ${WAYLAND_CURSOR_INCLUDE_DIR}
-  ${WAYLAND_EGL_INCLUDE_DIR}
-  ${PIXMAN_INCLUDE_DIRS}
-  ${FONTCONFIG_INCLUDE_DIR}
-  ${FREETYPE_INCLUDE_DIRS}
-  ${UDEV_INCLUDE_DIRS}
-  ${LibRSVG_INCLUDE_DIRS}
-  "${CMAKE_CURRENT_LIST_DIR}/include"
-  )
-
-list(REMOVE_DUPLICATES TWCLIENT_INCLUDE_DIRS)
-
+################################################################################
+# subdirs
+################################################################################
+set(TWCLIENT_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/include")
 
 add_subdirectory(ctypes)
 add_subdirectory(protocols)
 add_subdirectory(src)
 add_subdirectory(test)
+
+################################################################################
+# install
+################################################################################
+# include(CMakePackageConfigHelpers)
+# write_basic_package_version_file("twclientConfigVersion.cmake"
+#   VERSION ${twclient_VERSION}
+#   COMPATIBILITY SameMajorVersion
+#   )
+# install(FILES "${CMAKE_CURRENT_BINARY_DIR}/twclientConfigVersion.cmake"
+#   DESTINATION lib/cmake/taiwins)

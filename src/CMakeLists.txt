@@ -1,4 +1,6 @@
-include(Wayland)
+################################################################################
+# library
+################################################################################
 
 add_library(twclient
   client.c
@@ -7,60 +9,68 @@ add_library(twclient
   egl.c
   buffer.c
   event_queue.c
-  image_cache.c
-  icon_search.c
-  desktop_entry.c
   #inputs
   keyboard.c
   pointer.c)
 
+target_include_directories(twclient
+  PUBLIC "${TWCLIENT_INCLUDE_DIR}"
+  )
+add_library(twclient::twclient ALIAS twclient)
+
 target_link_libraries(twclient
   m
   ctype
-  OpenGL::EGL
-  ${XKBCOMMON_LIBRARIES}
-  ${WAYLAND_CLIENT_LIBRARIES}
-  ${CAIRO_LIBRARIES}
-  ${WAYLAND_EGL_LIBRARIES}
-  ${WAYLAND_CURSOR_LIBRARIES}
-  ${PIXMAN_LIBRARIES}
-  ${UDEV_LIBRARIES}
-  ${WAYLAND_EGL_LIBRARIES}
-  ${FONTCONFIG_LIBRARIES}
-  ${LibRSVG_LIBRARIES}
+  Pixman::Pixman
+  XKBCommon::XKBCommon
+  OpenGL::EGL #for egl_env
+  Cairo::Cairo
+  Fontconfig::Fontconfig
+  LibRSVG::LibRSVG
+  UDEV::UDEV
+  Freetype::Freetype
+  #wayland
+  Wayland::EGL
+  Wayland::Client
+  Wayland::Cursor
+  #protocols
+  twclient-protos
   )
 
-target_include_directories(twclient PUBLIC
-  ${CTYPES_INCLUDE_DIR}
-  ${TWCLIENT_PROTO_INCLUDE_DIR}
-  ${TWCLIENT_INCLUDE_DIRS}
-  ${CMAKE_CURRENT_BINARY_DIR})
+add_library(twclient-icons
+  image_cache.c
+  icon_search.c
+  desktop_entry.c
+  )
 
-set(TWCLIENT_LIBRARIES
-  twclient
+target_include_directories(twclient-icons PUBLIC
+  "${TWCLIENT_INCLUDE_DIR}")
+
+target_link_libraries(twclient-icons
+  Cairo::Cairo
+  LibRSVG::LibRSVG
   ctype
-  twclient_proto_libraries
-  CACHE STRING "twclient libraries"
-  )
-
-#library used for
-set(TWCLIENT_TRD_LIB
-  ${CTYPES_LIBRARIES}
-  ${XKBCOMMON_LIBRARIES}
-  ${WAYLAND_CLIENT_LIBRARIES}
-  ${CAIRO_LIBRARIES}
-  ${WAYLAND_EGL_LIBRARIES}
-  ${WAYLAND_CURSOR_LIBRARIES}
-  OpenGL::EGL
-  OpenGL::OpenGL
-  Vulkan::Vulkan
-  ${PIXMAN_LIBRARIES}
-  ${FONTCONFIG_LIBRARIES}
-  ${FREETYPE_LIBRARIES}
-  ${UDEV_LIBRARIES}
   m
-
-  PARENT_SCOPE
   )
+add_library(twclient::icons ALIAS twclient-icons)
 
 add_subdirectory(nk_backends)
+
+################################################################################
+# install
+################################################################################
+
+install(TARGETS twclient twclient-icons
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  )
+
+install(DIRECTORY ${TWCLIENT_INCLUDE_DIR}/
+  DESTINATION include/taiwins
+  PATTERN "stb/*" EXCLUDE
+  PATTERN "nuklear/*" EXCLUDE)
+
+install(DIRECTORY ${CTYPES_INCLUDE_DIR}/
+  DESTINATION include/taiwins/ctypes
+  FILES_MATCHING PATTERN "*.h")

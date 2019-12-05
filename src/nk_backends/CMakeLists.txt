@@ -1,37 +1,36 @@
-add_library(nk_egl_backend STATIC
+################################################################################
+# library
+################################################################################
+
+add_library(twclient-nkegl STATIC
   nk_wl_egl.c)
 
-target_include_directories(nk_egl_backend PUBLIC
-  ${TWCLIENT_PROTO_INCLUDE_DIR}
-  ${TWCLIENT_INCLUDE_DIRS})
-
-target_link_libraries(nk_egl_backend
+target_link_libraries(twclient-nkegl
   twclient
-  ${TWCLIENT_TRD_LIB}
-  twclient_proto_libraries
   )
+add_library(wclient::nkegl ALIAS twclient-nkegl)
 
-add_library(nk_cairo_backend STATIC
+add_library(twclient-nkcairo STATIC
   nk_wl_cairo.c)
 
-target_include_directories(nk_cairo_backend PUBLIC
-  ${TWCLIENT_PROTO_INCLUDE_DIR}
-  ${TWCLIENT_INCLUDE_DIRS})
-
-target_link_libraries(nk_cairo_backend
+target_link_libraries(twclient-nkcairo
   twclient
-  ${TWCLIENT_TRD_LIB}
-  twclient_proto_libraries
   )
+add_library(wclient::nkcairo ALIAS twclient-nkcairo)
 
-# add_library(nk_vk_backend STATIC
+# add_library(twclient-nkvk STATIC
 #   nk_wl_vulkan.c
 #   )
 
-# target_include_directories(nk_vk_backend PUBLIC
-#   ${TWCLIENT_INCLUDE_DIRS})
-
-# target_link_libraries(nk_vk_backend
+# target_link_libraries(twcleint-nkvk
 #   twclient
-#   ${TWCLIENT_TRD_LIB}
 #   )
+
+################################################################################
+# install
+################################################################################
+
+install(TARGETS twclient-nkegl twclient-nkcairo
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
