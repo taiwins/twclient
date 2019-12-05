@@ -29,11 +29,22 @@ set_package_properties(wlproto PROPERTIES
 unset(WLPROTO_PATH)
 
 find_package(PkgConfig)
-if (PKG_CONFIG_FOUND)
-   execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=pkgdatadir wayland-protocols
-      OUTPUT_VARIABLE WLPROTO_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif ()
+pkg_check_modules(wlproto QUIET wayland-protocols>=${WaylandProtocols_FIND_VERSION})
+execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=pkgdatadir wayland-protocols
+  OUTPUT_VARIABLE WLPROTO_PATH OUTPUT_STRIP_TRAILING_WHITESPACE
+  RESULT_VARIABLE _pkgconfig_failed)
+
+if (_pkgconfig_failed)
+  message(FATAL_ERROR "Missing wayland-protocols pkgdatadir")
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(wlproto DEFAULT_MSG WLPROTO_PATH)
 mark_as_advanced(WLPROTO_PATH)
+
+if (WLPROTO_PATH AND NOT TARGET WaylandProtocols)
+  add_library(WaylandProtocols INTERFACE)
+  set_target_properties(WaylandProtocols PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${WLPROTO_PATH}"
+    )
+endif()

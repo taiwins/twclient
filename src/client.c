@@ -15,10 +15,10 @@
 #include <wayland-cursor.h>
 #include <wayland-util.h>
 
-#include <strops.h>
 #include <sequential.h>
 #include <os/buffer.h>
 #include <os/file.h>
+#include <strops.h>
 
 #include <client.h>
 #include <ui.h>
