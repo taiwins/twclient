@@ -4,17 +4,18 @@
 # Rsvg_LIBRARY_DIR
 # Rsvg_LIBS
 find_package(PkgConfig)
-pkg_check_modules(pc_librsvg QUIET librsvg-2.0)
+pkg_check_modules(LIBRSVG REQUIRED QUIET librsvg-2.0)
+find_library(LIBRSVG_LOCATION NAMES rsvg-2 HINTS ${LIBRSVG_})
+find_package_handle_standard_args(LIBRSVG DEFAULT_MSG LIBRSVG_INCLUDE_DIRS LIBRSVG_LIBRARIES)
+mark_as_advanced(LIBRSVG_INCLUDE_DIRS LIBRSVG_LIBRARIES)
 
-set(LibRSVG_INCLUDE_DIRS ${pc_librsvg_INCLUDE_DIRS})
-set(LibRSVG_LIBRARIES ${pc_librsvg_LIBRARIES})
-
-find_package_handle_standard_args(LibRSVG DEFAULT_MSG LibRSVG_INCLUDE_DIRS LibRSVG_LIBRARIES)
-
-# if(LibRSVG_FOUND)
-#   message(STATUS " found rsvg")
-#   message(STATUS " - Includes: ${LibRSVG_INCLUDE_DIRS}")
-#   message(STATUS " - Libraries: ${LibRSVG_LIBRARIES}")
-# else(LibRSVG_FOUND)
-#   message(FATAL_ERROR "Could not find rsvg installation.")
-# endif(LibRSVG_FOUND)
+if (LIBRSVG_FOUND AND NOT TARGET LibRSVG::LibRSVG)
+  add_library(LibRSVG::LibRSVG UNKNOWN IMPORTED)
+  set_target_properties(LibRSVG::LibRSVG PROPERTIES
+    IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+    IMPORTED_LOCATION "${LIBRSVG_LOCATION}"
+    INTERFACE_LINK_DIRECTORIES "${LIBRSVG_LIBRARY_DIRS}"
+    INTERFACE_LINK_LIBRARIES "${LIBRSVG_LIBRARIES}"
+    INTERFACE_INCLUDE_DIRECTORIES "${LIBRSVG_INCLUDE_DIRS}"
+    )
+endif()
