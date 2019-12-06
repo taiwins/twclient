@@ -1,0 +1,14 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@LIBPREFIX@
+includedir=${prefix}/include/taiwins
+ctypesincludedir=${prefix}/include/taiwins/ctypes
+
+Name: twclient-nkegl
+Description: nuklear GUI library with EGL backend for twclient
+Version: @VERSION@
+
+Requires: twclient libglvnd
+Libs: -L${libdir} twclient-nkegl
+Cflags: -I${includedir} -I${ctypesincludedir}
+
