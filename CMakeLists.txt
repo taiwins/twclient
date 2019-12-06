@@ -59,10 +59,31 @@ add_subdirectory(test)
 ################################################################################
 # install
 ################################################################################
-# include(CMakePackageConfigHelpers)
-# write_basic_package_version_file("twclientConfigVersion.cmake"
-#   VERSION ${twclient_VERSION}
-#   COMPATIBILITY SameMajorVersion
-#   )
-# install(FILES "${CMAKE_CURRENT_BINARY_DIR}/twclientConfigVersion.cmake"
-#   DESTINATION lib/cmake/taiwins)
+include(GNUInstallDirs)
+foreach(PCIN "config/twclient.pc.in"
+    "config/twclient-icons.pc.in"
+    "config/twclient-nkcairo.pc.in"
+    "config/twclient-nkegl.pc.in")
+  get_filename_component(FILE ${PCIN} NAME_WE)
+  # get_filename_component(PREFIX $ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX} ABSOLUTE) #for debug
+  set(PREFIX ${CMAKE_INSTALL_PREFIX})
+  set(LIBPREFIX ${CMAKE_INSTALL_LIBDIR})
+  set(VERSION ${PROJECT_VERSION})
+  set(PCOUT "${CMAKE_BINARY_DIR}/${FILE}.pc")
+  configure_file(${PCIN} ${PCOUT} @ONLY)
+  install(FILES ${PCOUT}
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+  unset(PREFIX)
+  unset(LIBPREFIX)
+  unset(VERSION)
+  unset(PCOUT)
+endforeach()
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file("twclient-config-version.cmake"
+  VERSION ${twclient_VERSION}
+  COMPATIBILITY SameMajorVersion
+  )
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/twclient-config-version.cmake"
+  "config/twclient-config.cmake"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/twclient)

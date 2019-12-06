@@ -1,0 +1,14 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@LIBPREFIX@
+includedir=${prefix}/include/taiwins
+ctypesincludedir=${prefix}/include/taiwins/ctypes
+
+Name: twclient
+Description: Taiwins client utility library
+Version: @VERSION@
+
+Requires: wayland-client xkbcommon libglvnd libudev
+Libs: -L${libdir} twclient
+Cflags: -I${includedir} -I${ctypesincludedir}
+
