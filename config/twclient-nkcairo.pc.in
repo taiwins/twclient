@@ -1,0 +1,14 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@LIBPREFIX@
+includedir=${prefix}/include/taiwins
+ctypesincludedir=${prefix}/include/taiwins/ctypes
+
+Name: twclient-nkcairo
+Description: nuklear GUI library with Cairo backend for twclient
+Version: @VERSION@
+
+Requires: twclient cairo
+Libs: -L${libdir} twclient-nkcairo
+Cflags: -I${includedir} -I${ctypesincludedir}
+

@@ -1,0 +1,14 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@LIBPREFIX@
+includedir=${prefix}/include/taiwins
+ctypesincludedir=${prefix}/include/taiwins/ctypes
+
+Name: twclient-icons
+Description: Icon search and atlas generation library for twclient
+Version: @VERSION@
+
+Requires: cairo twclient wayland-client
+Libs: -L${libdir} twclient-icons
+Cflags: -I${includedir} -I${ctypesincludedir}
+
