@@ -20,7 +20,7 @@ add_library(twclient::twclient ALIAS twclient)
 
 target_link_libraries(twclient
   m
-  ctype
+  ctypes
   Pixman::Pixman
   XKBCommon::XKBCommon
   OpenGL::EGL #for egl_env
@@ -49,7 +49,7 @@ target_include_directories(twclient-icons PUBLIC
 target_link_libraries(twclient-icons
   Cairo::Cairo
   LibRSVG::LibRSVG
-  ctype
+  ctypes
   m
   )
 add_library(twclient::icons ALIAS twclient-icons)
