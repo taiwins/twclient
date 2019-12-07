@@ -26,10 +26,17 @@ target_link_libraries(test_nk_egl
   twclient-nkegl
   )
 
-add_executable(test_event_queue
+add_executable(test_queue
+  test_queue.c
+  )
+target_link_libraries(test_queue
+  twclient
+  )
+
+add_executable(test_inotify
   test_event_queue.c
   )
-target_link_libraries(test_event_queue
+target_link_libraries(test_inotify
   twclient
   )
 

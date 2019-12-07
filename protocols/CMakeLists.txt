@@ -27,5 +27,6 @@ add_library(twclient::protos ALIAS twclient-protos)
 ################################################################################
 # install
 ################################################################################
+include(GNUInstallDirs)
 install(FILES taiwins_theme.xml
-  DESTINATION share/taiwins/protocols)
+  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/taiwins/protocols)
