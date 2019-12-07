@@ -8,7 +8,7 @@ add_library(twclient-nkegl STATIC
 target_link_libraries(twclient-nkegl
   twclient
   )
-add_library(wclient::nkegl ALIAS twclient-nkegl)
+add_library(twclient::nkegl ALIAS twclient-nkegl)
 
 add_library(twclient-nkcairo STATIC
   nk_wl_cairo.c)
@@ -16,7 +16,7 @@ add_library(twclient-nkcairo STATIC
 target_link_libraries(twclient-nkcairo
   twclient
   )
-add_library(wclient::nkcairo ALIAS twclient-nkcairo)
+add_library(twclient::nkcairo ALIAS twclient-nkcairo)
 
 # add_library(twclient-nkvk STATIC
 #   nk_wl_vulkan.c
@@ -29,8 +29,9 @@ add_library(wclient::nkcairo ALIAS twclient-nkcairo)
 ################################################################################
 # install
 ################################################################################
-
+include(GNUInstallDirs)
 install(TARGETS twclient-nkegl twclient-nkcairo
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
