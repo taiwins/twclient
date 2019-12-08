@@ -69,3 +69,12 @@ target_link_libraries(test_readtheme
   Wayland::Client
   twclient-icons
   )
+
+add_executable(test_font_config
+  test_fontconfig.c
+  )
+target_link_libraries(test_font_config
+  Fontconfig::Fontconfig
+  Freetype::Freetype
+  Cairo::Cairo
+  )
