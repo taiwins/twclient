@@ -77,4 +77,5 @@ target_link_libraries(test_font_config
   Fontconfig::Fontconfig
   Freetype::Freetype
   Cairo::Cairo
+  ctypes
   )
