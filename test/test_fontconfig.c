@@ -19,6 +19,8 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
+#include <sequential.h>
+
 #define NK_IMPLEMENTATION
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -37,26 +39,43 @@ string_from_fc_weight(int weight)
 	return (weight < 80) ? "thin" : (weight < 150) ? "regular" : "heavy";
 }
 
-static void
-print_charsetpage(FcChar32 basepoint, FcChar32 map[FC_CHARSET_MAP_SIZE])
+static inline nk_rune*
+charset_point(vector_t *charset, uint32_t cursor)
 {
-	bool inrange = true;
-	nk_rune range[101] = {0};
-	int range_cursor = 0;
-	range[0] = basepoint;
+	if (charset->len > cursor)
+		return vector_at(charset, cursor);
+	assert(cursor == charset->len);
+	return vector_newelem(charset);
+}
 
+static int
+accum_charsetpage(FcChar32 basepoint, FcChar32 map[FC_CHARSET_MAP_SIZE], vector_t *cs)
+{
+	int range_cursor = -1;
+	bool inrange = false;
+	int count = 0;
+
+	//if continue from last page
+	if (cs->len && *charset_point(cs, cs->len-1) == basepoint) {
+		range_cursor = cs->len-1;
+		inrange = true;
+	}
 
 	for (int i = 0; i < FC_CHARSET_MAP_SIZE; i++) {
 		for (int j = 0; j < 32; j++) {
+			FcChar32 codepoint = basepoint + i * 32 + j;
+
 			//case 0 continue in range
 			if ( (map[i] & (1 << j)) && inrange)
 				continue;
-			//case 1, breaks
+			//case 1, break the range.
 			else if ( !(map[i] & (1 << j)) && inrange) {
+				//there could be special case like [0,0], it is not a big deal.
 				range_cursor++;
 				assert((range_cursor % 2) == 1);
-				range[range_cursor] = basepoint + i * 32 + j;
+				*charset_point(cs, range_cursor) = codepoint-1; //it could be?
 				inrange = false;
+				count++;
 			}
 			//case 2, not in range, continue
 			else if ( !(map[i] & (1 << j)) && !inrange)
@@ -65,16 +84,18 @@ print_charsetpage(FcChar32 basepoint, FcChar32 map[FC_CHARSET_MAP_SIZE])
 			else if ( (map[i] & (1 << j)) && !inrange) {
 				range_cursor++;
 				assert((range_cursor % 2) == 0);
-				range[range_cursor] = basepoint + i * 32 + j;
+				*charset_point(cs, range_cursor) = codepoint;
 				inrange = true;
 			}
 		}
 	}
-	if (range_cursor == 0)
-		return;
-	for (int i = 0; i < range_cursor; i+=2)
-		printf("(%d, %d) ", range[i], range[i+1]);
-	printf("\n");
+	//close this page
+	if (inrange) {
+		*charset_point(cs, range_cursor+1) =
+			basepoint + FC_CHARSET_MAP_SIZE * 32 -1;
+		count += 1;
+	}
+	return count;
 }
 
 static void print_pattern(FcPattern *pat)
@@ -129,10 +150,23 @@ static void print_pattern(FcPattern *pat)
 		//how to print the charset?
 		FcChar32 basepoint = FC_CHARSET_DONE, next;
 		FcChar32 map[FC_CHARSET_MAP_SIZE];
+		vector_t charset;
+		int range_count = 0;
+		vector_init(&charset, sizeof(nk_rune), NULL);
+
 		for (basepoint = FcCharSetFirstPage(cset, map, &next);
 		     basepoint != FC_CHARSET_DONE;
 		     basepoint = FcCharSetNextPage(cset, map, &next))
-			print_charsetpage(basepoint, map);
+			range_count += accum_charsetpage(basepoint, map, &charset);
+
+		assert(charset.len % 2 == 0);
+		printf("charset: ");
+		for (int i = 0; i < charset.len / 2; i++)
+			printf("(%d, %d) ", *charset_point(&charset, 2*i), *charset_point(&charset, 2*i+1));
+		printf("\n");
+
+		vector_destroy(&charset);
+
 	} else
 		printf("no charset\n");
 	printf("\n");
