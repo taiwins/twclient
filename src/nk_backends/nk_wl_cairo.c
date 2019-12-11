@@ -257,13 +257,139 @@ nk_cairo_font_init(struct nk_cairo_font *font, const char *text_font, const char
 	(void)error;
 }
 
-/////////////////////////////////// NK_CAIRO backend /////////////////////////////////////
 
+//////////////////////////////////// NK_CAIRO FONTS /////////////////////////////////////
+
+//not thread safe
+struct nk_wl_ftlib {
+	FT_Library ftlib;
+	int ref;
+} NK_WL_FTLIB = {0};
+
+static inline FT_Library *
+nk_wl_ft_ref()
+{
+	if (!NK_WL_FTLIB.ref)
+		FT_Init_FreeType(&NK_WL_FTLIB.ftlib);
+	NK_WL_FTLIB.ref++;
+	return &NK_WL_FTLIB.ftlib;
+}
+
+static inline void
+nk_wl_ft_unref(FT_Library *lib)
+{
+	if (!NK_WL_FTLIB.ref || lib != &NK_WL_FTLIB.ftlib)
+		return;
+	NK_WL_FTLIB.ref = MAX(0, NK_WL_FTLIB.ref-1);
+	if (!NK_WL_FTLIB.ref)
+		FT_Done_FreeType(NK_WL_FTLIB.ftlib);
+}
+
+struct nk_wl_user_font {
+	int size;
+	float scale;
+	FT_Face face;
+	FT_Library *ft_lib;
+	cairo_font_face_t *cairo_face;
+	struct nk_user_font nk_font;
+	//we dont need range here, but need for EGL backend
+};
+
+
+static float
+nk_wl_text_width(nk_handle handle, float height, const char *text,
+		    int utf8_len)
+{
+	struct nk_wl_user_font *user_font = handle.ptr;
+	cairo_surface_t *recording = cairo_recording_surface_create(CAIRO_CONTENT_COLOR, NULL);
+	cairo_t *cr = cairo_create(recording);
+	cairo_text_extents_t extents;
+
+	cairo_set_font_face(cr, user_font->cairo_face);
+	cairo_set_font_size(cr, user_font->size);
+	cairo_text_extents(cr, text, &extents);
+	cairo_destroy(cr);
+	cairo_surface_destroy(recording);
+	return extents.width;
+}
+
+void
+nk_wl_render_text(cairo_t *cr, const struct nk_vec2 *pos,
+                  struct nk_wl_user_font *font,
+                  const char *text, const int utf8_len)
+{
+	cairo_set_font_face(cr, font->cairo_face);
+	cairo_set_font_size(cr, font->size);
+
+	cairo_font_extents_t extents;
+	cairo_font_extents(cr, &extents);
+	cairo_move_to(cr, pos->x, pos->y + extents.ascent);
+	cairo_show_text(cr, text);
+}
+
+struct nk_user_font *
+nk_wl_new_font(struct nk_wl_font_config config)
+{
+	int error;
+	char *font_path = NULL;
+	if (!config.name)
+		config.name = "Vera";
+	if (!config.pix_size)
+		config.pix_size = 16;
+	if (!config.scale)
+		config.scale = 1;
+	font_path = nk_wl_find_font(&config);
+	if (!font_path)
+		return NULL;
+	//else, we try to creat
+	struct nk_wl_user_font *user_font =
+		malloc(sizeof(struct nk_wl_user_font));
+	user_font->ft_lib = nk_wl_ft_ref();
+	if (!user_font->ft_lib)
+		goto err_lib;
+
+	user_font->size = config.pix_size;
+	user_font->scale = config.scale;
+	error = FT_New_Face(*user_font->ft_lib, font_path, 0, &user_font->face);
+	if (error)
+		goto err_face;
+	user_font->cairo_face = cairo_ft_font_face_create_for_ft_face(user_font->face, 0);
+	if (!user_font->cairo_face)
+		goto err_crface;
+	user_font->nk_font.height = config.pix_size;
+	user_font->nk_font.userdata.ptr = user_font;
+	user_font->nk_font.width = nk_wl_text_width;
+	free(font_path);
+	return &user_font->nk_font;
+
+err_crface:
+	FT_Done_Face(user_font->face);
+err_face:
+	nk_wl_ft_unref(user_font->ft_lib);
+err_lib:
+	free(user_font);
+	free(font_path);
+	return NULL;
+}
+
+void
+nk_wl_destroy_font(struct nk_user_font *font)
+{
+	struct nk_wl_user_font *cairo_font =
+		container_of(font, struct nk_wl_user_font, nk_font);
+
+	cairo_font_face_destroy(cairo_font->cairo_face);
+	FT_Done_Face(cairo_font->face);
+	nk_wl_ft_unref(cairo_font->ft_lib);
+	free(cairo_font);
+}
+
+/////////////////////////////////// NK_CAIRO backend /////////////////////////////////////
 
 struct nk_cairo_backend {
 	struct nk_wl_backend base;
-
 	nk_max_cmd_t last_cmds[2];
+	struct nk_user_font *default_font;
 	struct nk_cairo_font user_font;
 	//this is a stack we keep right now, all other method failed.
 };
@@ -583,10 +709,11 @@ nk_cairo_text(cairo_t *cr, const struct nk_command *cmd)
 	cairo_set_source_rgb(cr, NK_COLOR_TO_FLOAT(t->foreground.r),
 			     NK_COLOR_TO_FLOAT(t->foreground.g),
 			     NK_COLOR_TO_FLOAT(t->foreground.b));
-
-	struct nk_cairo_font *font = t->font->userdata.ptr;
 	struct nk_vec2 rpos = nk_vec2(t->x, t->y);
-	nk_cairo_render_text(cr, &rpos, font, t->string, t->length);
+	nk_wl_render_text(cr, &rpos, t->font->userdata.ptr, t->string, t->length);
+
+	/* struct nk_cairo_font *font = t->font->userdata.ptr; */
+	/* nk_cairo_render_text(cr, &rpos, font, t->string, t->length); */
 }
 
 static void
@@ -778,8 +905,19 @@ nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 struct nk_wl_backend *
 nk_cairo_create_bkend(void)
 {
+	struct nk_wl_font_config default_config = {
+		.name = "Vera",
+		.slant = NK_WL_SLANT_ROMAN,
+		.pix_size = 16,
+		.scale = 1,
+		.nranges = 0,
+		.ranges = NULL,
+		.TTFonly = true,
+	};
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
 	b->base.theme_hash = 0;
+	b->default_font = nk_wl_new_font(default_config);
+
 	nk_init_default(&b->base.ctx, &b->user_font.nk_font);
 	nk_cairo_font_init(&b->user_font, NULL, NULL);
 	nk_cairo_font_set_size(&b->user_font, 16, 1.0);
@@ -792,6 +930,8 @@ nk_cairo_destroy_bkend(struct nk_wl_backend *bkend)
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
+	nk_wl_destroy_font(b->default_font);
+
 	nk_cairo_font_done(&b->user_font);
 	nk_free(&bkend->ctx);
 	//we make it here to
