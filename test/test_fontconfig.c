@@ -1,3 +1,4 @@
+#include "vector.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -56,9 +57,10 @@ accum_charsetpage(FcChar32 basepoint, FcChar32 map[FC_CHARSET_MAP_SIZE], vector_
 	int count = 0;
 
 	//if continue from last page
-	if (cs->len && *charset_point(cs, cs->len-1) == basepoint) {
+	if (cs->len) {
 		range_cursor = cs->len-1;
-		inrange = true;
+		inrange = (*charset_point(cs, cs->len-1) == basepoint) ?
+			true : false;
 	}
 
 	for (int i = 0; i < FC_CHARSET_MAP_SIZE; i++) {
@@ -98,11 +100,33 @@ accum_charsetpage(FcChar32 basepoint, FcChar32 map[FC_CHARSET_MAP_SIZE], vector_
 	return count;
 }
 
+static vector_t
+pattern_get_charset(FcPattern *pat)
+{
+	vector_t charset = {0};
+	FcChar32 basepoint = FC_CHARSET_DONE, next;
+	FcChar32 map[FC_CHARSET_MAP_SIZE];
+	int range_count = 0;
+	FcCharSet *cset;
+
+	if (FcPatternGetCharSet(pat, FC_CHARSET, 0, &cset) != FcResultMatch)
+		return charset;
+	vector_init_zero(&charset, sizeof(nk_rune), NULL);
+
+	for (basepoint = FcCharSetFirstPage(cset, map, &next);
+	     basepoint != FC_CHARSET_DONE;
+	     basepoint = FcCharSetNextPage(cset, map, &next))
+		range_count += accum_charsetpage(basepoint, map, &charset);
+	assert(charset.len % 2 == 0);
+	*charset_point(&charset, charset.len) = 0;
+	return charset;
+}
+
+
 static void print_pattern(FcPattern *pat)
 {
 	FcChar8 *s;
 	double d;
-	FcCharSet *cset;
 	int i;
 
 	if (FcPatternGetString(pat, FC_FAMILY, 0, &s) == FcResultMatch)
@@ -146,31 +170,17 @@ static void print_pattern(FcPattern *pat)
 	else
 		fprintf(stdout, "no point size\n");
 
-	if (FcPatternGetCharSet(pat, FC_CHARSET, 0, &cset) == FcResultMatch) {
-		//how to print the charset?
-		FcChar32 basepoint = FC_CHARSET_DONE, next;
-		FcChar32 map[FC_CHARSET_MAP_SIZE];
-		vector_t charset;
-		int range_count = 0;
-		vector_init(&charset, sizeof(nk_rune), NULL);
-
-		for (basepoint = FcCharSetFirstPage(cset, map, &next);
-		     basepoint != FC_CHARSET_DONE;
-		     basepoint = FcCharSetNextPage(cset, map, &next))
-			range_count += accum_charsetpage(basepoint, map, &charset);
-
-		assert(charset.len % 2 == 0);
-		printf("charset: ");
-		for (int i = 0; i < charset.len / 2; i++)
-			printf("(%d, %d) ", *charset_point(&charset, 2*i), *charset_point(&charset, 2*i+1));
-		printf("\n");
-
+	vector_t charset = pattern_get_charset(pat);
+	if (charset.len) {
+		/* for (int i = 0; i < charset.len / 2; i++) */
+		/*	printf("(%d, %d) ", *charset_point(&charset, 2*i), *charset_point(&charset, 2*i+1)); */
+		/* printf("\n"); */
 		vector_destroy(&charset);
-
 	} else
 		printf("no charset\n");
 	printf("\n");
 }
+
 
 static void
 union_unicode_range(const nk_rune left[2], const nk_rune right[2], nk_rune out[2])
@@ -199,7 +209,7 @@ unicode_range_compare(const void *l, const void *r)
 }
 
 //we can only merge one range at a time
-static int
+int
 merge_unicode_range(const nk_rune *left, const nk_rune *right, nk_rune *out)
 {
 	//get the range
@@ -239,7 +249,7 @@ merge_unicode_range(const nk_rune *left, const nk_rune *right, nk_rune *out)
 }
 
 static void
-save_the_font_images(const nk_rune *glyph_range)
+save_the_font_images(const nk_rune *glyph_range, const char *path)
 {
 	int w, h;
 	struct nk_font_config cfg = nk_font_config(16);
@@ -248,10 +258,7 @@ save_the_font_images(const nk_rune *glyph_range)
 	struct nk_font_atlas atlas;
 	nk_font_atlas_init_default(&atlas);
 	nk_font_atlas_begin(&atlas);
-	/* struct nk_font * font = nk_font_atlas_add_from_file( */
-	/*	&atlas, */
-	/*	"/usr/share/fonts/TTF/Inconsolata-Regular.ttf", */
-	/*	16, &cfg); */
+	nk_font_atlas_add_from_file(&atlas, path, 16, &cfg);
 	const void *data = nk_font_atlas_bake(&atlas, &w, &h, NK_FONT_ATLAS_ALPHA8);
 
 	printf("we had a texture of size %d, %d\n", w, h);
@@ -299,7 +306,8 @@ main(int argc, char *argv[])
 {
 	FcInit();
 	FcConfig* config = FcInitLoadConfigAndFonts();
-	FcPattern* pat = FcNameParse((const FcChar8*)"WenQuanYi Micro Hei");
+	FcPattern* pat = FcNameParse((const FcChar8*)"DejaVu Sans");
+	vector_t unicode_range = {0};
 	//get the same
 	print_pattern(pat);
 
@@ -315,31 +323,21 @@ main(int argc, char *argv[])
 
 	if (font)
 	{
+		unicode_range = pattern_get_charset(font);
 		FcChar8* file = NULL;
 		if (FcPatternGetString(font, FC_FILE, 0, &file) == FcResultMatch)
 		{
 			//we found the font, now print it.
 			//This might be a fallback font
 			fontFile = (char*)file;
+			save_the_font_images((const nk_rune *)unicode_range.elems, fontFile);
 			printf("%s\n",fontFile);
 		}
+		vector_destroy(&unicode_range);
 	}
 	FcPatternDestroy(font);
 	FcPatternDestroy(pat);
-	/* FcFontSetDestroy(sys_fonts); */
-	/* FcFontSetDestroy(app_fonts); */
 	FcConfigDestroy(config);
 	FcFini();
-
-	int total_range  = merge_unicode_range(nk_font_chinese_glyph_ranges(),
-					       nk_font_korean_glyph_ranges(), NULL);
-	nk_rune rune_range[total_range+1];
-	merge_unicode_range(nk_font_chinese_glyph_ranges(),
-			    nk_font_korean_glyph_ranges(), rune_range);
-	for (int i = 0; i < total_range/2; i++) {
-		printf("(%x, %x), ", rune_range[i*2], rune_range[i*2+1]);
-	}
-	printf("%x\n", rune_range[total_range]);
-	save_the_font_images(rune_range);
 	return 0;
 }
