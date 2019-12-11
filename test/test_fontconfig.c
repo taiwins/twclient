@@ -7,7 +7,6 @@
 #include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
 
-
 #include <cairo/cairo.h>
 #include <cairo/cairo-ft.h>
 #include <assert.h>
@@ -122,8 +121,8 @@ pattern_get_charset(FcPattern *pat)
 	return charset;
 }
 
-
-static void print_pattern(FcPattern *pat)
+void
+print_pattern(FcPattern *pat)
 {
 	FcChar8 *s;
 	double d;
@@ -181,7 +180,6 @@ static void print_pattern(FcPattern *pat)
 	printf("\n");
 }
 
-
 static void
 union_unicode_range(const nk_rune left[2], const nk_rune right[2], nk_rune out[2])
 {
@@ -208,7 +206,7 @@ unicode_range_compare(const void *l, const void *r)
 	return ((int)range_left[0] - (int)range_right[0]);
 }
 
-//we can only merge one range at a time
+//we can only merge one range at a time, we need to expose them
 int
 merge_unicode_range(const nk_rune *left, const nk_rune *right, nk_rune *out)
 {
@@ -276,14 +274,41 @@ save_the_font_images(const nk_rune *glyph_range, const char *path)
 	//I will need to write a allocator for nuklear though, this sucks.
 }
 
+//not thread safe
+struct nk_wl_ftlib {
+	FT_Library ftlib;
+	int ref;
+} NK_WL_FTLIB = {0};
+
+
+static inline FT_Library *
+nk_wl_ft_ref()
+{
+	if (!NK_WL_FTLIB.ref)
+		FT_Init_FreeType(&NK_WL_FTLIB.ftlib);
+	NK_WL_FTLIB.ref++;
+	return &NK_WL_FTLIB.ftlib;
+}
+
+static inline void
+nk_wl_ft_unref(FT_Library *lib)
+{
+	if (!NK_WL_FTLIB.ref || lib != &NK_WL_FTLIB.ftlib)
+		return;
+	NK_WL_FTLIB.ref = MAX(0, NK_WL_FTLIB.ref-1);
+	if (!NK_WL_FTLIB.ref)
+		FT_Done_FreeType(NK_WL_FTLIB.ftlib);
+}
+
 //an implementation using cairo
 struct nk_wl_user_font {
 	int size;
 	float scale;
 	FT_Face face;
-	FT_Library ft_lib;
+	FT_Library *ft_lib;
 	cairo_font_face_t *cairo_face;
 	struct nk_user_font nk_font;
+	//we dont need range here, but need for EGL backend
 };
 
 enum nk_wl_font_slant {
@@ -296,48 +321,186 @@ enum nk_wl_font_slant {
 struct nk_wl_font_config {
 	const char *name;
 	enum nk_wl_font_slant slant;
+	int pix_size, scale;
+	int nranges;
+	const nk_rune **ranges;
+
 	//fc config offers light, medium, demibold, bold, black
 	//demibold, bold and black is true, otherwise false.
 	bool bold; //classified as bold
+	//private: TTF only
+	bool TTFonly;
 };
+
+static char *
+nk_wl_find_font(const struct nk_wl_font_config *user_config)
+{
+	FcInit();
+	FcConfig *config = FcInitLoadConfigAndFonts();
+	FcPattern *font = NULL;
+	FcPattern *pat = FcNameParse((const FcChar8 *)user_config->name);
+	char *path = NULL;
+
+	FcConfigSubstitute(config, pat, FcMatchPattern);
+	FcDefaultSubstitute(pat);
+	//boldness
+	if (user_config->bold)
+		FcPatternAddInteger(pat, FC_WEIGHT, FC_WEIGHT_DEMIBOLD);
+	else
+		FcPatternAddInteger(pat, FC_WEIGHT, FC_WEIGHT_REGULAR);
+	//slant
+	FcPatternAddInteger(
+		pat, FC_SLANT,
+		(user_config->slant == NK_WL_SLANT_ROMAN) ? FC_SLANT_ROMAN :
+		(user_config->slant == NK_WL_SLANT_OBLIQUE) ? FC_SLANT_OBLIQUE :
+		FC_SLANT_ITALIC);
+
+	FcResult result;
+	FcFontSet *set = FcFontSort(config, pat, false, NULL, &result);
+	if (!set)
+		goto fini;
+	//deal with TTF
+	if (user_config->TTFonly) {
+		const char *format = "TrueType";
+		//select only the ttf
+		FcPattern *ttf_pattern = FcPatternCreate();
+		FcPatternAddString(ttf_pattern, FC_FONTFORMAT, (const FcChar8*)format);
+		font = FcFontSetMatch(config, &set, 1, ttf_pattern, &result);
+		FcPatternDestroy(ttf_pattern);
+	} else
+		font = FcFontSetMatch(config, &set, 1, pat, &result);
+	FcFontSetDestroy(set);
+	//return string
+	FcChar8* file = NULL;
+	if (FcPatternGetString(font, FC_FILE, 0, &file) != FcResultMatch)
+		goto fini;
+	/* printf("%s\n", file); */
+	path = strdup((const char *)file);
+fini:
+	if (font)
+		FcPatternDestroy(font);
+	FcPatternDestroy(pat);
+	FcConfigDestroy(config);
+	FcFini();
+	return path;
+}
+
+
+static float
+nk_cairo_text_width(nk_handle handle, float height, const char *text,
+		    int utf8_len)
+{
+	struct nk_wl_user_font *user_font = handle.ptr;
+	cairo_surface_t *recording = cairo_recording_surface_create(CAIRO_CONTENT_COLOR, NULL);
+	cairo_t *cr = cairo_create(recording);
+	cairo_text_extents_t extents;
+
+	cairo_set_font_face(cr, user_font->cairo_face);
+	cairo_set_font_size(cr, user_font->size);
+	cairo_text_extents(cr, text, &extents);
+	cairo_destroy(cr);
+	cairo_surface_destroy(recording);
+	return extents.width;
+}
+
+
+
+//sample implementaiton for with cairo
+struct nk_user_font *
+nk_wl_new_font(struct nk_wl_font_config config)
+{
+	int error;
+	char *font_path = NULL;
+	if (!config.name)
+		config.name = "Vera";
+	if (!config.pix_size)
+		config.pix_size = 16;
+	if (!config.scale)
+		config.scale = 1;
+	font_path = nk_wl_find_font(&config);
+	if (!font_path)
+		return NULL;
+	//else, we try to creat
+	struct nk_wl_user_font *user_font =
+		malloc(sizeof(struct nk_wl_user_font));
+	user_font->ft_lib = nk_wl_ft_ref();
+	if (!user_font->ft_lib)
+		goto err_lib;
+
+	user_font->size = config.pix_size;
+	user_font->scale = config.scale;
+	error = FT_New_Face(*user_font->ft_lib, font_path, 0, &user_font->face);
+	if (error)
+		goto err_face;
+	user_font->cairo_face = cairo_ft_font_face_create_for_ft_face(user_font->face, 0);
+	if (!user_font->cairo_face)
+		goto err_crface;
+	user_font->nk_font.height = config.pix_size;
+	user_font->nk_font.userdata.ptr = user_font;
+	user_font->nk_font.width = nk_cairo_text_width;
+	free(font_path);
+	return &user_font->nk_font;
+
+err_crface:
+	FT_Done_Face(user_font->face);
+err_face:
+	nk_wl_ft_unref(user_font->ft_lib);
+err_lib:
+	free(user_font);
+	free(font_path);
+	return NULL;
+}
+
+void
+nk_wl_destroy_font(struct nk_user_font *font)
+{
+	struct nk_wl_user_font *cairo_font =
+		container_of(font, struct nk_wl_user_font, nk_font);
+
+	cairo_font_face_destroy(cairo_font->cairo_face);
+	FT_Done_Face(cairo_font->face);
+	nk_wl_ft_unref(cairo_font->ft_lib);
+	free(cairo_font);
+}
 
 int
 main(int argc, char *argv[])
 {
-	FcInit();
-	FcConfig* config = FcInitLoadConfigAndFonts();
-	FcPattern* pat = FcNameParse((const FcChar8*)"DejaVu Sans");
-	vector_t unicode_range = {0};
-	//get the same
-	print_pattern(pat);
+	struct nk_wl_font_config config = {
+		.name = argv[1],
+		.slant = NK_WL_SLANT_ROMAN,
+		.pix_size = 16,
+		.scale = 1,
+		.nranges = 0,
+		.ranges = NULL,
+		.TTFonly = true,
+	};
 
-	FcConfigSubstitute(config, pat, FcMatchPattern);
-	FcDefaultSubstitute(pat);
-	print_pattern(pat);
+	struct nk_user_font *nk_font = nk_wl_new_font(config);
+	cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 1000, 1000);
+	cairo_t *cr = cairo_create(surface);
 
-	char* fontFile; //this is what we'd return if this was a function
-	// find the font
-	FcResult result;
-	FcPattern* font = FcFontMatch(config, pat, &result);
-	print_pattern(font);
+	struct nk_wl_user_font *user_font =
+		container_of(nk_font, struct nk_wl_user_font, nk_font);
+	cairo_set_font_face(cr, user_font->cairo_face);
+	cairo_set_font_size(cr, user_font->size);
+	cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+	cairo_paint(cr);
 
-	if (font)
-	{
-		unicode_range = pattern_get_charset(font);
-		FcChar8* file = NULL;
-		if (FcPatternGetString(font, FC_FILE, 0, &file) == FcResultMatch)
-		{
-			//we found the font, now print it.
-			//This might be a fallback font
-			fontFile = (char*)file;
-			save_the_font_images((const nk_rune *)unicode_range.elems, fontFile);
-			printf("%s\n",fontFile);
-		}
-		vector_destroy(&unicode_range);
-	}
-	FcPatternDestroy(font);
-	FcPatternDestroy(pat);
-	FcConfigDestroy(config);
-	FcFini();
+
+
+	cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
+	cairo_move_to(cr, 100, 100);
+	char text[256];
+	sprintf(text, "%s \nIcons test %s, %s:\n", "this is a test", u8"\uf192", u8"\ue708");
+	printf(".this extents is %lf\n", nk_cairo_text_width(user_font->nk_font.userdata, 20, text, strlen(text)));
+
+	cairo_show_text(cr, text);
+	cairo_surface_write_to_png(surface, "/tmp/test_font.png");
+	cairo_destroy(cr);
+	cairo_surface_destroy(surface);
+	//now we have the cairo_font_face_t
+
+	nk_wl_destroy_font(nk_font);
 	return 0;
 }
