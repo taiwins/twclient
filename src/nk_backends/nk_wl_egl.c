@@ -1,3 +1,4 @@
+#include "nk_wl_font.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -158,6 +159,84 @@ nk_egl_prepare_font(struct nk_egl_backend *bkend, size_t font_size)
 	nk_font_atlas_cleanup(&bkend->atlas);
 	//I should be able to free the image here?
 	return font;
+}
+
+
+struct nk_wl_user_font {
+	int size;
+	int scale;
+	nk_rune *merged_ranges;
+	struct nk_font *font;
+	struct nk_user_font user_font;
+	struct nk_font_atlas atlas;
+	struct nk_image font_image;
+};
+
+//problem with this function is that we are not sure if opengl context is there
+NK_API struct nk_user_font *
+nk_wl_new_font(struct nk_wl_font_config config)
+{
+	char *font_path;
+	int total_range = 0;
+	if (!config.name)
+		config.name = "Vera";
+	if (!config.pix_size)
+		config.pix_size = 16;
+	if (!config.scale)
+		config.scale = 1;
+	if (!config.ranges) {
+		config.nranges = 1;
+		config.ranges = &basic_range;
+	}
+	config.TTFonly = true;
+	if ((font_path = nk_wl_find_font(&config)) == NULL)
+	    return NULL;
+	//now merge the ranges
+	for (int i = 0; i < config.nranges; i++)
+		total_range += nk_range_count(config.ranges[i]);
+	total_range = 2 * total_range + 1;
+
+	struct nk_wl_user_font *user_font =
+		malloc(sizeof(struct nk_wl_user_font));
+	if (!user_font)
+		return NULL;
+	user_font->merged_ranges = malloc(sizeof(nk_rune) * total_range);
+	if (!user_font->merged_ranges)
+		goto err_range;
+	//initial range
+	memcpy(user_font->merged_ranges, config.ranges[0],
+	       sizeof(nk_rune) * 2 * nk_range_count(config.ranges[0]) + 1);
+	//additional range
+	for (int i = 1; i < config.nranges; i++)
+		merge_unicode_range(user_font->merged_ranges, config.ranges[i],
+		                    user_font->merged_ranges);
+
+	struct nk_font_config cfg =
+		nk_font_config(config.pix_size * config.scale);
+	cfg.range = user_font->merged_ranges;
+	cfg.merge_mode = nk_false;
+
+	nk_font_atlas_init_default(&user_font->atlas);
+	nk_font_atlas_begin(&user_font->atlas);
+	user_font->font = nk_font_atlas_add_from_file(&user_font->atlas,
+	                                              font_path,
+	                                              config.pix_size *
+	                                              config.scale,
+	                                              &cfg);
+	//right now let use just do this, SDF could be used later
+	//with different shader
+	user_font->font_image.handle.ptr =
+		nk_font_atlas_bake(&user_font->atlas,
+		                   &user_font->font_image.w,
+		                   &user_font->font_image.h,
+		                   NK_FONT_ATLAS_RGBA32);
+	//later convert this into GPU then call nk_
+
+
+
+err_range:
+	free(user_font);
+	return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////
