@@ -14,9 +14,6 @@
 #include FT_FREETYPE_H
 
 #define NK_IMPLEMENTATION
-#define NK_EGL_CMD_SIZE 4096
-#define MAX_VERTEX_BUFFER 512 * 128
-#define MAX_ELEMENT_BUFFER 128 * 128
 #define NK_CAIRO_BACKEND
 
 #define MAX_CMD_SIZE = 64 * 1024
@@ -126,7 +123,7 @@ nk_wl_render_text(cairo_t *cr, const struct nk_vec2 *pos,
 }
 
 struct nk_user_font *
-nk_wl_new_font(struct nk_wl_font_config config)
+nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 {
 	int error;
 	char *font_path = NULL;
@@ -171,10 +168,9 @@ err_lib:
 }
 
 void
-nk_wl_destroy_font(struct nk_user_font *font)
+nk_wl_destroy_font(struct nk_user_font *font, struct nk_wl_backend *backend)
 {
-	struct nk_wl_user_font *cairo_font =
-		container_of(font, struct nk_wl_user_font, nk_font);
+	struct nk_wl_user_font *cairo_font = font->userdata.ptr;
 
 	cairo_font_face_destroy(cairo_font->cairo_face);
 	FT_Done_Face(cairo_font->face);
@@ -712,7 +708,7 @@ nk_cairo_create_bkend(void)
 	};
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
 	b->base.theme_hash = 0;
-	b->default_font = nk_wl_new_font(default_config);
+	b->default_font = nk_wl_new_font(default_config, &b->base);
 	nk_init_default(&b->base.ctx, b->default_font);
 	return &b->base;
 }
@@ -723,7 +719,7 @@ nk_cairo_destroy_bkend(struct nk_wl_backend *bkend)
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
-	nk_wl_destroy_font(b->default_font);
+	nk_wl_destroy_font(b->default_font, bkend);
 	nk_free(&bkend->ctx);
 	//we make it here to
 	//float unused_val = nk_sin(1.0);

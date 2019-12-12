@@ -1,4 +1,3 @@
-#include "nk_wl_font.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -14,13 +13,13 @@
 #include <wayland-client.h>
 
 #define NK_IMPLEMENTATION
+#define NK_EGL_BACKEND
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 #define NK_INCLUDE_FONT_BAKING
 #define NK_EGL_CMD_SIZE 4096
 #define MAX_VERTEX_BUFFER 512 * 128
 #define MAX_ELEMENT_BUFFER 128 * 128
-#define NK_EGL_BACKEND
 
 #define NK_SHADER_VERSION "#version 330 core\n"
 
@@ -161,23 +160,93 @@ nk_egl_prepare_font(struct nk_egl_backend *bkend, size_t font_size)
 	return font;
 }
 
-
 struct nk_wl_user_font {
 	int size;
 	int scale;
 	nk_rune *merged_ranges;
 	struct nk_font *font;
-	struct nk_user_font user_font;
 	struct nk_font_atlas atlas;
 	struct nk_image font_image;
+	struct nk_user_font user_font;
 };
+
+static bool
+nk_egl_bake_font(struct nk_wl_user_font *font,
+                 const struct nk_wl_font_config *config,
+                 const char *path)
+{
+	int atlas_width, atlas_height;
+	const void *image_data;
+	GLuint font_texture;
+
+	struct nk_font_config cfg =
+		nk_font_config(config->pix_size * config->scale);
+	cfg.range = font->merged_ranges;
+	cfg.merge_mode = nk_false;
+
+	nk_font_atlas_init_default(&font->atlas);
+	nk_font_atlas_begin(&font->atlas);
+	font->font = nk_font_atlas_add_from_file(&font->atlas,
+	                                         path,
+	                                         config->pix_size *
+	                                         config->scale,
+	                                         &cfg);
+	image_data = nk_font_atlas_bake(&font->atlas,
+	                                &atlas_width,
+	                                &atlas_height,
+	                                NK_FONT_ATLAS_RGBA32);
+	//upload to gpu
+	//TODO need makecurrent
+	glGenTextures(1, &font_texture);
+	glBindTexture(GL_TEXTURE_2D, font_texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+	             (GLsizei)atlas_width, (GLsizei)atlas_height, 0,
+	             GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	nk_font_atlas_end(&font->atlas, nk_handle_id(font_texture),
+	                  NULL);
+	nk_font_atlas_cleanup(&font->atlas);
+	font->font_image = nk_image_id(font_texture);
+
+	return true;
+}
+
+static bool
+nk_egl_font_cal_ranges(struct nk_wl_user_font *font,
+                       const struct nk_wl_font_config *config)
+{
+	int total_range = 0;
+	//calculate ranges
+	for (int i = 0; i < config->nranges; i++)
+		total_range += nk_range_count(config->ranges[i]);
+	total_range = 2 * total_range + 1;
+
+	font->merged_ranges = malloc(sizeof(nk_rune) * total_range);
+	if (!font->merged_ranges)
+		return false;
+	//create the ranges
+	memcpy(font->merged_ranges, config->ranges[0],
+	       sizeof(nk_rune) * 2 * nk_range_count(config->ranges[0]) + 1);
+	//additional range
+	for (int i = 1; i < config->nranges; i++)
+		merge_unicode_range(font->merged_ranges, config->ranges[i],
+		                    font->merged_ranges);
+	return true;
+}
 
 //problem with this function is that we are not sure if opengl context is there
 NK_API struct nk_user_font *
-nk_wl_new_font(struct nk_wl_font_config config)
+nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 {
 	char *font_path;
-	int total_range = 0;
+	struct nk_egl_backend *egl_b =
+		container_of(b, struct nk_egl_backend, base);
+	if (!egl_b->env.egl_context)
+		return NULL;
+
 	if (!config.name)
 		config.name = "Vera";
 	if (!config.pix_size)
@@ -186,57 +255,46 @@ nk_wl_new_font(struct nk_wl_font_config config)
 		config.scale = 1;
 	if (!config.ranges) {
 		config.nranges = 1;
-		config.ranges = &basic_range;
+		config.ranges = (const nk_rune **)(&basic_range);
 	}
 	config.TTFonly = true;
 	if ((font_path = nk_wl_find_font(&config)) == NULL)
 	    return NULL;
-	//now merge the ranges
-	for (int i = 0; i < config.nranges; i++)
-		total_range += nk_range_count(config.ranges[i]);
-	total_range = 2 * total_range + 1;
 
 	struct nk_wl_user_font *user_font =
 		malloc(sizeof(struct nk_wl_user_font));
 	if (!user_font)
 		return NULL;
-	user_font->merged_ranges = malloc(sizeof(nk_rune) * total_range);
-	if (!user_font->merged_ranges)
+	//scale is usefull since user can control it for an application
+	user_font->size = config.pix_size;
+	user_font->scale = config.scale;
+
+	if (!nk_egl_font_cal_ranges(user_font, &config))
 		goto err_range;
-	//initial range
-	memcpy(user_font->merged_ranges, config.ranges[0],
-	       sizeof(nk_rune) * 2 * nk_range_count(config.ranges[0]) + 1);
-	//additional range
-	for (int i = 1; i < config.nranges; i++)
-		merge_unicode_range(user_font->merged_ranges, config.ranges[i],
-		                    user_font->merged_ranges);
 
-	struct nk_font_config cfg =
-		nk_font_config(config.pix_size * config.scale);
-	cfg.range = user_font->merged_ranges;
-	cfg.merge_mode = nk_false;
+	if (!nk_egl_bake_font(user_font, &config, font_path))
+		goto err_bake;
 
-	nk_font_atlas_init_default(&user_font->atlas);
-	nk_font_atlas_begin(&user_font->atlas);
-	user_font->font = nk_font_atlas_add_from_file(&user_font->atlas,
-	                                              font_path,
-	                                              config.pix_size *
-	                                              config.scale,
-	                                              &cfg);
-	//right now let use just do this, SDF could be used later
-	//with different shader
-	user_font->font_image.handle.ptr =
-		nk_font_atlas_bake(&user_font->atlas,
-		                   &user_font->font_image.w,
-		                   &user_font->font_image.h,
-		                   NK_FONT_ATLAS_RGBA32);
-	//later convert this into GPU then call nk_
-
-
-
+	return &user_font->user_font;
+err_bake:
+	free(user_font->merged_ranges);
 err_range:
 	free(user_font);
 	return NULL;
+}
+
+NK_API void
+nk_wl_destroy_font(struct nk_user_font *font, struct nk_wl_backend *b)
+{
+	//this is definitly not the correct way to do it. As nk_font itself
+	//already has user_font
+	struct nk_wl_user_font *user_font = font->userdata.ptr;
+	GLuint tex = user_font->font_image.handle.id;
+	free(user_font->merged_ranges);
+	nk_font_atlas_clear(&user_font->atlas);
+	glDeleteTextures(1, &tex);
+
+
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -641,7 +699,6 @@ nk_egl_destroy_backend(struct nk_wl_backend *b)
 	free(bkend);
 
 }
-
 
 //this need to include in a c file and we include it from there
 
