@@ -39,6 +39,7 @@ extern "C" {
 //this will make our struct various size, so lets put the buffer in the end
 #define NK_MAX_CTX_MEM 64 * 1024
 
+#include <sequential.h>
 #include <ui.h>
 #include <client.h>
 #include <nuklear/nuklear.h>
@@ -83,6 +84,10 @@ struct nk_wl_backend {
 	nk_hash theme_hash;
 	nk_rune *unicode_range;
 	uint32_t row_size; //current row size for the backend
+	//resources
+	vector_t image_resources;
+	vector_t font_resources;
+
 	//look
 	struct {
 		//update to date information
@@ -263,6 +268,24 @@ nk_wl_clean_app_surface(struct nk_wl_backend *bkend)
 		free(bkend->internal_clipboard);
 }
 
+static void
+nk_wl_backend_cleanup(struct nk_wl_backend *bkend)
+{
+	/* struct nk_image *image = NULL; */
+	/* struct nk_user_font *user_font = NULL; */
+	nk_free(&bkend->ctx);
+	//this is not right
+	/* vector_for_each(image, &bkend->image_resources) */
+	/*	nk_wl_free_image(image); */
+	/* vector_destroy(&bkend->image_resources); */
+
+	/* vector_for_each(user_font, &bkend->font_resources) */
+	/*	nk_wl_destroy_font(user_font); */
+	/* vector_destroy(&bkend->font_resources); */
+
+}
+
+
 /********************************* shared_api *******************************************/
 /* NK_API struct nk_image nk_wl_load_image(const char *path); */
 
@@ -306,7 +329,7 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app, nk_wl_draw
 	int width = app->allocation.w;
 	int height = app->allocation.h;
 
-	if (nk_begin(&bkend->ctx, "cairo_app", nk_rect(0, 0, width, height),
+	if (nk_begin(&bkend->ctx, "nk_app", nk_rect(0, 0, width, height),
 		     NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)) {
 		draw_call(&bkend->ctx, width, height, app);
 	} nk_end(&bkend->ctx);

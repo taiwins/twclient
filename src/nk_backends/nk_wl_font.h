@@ -42,8 +42,10 @@ struct nk_wl_font_config {
 	bool TTFonly;
 };
 
-NK_API struct nk_user_font *nk_wl_new_font(struct nk_wl_font_config config);
-NK_API void nk_wl_destroy_font(struct nk_user_font *font);
+NK_API struct nk_user_font *nk_wl_new_font(struct nk_wl_font_config config,
+                                           struct nk_wl_backend *backend);
+NK_API void nk_wl_destroy_font(struct nk_user_font *font,
+                               struct nk_wl_backend *backend);
 
 static char *
 nk_wl_find_font(const struct nk_wl_font_config *user_config)
