@@ -29,235 +29,6 @@
 
 #include "nk_wl_internal.h"
 
-/////////////////////////////////// NK_CAIRO text handler /////////////////////////////////////
-#define NK_CR_FONT_KEY ((cairo_user_data_key_t *)1000)
-
-
-struct nk_cairo_font {
-	int size;
-	float scale;
-	FT_Face text_font;
-	FT_Face icon_font;
-	FT_Library ft_lib;
-	struct nk_user_font nk_font;
-};
-
-
-static void
-nk_cairo_font_done(struct nk_cairo_font *user_font)
-{
-	FT_Done_Face(user_font->text_font);
-	FT_Done_Face(user_font->icon_font);
-	FT_Done_FreeType(user_font->ft_lib);
-}
-
-static inline bool
-is_in_pua(nk_rune rune)
-{
-	return rune >= 0xE000 && rune <= 0xF8FF;
-}
-
-static bool
-nk_cairo_is_whitespace(nk_rune code) {
-	bool ws;
-	switch (code) {
-	case ' ': case '\t': case '\v': case '\f': case '\r':
-		ws = true;
-		break;
-	default:
-		ws = false;
-	}
-	return ws;
-}
-
-static FT_Vector
-nk_cairo_calc_advance(int32_t this_glyph, int32_t last_glyph,
-		      FT_Face this_face, FT_Face last_face)
-{
-	FT_Vector advance_vec = {0, 0};
-	if (this_face == last_face)
-		FT_Get_Kerning(this_face, last_glyph, this_glyph,
-			       ft_kerning_default, &advance_vec);
-
-	FT_Load_Glyph(this_face, this_glyph, FT_LOAD_DEFAULT);
-	advance_vec.x += this_face->glyph->advance.x;
-	advance_vec.y += this_face->glyph->advance.y;
-	return advance_vec;
-}
-
-static int
-utf8_to_ucs4(nk_rune *runes, const int ucs4_len, const char *text, const int utf8_len)
-{
-	int len_decoded = 0;
-	int i = 0;
-	while (len_decoded < utf8_len && i < ucs4_len) {
-		len_decoded += nk_utf_decode(text+len_decoded, &runes[i++], utf8_len - len_decoded);
-	}
-	return i;
-}
-
-//this function exists outside the cairo context, but again, what we need is
-//rendering text in small scale
-static float
-nk_cairo_text_width(nk_handle handle, float height, const char *text,
-		    int utf8_len)
-{
-	struct nk_cairo_font *user_font = handle.ptr;
-	float width = 0.0;
-	nk_rune ucs4_this;
-	FT_Face curr_face, last_face = NULL;
-	int32_t glyph_this, glyph_last = -1;
-
-	nk_rune unicodes[utf8_len];
-	int nglyphs = utf8_to_ucs4(unicodes, utf8_len, text, utf8_len);
-
-	for (int i = 0; i < nglyphs; i++) {
-		ucs4_this = unicodes[i];
-		curr_face = is_in_pua(ucs4_this) ?
-			user_font->icon_font :
-			user_font->text_font;
-		glyph_this = FT_Get_Char_Index(curr_face, ucs4_this);
-		FT_Vector real_advance = nk_cairo_calc_advance(glyph_this, glyph_last,
-							       curr_face, last_face);
-		width += real_advance.x / 64.0;
-		glyph_last = glyph_this;
-		last_face = curr_face;
-	}
-	return width * (1.0 / user_font->scale);
-}
-
-
-static struct nk_vec2
-nk_cairo_render_glyph(cairo_t *cr, FT_Face face, float scale,
-		      const nk_rune codepoint,
-		      const int32_t glyph, const struct nk_vec2 *baseline)
-{
-	FT_Load_Glyph(face, glyph, FT_LOAD_DEFAULT);
-	struct nk_vec2 advance = { scale * face->glyph->metrics.horiAdvance / 64.0, 0 };
-	if (nk_cairo_is_whitespace(codepoint))
-		return advance;
-
-	FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
-	FT_Bitmap *bitmap = &face->glyph->bitmap;
-	int w = bitmap->width;
-	int h = bitmap->rows;
-	//make glyph and pattern
-	uint32_t pixels[w * h * sizeof(uint32_t)];
-	for (int i = 0; i < w * h; i++) {
-		pixels[i] = bitmap->buffer[i] << 24;
-
-	}
-	//now make pattern out of it
-	cairo_surface_t *gsurf =
-		cairo_image_surface_create_for_data(
-			(unsigned char *)pixels, CAIRO_FORMAT_ARGB32, w, h,
-			cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, w));
-	{
-		//horibearingY is a postive value
-		struct nk_vec2 render_point = *baseline;
-		float ybearing = scale * face->glyph->metrics.horiBearingY / 64.0;
-		float xbearing = scale * face->glyph->metrics.horiBearingX / 64.0;
-		//translate to the top-left corner for rendering
-		render_point.y -= ybearing;
-		render_point.x += xbearing;
-
-		cairo_save(cr);
-		cairo_translate(cr, render_point.x, render_point.y);
-		cairo_scale(cr, scale, scale);
-		cairo_mask_surface(cr, gsurf, 0, 0);
-		cairo_fill(cr);
-		cairo_restore(cr);
-	}
-
-	cairo_surface_destroy(gsurf);
-	return advance;
-}
-
-static void
-nk_cairo_render_text(cairo_t *cr, const struct nk_vec2 *pos,
-		     struct nk_cairo_font *font, const char *text, const int utf8_len)
-{
-	//convert the text to unicode
-	//since we render horizontally, we only need to care about:
-	//
-	//: horibearingX, horibearingY, horiAdvance.
-	//refer at https://freetype.org/freetype2/docs/tutorial/step2.html#section-1
-
-	//this is the initial point
-	struct nk_vec2 advance = nk_vec2(pos->x,
-					 pos->y + (font->size / font->scale));
-	float scale = 1.0 / font->scale;
-	nk_rune ucs4_this;
-	FT_Face curr_face, last_face = NULL;
-	int32_t glyph_this, glyph_last = -1;
-
-	nk_rune unicodes[utf8_len];
-	int nglyphs = utf8_to_ucs4(unicodes, utf8_len, text, utf8_len);
-	if (nglyphs == 0)
-		return;
-
-	for (int i = 0; i < nglyphs; i++) {
-		FT_Vector kern_vec = {0, 0};
-		ucs4_this = unicodes[i];
-		curr_face = is_in_pua(ucs4_this) ? font->icon_font : font->text_font;
-		glyph_this = FT_Get_Char_Index(curr_face, unicodes[i]);
-		if (curr_face == last_face)
-			FT_Get_Kerning(curr_face, glyph_last, glyph_this, FT_KERNING_DEFAULT, &kern_vec);
-
-		advance.x += scale * kern_vec.x/64.0;
-		advance.y += scale * kern_vec.y/64.0;
-
-		//now do the rendering, the translation is done for every char
-		struct nk_vec2 glyph_advance =
-			nk_cairo_render_glyph(cr, curr_face, scale,
-					      ucs4_this, glyph_this, &advance);
-		advance.x += glyph_advance.x;
-		advance.y += glyph_advance.y;
-
-		glyph_last = glyph_this;
-		last_face = curr_face;
-	}
-}
-
-static void
-nk_cairo_font_set_size(struct nk_cairo_font *font, int pix_size, float scale)
-{
-	font->size = pix_size * scale;
-	font->nk_font.height = pix_size * 96.0 / 72.0;
-	font->scale = scale;
-	int error;
-	error = FT_Set_Pixel_Sizes(font->text_font, 0, pix_size * scale);
-	error = FT_Set_Pixel_Sizes(font->icon_font, 0, pix_size * scale);
-	(void)error;
-
-}
-
-void
-nk_cairo_font_init(struct nk_cairo_font *font, const char *text_font, const char *icon_font)
-{
-	int error;
-	FT_Init_FreeType(&font->ft_lib);
-	font->size = 0;
-	int pixel_size = 16;
-	font->size = pixel_size;
-	font->nk_font.userdata.ptr = font;
-	font->nk_font.width = nk_cairo_text_width;
-
-	const char *vera = "/usr/share/fonts/TTF/Vera.ttf";
-	const char *fa_a = "/usr/share/fonts/TTF/fa-solid-900.ttf";
-
-	//tw_find_font_path(text_font, font_path, 256);
-	error = FT_New_Face(font->ft_lib, vera, 0,
-			    &font->text_font);
-
-	if (FT_HAS_KERNING(font->text_font))
-	    fprintf(stderr, "dejavu sans has kerning\n");
-	error = FT_New_Face(font->ft_lib, fa_a, 0,
-			    &font->icon_font);
-	(void)error;
-}
-
-
 //////////////////////////////////// NK_CAIRO FONTS /////////////////////////////////////
 
 //not thread safe
@@ -298,19 +69,31 @@ struct nk_wl_user_font {
 
 static float
 nk_wl_text_width(nk_handle handle, float height, const char *text,
-		    int utf8_len)
+                 int utf8_len)
 {
 	struct nk_wl_user_font *user_font = handle.ptr;
 	cairo_surface_t *recording = cairo_recording_surface_create(CAIRO_CONTENT_COLOR, NULL);
-	cairo_t *cr = cairo_create(recording);
 	cairo_text_extents_t extents;
-
+	cairo_t *cr = cairo_create(recording);
 	cairo_set_font_face(cr, user_font->cairo_face);
 	cairo_set_font_size(cr, user_font->size);
-	cairo_text_extents(cr, text, &extents);
+
+	int nglyphs;
+	cairo_glyph_t *glyphs = NULL;
+	/* int nclusters; */
+	/* cairo_text_cluster_t *clusters = NULL; */
+	/* cairo_text_cluster_flags_t cluster_flags; */
+
+	cairo_scaled_font_t *scaled_font = cairo_get_scaled_font(cr);
+	cairo_scaled_font_text_to_glyphs(scaled_font, 0, 0, text,
+	                                 utf8_len, &glyphs, &nglyphs,
+	                                 NULL, NULL, NULL);
+
+	cairo_scaled_font_glyph_extents(scaled_font, glyphs, nglyphs, &extents);
+	cairo_glyph_free(glyphs);
 	cairo_destroy(cr);
 	cairo_surface_destroy(recording);
-	return extents.width;
+	return extents.x_advance;
 }
 
 void
@@ -321,10 +104,25 @@ nk_wl_render_text(cairo_t *cr, const struct nk_vec2 *pos,
 	cairo_set_font_face(cr, font->cairo_face);
 	cairo_set_font_size(cr, font->size);
 
+	int nglyphs;
+	cairo_glyph_t *glyphs = NULL;
+	int nclusters;
+	cairo_text_cluster_t *clusters = NULL;
+	cairo_text_cluster_flags_t cluster_flags;
 	cairo_font_extents_t extents;
-	cairo_font_extents(cr, &extents);
-	cairo_move_to(cr, pos->x, pos->y + extents.ascent);
-	cairo_show_text(cr, text);
+
+	cairo_scaled_font_t *scaled_font = cairo_get_scaled_font(cr);
+	cairo_scaled_font_extents(scaled_font, &extents);
+	cairo_scaled_font_text_to_glyphs(scaled_font, pos->x, pos->y+extents.ascent,
+	                                 text, utf8_len, &glyphs, &nglyphs,
+	                                 &clusters, &nclusters, &cluster_flags);
+	//render
+	cairo_show_text_glyphs(cr, text, utf8_len, glyphs,
+	                        nglyphs, clusters, nclusters,
+	                        cluster_flags);
+	cairo_glyph_free(glyphs);
+	cairo_text_cluster_free(clusters);
+
 }
 
 struct nk_user_font *
@@ -390,7 +188,6 @@ struct nk_cairo_backend {
 	struct nk_wl_backend base;
 	nk_max_cmd_t last_cmds[2];
 	struct nk_user_font *default_font;
-	struct nk_cairo_font user_font;
 	//this is a stack we keep right now, all other method failed.
 };
 
@@ -891,14 +688,13 @@ nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
+	struct nk_wl_user_font *user_font = b->default_font->userdata.ptr;
 
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, geo);
 	shm_buffer_reallocate(surf, &geo);
-
 	surf->destroy = nk_cairo_destroy_app_surface;
 	//change the font size here,
-	if (b->user_font.size != (int)(bkend->row_size * geo.s))
-		nk_cairo_font_set_size(&b->user_font, bkend->row_size, geo.s);
+	user_font->size = (int)bkend->row_size;
 }
 
 
@@ -906,7 +702,7 @@ struct nk_wl_backend *
 nk_cairo_create_bkend(void)
 {
 	struct nk_wl_font_config default_config = {
-		.name = "Vera",
+		.name = "nerd",
 		.slant = NK_WL_SLANT_ROMAN,
 		.pix_size = 16,
 		.scale = 1,
@@ -917,10 +713,7 @@ nk_cairo_create_bkend(void)
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
 	b->base.theme_hash = 0;
 	b->default_font = nk_wl_new_font(default_config);
-
-	nk_init_default(&b->base.ctx, &b->user_font.nk_font);
-	nk_cairo_font_init(&b->user_font, NULL, NULL);
-	nk_cairo_font_set_size(&b->user_font, 16, 1.0);
+	nk_init_default(&b->base.ctx, b->default_font);
 	return &b->base;
 }
 
@@ -931,8 +724,6 @@ nk_cairo_destroy_bkend(struct nk_wl_backend *bkend)
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
 	nk_wl_destroy_font(b->default_font);
-
-	nk_cairo_font_done(&b->user_font);
 	nk_free(&bkend->ctx);
 	//we make it here to
 	//float unused_val = nk_sin(1.0);
