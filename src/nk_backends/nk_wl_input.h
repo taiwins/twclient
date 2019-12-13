@@ -1,11 +1,14 @@
 #ifndef NK_WL_INPUT_H
 #define NK_WL_INPUT_H
 
+#include <linux/input.h>
+
+#include "nk_wl_internal.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "nk_wl_internal.h"
 
 
 /* Clear the retained input state

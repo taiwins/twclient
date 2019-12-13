@@ -11,41 +11,11 @@
 #include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct nk_wl_user_font;
-
-// to be implemented by all backends, there should be an additional parameter
-// for code points, the nk_user_font is hidden from you. Do it for the pixel size
-
-enum nk_wl_font_slant {
-	NK_WL_SLANT_ROMAN,
-	NK_WL_SLANT_ITALIC,
-	NK_WL_SLANT_OBLIQUE,
-};
-
-//we accept only true type font
-struct nk_wl_font_config {
-	const char *name;
-	enum nk_wl_font_slant slant;
-	int pix_size, scale;
-	int nranges;
-	const nk_rune **ranges;
-
-	//fc config offers light, medium, demibold, bold, black
-	//demibold, bold and black is true, otherwise false.
-	bool bold; //classified as bold
-	//private: TTF only
-	bool TTFonly;
-};
-
-NK_API struct nk_user_font *nk_wl_new_font(struct nk_wl_font_config config,
-                                           struct nk_wl_backend *backend);
-NK_API void nk_wl_destroy_font(struct nk_user_font *font,
-                               struct nk_wl_backend *backend);
 
 static char *
 nk_wl_find_font(const struct nk_wl_font_config *user_config)
@@ -99,6 +69,8 @@ fini:
 	FcFini();
 	return path;
 }
+
+#if defined (NK_INCLUDE_FONT_BAKING)
 
 //merge unicodes
 static inline void
@@ -165,6 +137,9 @@ merge_unicode_range(const nk_rune *left, const nk_rune *right, nk_rune *out)
 	memcpy(out, merged, (2*m+1) * sizeof(nk_rune));
 	return 2*m;
 }
+
+#endif /* NK_INCLUDE_FONT_BAKING */
+
 
 
 #ifdef __cplusplus

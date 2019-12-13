@@ -12,22 +12,6 @@ struct nk_wl_backend;
 struct nk_context;
 struct nk_style;
 
-#ifdef NK_PRIAVTE
-/* if we use nk_private, then we define everything into static */
-
-#if defined(NK_INCLUDE_CAIRO_BACKEND)
-#include "nuklear/nk_wl_cairo.c"
-
-#elif defined(NK_INCLUDE_EGL_BACKEND)
-#include "nuklear/nk_wl_egl.c"
-
-#elif defined (NK_INCLUDE_VK_BACKEND)
-#include "nuklear/nk_wl_vulkan.c"
-
-#endif /* include backends */
-
-#else /* NK_PRIVATE */
-
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -41,28 +25,42 @@ typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float heig
 typedef void (*nk_wl_postcall_t)(struct app_surface *app);
 
 /*******************************************************************************
- * desktop shell implementation
+ * shell implementation
  ******************************************************************************/
-struct xdg_toplevel *nk_wl_impl_xdg_shell_surface(struct app_surface *app);
+NK_API struct xdg_toplevel *
+nk_wl_impl_xdg_shell_surface(struct app_surface *app,
+                             struct xdg_surface *xdg_surface);
 
-void nk_wl_impl_wl_shell_surface(struct app_surface *app);
+NK_API void
+nk_wl_impl_wl_shell_surface(struct app_surface *app,
+                            struct wl_shell_surface *protocol);
 
+/*******************************************************************************
+ * backends
+ ******************************************************************************/
 
 /* cairo_backend */
-struct nk_wl_backend *nk_cairo_create_bkend(void);
-void nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
+struct nk_wl_backend *
+nk_cairo_create_bkend(void);
+
+void
+nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
 
 void
 nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			  nk_wl_drawcall_t draw_cb,  const struct bbox geo);
+                          nk_wl_drawcall_t draw_cb,  const struct bbox geo);
+
 
 /* egl_backend */
-struct nk_wl_backend* nk_egl_create_backend(const struct wl_display *display);
+struct nk_wl_backend*
+nk_egl_create_backend(const struct wl_display *display);
 
-void nk_egl_destroy_backend(struct nk_wl_backend *b);
+void
+nk_egl_destroy_backend(struct nk_wl_backend *b);
+
 void
 nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			nk_wl_drawcall_t draw_cb, const struct bbox geo);
+                        nk_wl_drawcall_t draw_cb, const struct bbox geo);
 
 
 /* vulkan_backend */
@@ -74,13 +72,8 @@ nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 /*			   nk_wl_drawcall_t draw_cb, const struct bbox geo); */
 
 
-#endif /* NK_PRIVATE */
-
-#ifndef NK_API
-#define NK_API
-#endif
-
-NK_API xkb_keysym_t nk_wl_get_keyinput(struct nk_context *ctx);
+NK_API xkb_keysym_t
+nk_wl_get_keyinput(struct nk_context *ctx);
 
 NK_API bool
 nk_wl_get_btn(struct nk_context *ctx, uint32_t *button, uint32_t *sx, uint32_t *sy);
@@ -96,6 +89,11 @@ NK_API void
 nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app,
 		nk_wl_drawcall_t draw_call);
 
+
+/*******************************************************************************
+ * image loader
+ ******************************************************************************/
+
 NK_API struct nk_image
 nk_wl_load_image(const char *path, enum wl_shm_format format,
 		 int width, int height);
@@ -103,8 +101,42 @@ NK_API bool
 nk_wl_load_image_for_buffer(const char *path, enum wl_shm_format format,
 			    int width, int height, unsigned char *mem);
 
+NK_API void nk_wl_free_image(struct nk_image *img);
+
+
+/*******************************************************************************
+ * font loader
+ ******************************************************************************/
+
+enum nk_wl_font_slant {
+	NK_WL_SLANT_ROMAN,
+	NK_WL_SLANT_ITALIC,
+	NK_WL_SLANT_OBLIQUE,
+};
+
+//we accept only true type font
+struct nk_wl_font_config {
+	const char *name;
+	enum nk_wl_font_slant slant;
+	int pix_size, scale;
+	int nranges;
+	const nk_rune **ranges;
+
+	//fc config offers light, medium, demibold, bold, black
+	//demibold, bold and black is true, otherwise false.
+	bool bold; //classified as bold
+	//private: TTF only
+	bool TTFonly;
+};
+
+
+NK_API struct nk_user_font *
+nk_wl_new_font(struct nk_wl_font_config config,
+               struct nk_wl_backend *backend);
 
 NK_API void
-nk_wl_free_image(struct nk_image *img);
+nk_wl_destroy_font(struct nk_user_font *font,
+                   struct nk_wl_backend *backend);
+
 
 #endif
