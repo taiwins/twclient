@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
 			 &App.global, APP_SURFACE_APP,
 			 APP_SURFACE_COMPOSITE);
 
-	nk_wl_impl_wl_shell_surface(&App.surface);
+	nk_wl_impl_wl_shell_surface(&App.surface, shell_surface);
 	wl_shell_surface_set_toplevel(shell_surface);
 	App.shell_surface = shell_surface;
 	App.surface.known_mimes[MIME_TYPE_TEXT] = "text/";

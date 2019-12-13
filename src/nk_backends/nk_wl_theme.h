@@ -5,9 +5,11 @@
 extern "C" {
 #endif
 
+#include <string.h>
 #include <assert.h>
 #include <cairo/cairo.h>
 #include <helpers.h>
+
 #include <theme.h>
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
@@ -150,7 +152,7 @@ nk_button_style_from_tw(struct nk_style_button *button,
 			const struct taiwins_style_button *src_button,
 			const struct nk_image *images)
 {
-	nk_zero_struct(*button);
+	memset(button, 0, sizeof(*button));
 	//button
 	button->normal =
 		nk_style_item_from_tw(&src_button->normal.style, images);
@@ -191,7 +193,7 @@ nk_toggle_style_from_tw(struct nk_style_toggle *toggle,
 			const struct taiwins_style_toggle *src_toggle,
 			const struct nk_image *images)
 {
-	nk_zero_struct(*toggle);
+	memset(toggle, 0, sizeof(*toggle));
 	toggle->normal =
 		nk_style_item_from_tw(&src_toggle->normal.style, images);
 	toggle->hover =
@@ -231,7 +233,7 @@ nk_selectable_style_from_tw(struct nk_style_selectable *select,
 			    const struct taiwins_style_selectable *src_select,
 			    const struct nk_image *images)
 {
-	nk_zero_struct(*select);
+	memset(select, 0, sizeof(*select));
 	//background inactive
 	select->normal =
 		nk_style_item_from_tw(&src_select->normal.style, images);
@@ -284,7 +286,7 @@ nk_slider_style_from_tw(struct nk_style_slider *slider,
 			const struct taiwins_style_slider *src_slider,
 			const struct nk_image *images)
 {
-	nk_zero_struct(*slider);
+	memset(slider, 0, sizeof(*slider));
 	//background
 	slider->normal =
 		nk_style_item_from_tw(&src_slider->normal.style, images);
@@ -335,7 +337,7 @@ nk_progress_style_from_tw(struct nk_style_progress *style,
 			  const struct taiwins_style_progress *src_style,
 			  const struct nk_image *images)
 {
-	nk_zero_struct(*style);
+	memset(style, 0, sizeof(*style));
 	style->normal =
 		nk_style_item_from_tw(&src_style->normal.style, images);
 	style->hover =
@@ -370,7 +372,7 @@ nk_scrollbar_style_from_tw(struct nk_style_scrollbar *style,
 			   const struct taiwins_style_scrollbar *src_style,
 			   const struct nk_image *images)
 {
-	nk_zero_struct(*style);
+	memset(style, 0, sizeof(*style));
 	//background
 	style->normal =
 		nk_style_item_from_tw(&src_style->normal.style, images);
@@ -413,7 +415,7 @@ nk_edit_style_from_tw(struct nk_style_edit *style,
 		      const struct taiwins_style_edit *src_style,
 		      const struct nk_image *images)
 {
-	nk_zero_struct(*style);
+	memset(style, 0, sizeof(*style));
 	//background
 	style->normal =
 		nk_style_item_from_tw(&src_style->normal.style, images);
@@ -464,7 +466,7 @@ nk_property_style_from_tw(struct nk_style_property *style,
 			  const struct taiwins_style_property *src_style,
 			  const struct nk_image *images)
 {
-	nk_zero_struct(*style);
+	memset(style, 0, sizeof(*style));
 	//background
 	style->normal =
 		nk_style_item_from_tw(&src_style->normal.style, images);
@@ -503,7 +505,7 @@ nk_chart_style_from_tw(struct nk_style_chart *style,
 		       const struct taiwins_style_chart *src_style,
 		       const struct nk_image *images)
 {
-	nk_zero_struct(*style);
+	memset(style, 0, sizeof(*style));
 	style->background =
 		nk_style_item_from_tw(&src_style->background.style, images);
 	style->border_color =
@@ -567,7 +569,7 @@ nk_tab_style_from_tw(struct nk_style_tab *style,
 		     const struct taiwins_style_tab *src_style,
 		     const struct nk_image *images)
 {
-	nk_zero_struct(*style);
+	memset(style, 0, sizeof(*style));
 	style->background =
 		nk_style_item_from_tw(&src_style->background.style, images);
 	style->border_color =
@@ -844,90 +846,7 @@ nk_wl_apply_color(struct nk_wl_backend *bkend,
 	nk_style_from_table(&bkend->ctx, table);
 }
 
-/******************************************************************************
- * APIS
- *****************************************************************************/
 
-NK_API bool
-nk_wl_load_image_for_buffer(const char *path, enum wl_shm_format format,
-			    int width, int height, unsigned char *mem)
-{
-	int w, h, channels;
-	cairo_surface_t *src_surf, *image_surf;
-	cairo_t *cr;
-	cairo_format_t cairo_format = translate_wl_shm_format(format);
-	if (cairo_format != CAIRO_FORMAT_ARGB32)
-		goto err_format;
-
-	//you have no choice but to load rgba, cairo deal with 32 bits only
-	uint32_t *pixels = (uint32_t *)stbi_load(path, &w, &h, &channels,
-					  STBI_rgb_alpha);
-	if (w == 0 || h == 0 || channels == 0 || pixels == NULL)
-		goto err_load;
-
-	taiwins_rgba_t pixel;
-	for (int i = 0; i < w * h; i++ ) {
-		pixel.code = *(pixels+i);
-		double p = pixel.a / 255.0;
-		*(pixels+i) = ((uint32_t)pixel.a << 24) +
-			((uint32_t)(pixel.r / p) << 16) +
-			((uint32_t)(pixel.g / p) << 8) +
-			((uint32_t)(pixel.b / p));
-	}
-	src_surf = cairo_image_surface_create_for_data(
-		(unsigned char *)pixels, CAIRO_FORMAT_ARGB32,
-		w, h,
-		cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, w));
-	image_surf = cairo_image_surface_create_for_data(
-		(unsigned char *)mem, CAIRO_FORMAT_ARGB32,
-		width, height,
-		cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width));
-
-	cr = cairo_create(image_surf);
-	cairo_scale(cr, (double)width / w, (double)height / h);
-	cairo_set_source_surface(cr, src_surf, 0, 0);
-	cairo_paint(cr);
-
-	stbi_image_free(pixels);
-	cairo_destroy(cr);
-	cairo_surface_destroy(image_surf);
-	cairo_surface_destroy(src_surf);
-
-	return true;
-err_format:
-err_load:
-	return false;
-
-}
-
-NK_API struct nk_image
-nk_wl_load_image(const char *path, enum wl_shm_format format,
-		 int width, int height)
-{
-	struct nk_image image = {0};
-	cairo_format_t cairo_format = translate_wl_shm_format(format);
-	if (cairo_format != CAIRO_FORMAT_ARGB32)
-		goto err_format;
-
-	unsigned char *mem = malloc(width * height * 4);
-	if (!nk_wl_load_image_for_buffer(path, format,
-					 width, height, mem))
-		goto err_load;
-	image = nk_subimage_ptr(mem, width, height,
-				nk_rect(0,0, width, height));
-	return image;
-err_load:
-	free(mem);
-err_format:
-	return image;
-}
-
-
-NK_API void
-nk_wl_free_image(struct nk_image *im)
-{
-	free(im->handle.ptr);
-}
 #ifdef __cplusplus
 }
 #endif
