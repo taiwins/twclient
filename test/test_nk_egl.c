@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 	app_surface_init_default(&App.surface, wl_surface,
 			 &App.global);
 
-	nk_wl_impl_wl_shell_surface(&App.surface);
+	nk_wl_impl_wl_shell_surface(&App.surface, shell_surface);
 	wl_shell_surface_set_toplevel(shell_surface);
 	App.shell_surface = shell_surface;
 

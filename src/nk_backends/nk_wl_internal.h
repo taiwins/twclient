@@ -15,11 +15,15 @@
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <wayland-client.h>
 
+#include <sequential.h>
+#include <ui.h>
+#include <client.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if defined (__GNUC__)
+#if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wunused-function"
 #elif defined (__clang__)
@@ -27,27 +31,10 @@ extern "C" {
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
-/* we include this so we do not need to deal with namespace collision, in the
- * mean time, for the sake private implementation, all the function declared
- * here should be declared as static.
- */
-//#define NK_PRIVATE
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_VARARGS
-
 //this will make our struct various size, so lets put the buffer in the end
 #define NK_MAX_CTX_MEM 64 * 1024
+#include <nk_backends.h>
 
-#include <sequential.h>
-#include <ui.h>
-#include <client.h>
-#include <nuklear/nuklear.h>
-
-
-//we may in the end include that file so save all the trouble
-typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct app_surface *app);
-typedef void (*nk_wl_postcall_t)(struct app_surface *app);
 
 #ifndef NK_MAX_CMD_SIZE
 #define NK_MAX_CMD_SIZE (sizeof (union {	\
@@ -104,21 +91,28 @@ struct nk_wl_backend {
 	};
 };
 
-/******************************** nuklear colors ***********************************/
+/***************************** nuklear colors *********************************/
 #include "nk_wl_theme.h"
 
-/********************************* input ****************************************/
+/******************************** image ***************************************/
+
+#include "nk_wl_image.h"
+
+/******************************** input ***************************************/
 
 #include "nk_wl_input.h"
 
-/******************************* wl_shell ***************************************/
+/******************************* wl_shell *************************************/
 
 #include "nk_wl_shell.h"
 
-/******************************* nk_wl_font ***************************************/
+/***************************** nk_wl_font *************************************/
+
 #include "nk_wl_font.h"
 
-/******************************** render *******************************************/
+/****************************** render ****************************************/
+
+
 static void nk_wl_render(struct nk_wl_backend *bkend);
 static void nk_wl_resize(struct app_surface *app, const struct app_event *e);
 
