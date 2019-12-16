@@ -72,8 +72,8 @@ struct nk_wl_backend {
 	nk_rune *unicode_range;
 	uint32_t row_size; //current row size for the backend
 	//resources
-	vector_t image_resources;
-	vector_t font_resources;
+	struct wl_list images;
+	struct wl_list fonts;
 
 	//look
 	struct {
@@ -268,15 +268,6 @@ nk_wl_backend_cleanup(struct nk_wl_backend *bkend)
 	/* struct nk_image *image = NULL; */
 	/* struct nk_user_font *user_font = NULL; */
 	nk_free(&bkend->ctx);
-	//this is not right
-	/* vector_for_each(image, &bkend->image_resources) */
-	/*	nk_wl_free_image(image); */
-	/* vector_destroy(&bkend->image_resources); */
-
-	/* vector_for_each(user_font, &bkend->font_resources) */
-	/*	nk_wl_destroy_font(user_font); */
-	/* vector_destroy(&bkend->font_resources); */
-
 }
 
 

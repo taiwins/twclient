@@ -54,13 +54,13 @@ nk_wl_ft_unref(FT_Library *lib)
 }
 
 struct nk_wl_user_font {
+	struct wl_list link;
 	int size;
 	float scale;
 	FT_Face face;
 	FT_Library *ft_lib;
 	cairo_font_face_t *cairo_face;
 	struct nk_user_font nk_font;
-	//we dont need range here, but need for EGL backend
 };
 
 
@@ -139,6 +139,7 @@ nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 	//else, we try to creat
 	struct nk_wl_user_font *user_font =
 		malloc(sizeof(struct nk_wl_user_font));
+	wl_list_init(&user_font->link);
 	user_font->ft_lib = nk_wl_ft_ref();
 	if (!user_font->ft_lib)
 		goto err_lib;
@@ -168,9 +169,10 @@ err_lib:
 }
 
 void
-nk_wl_destroy_font(struct nk_user_font *font, struct nk_wl_backend *backend)
+nk_wl_destroy_font(struct nk_user_font *font)
 {
 	struct nk_wl_user_font *cairo_font = font->userdata.ptr;
+	wl_list_remove(&cairo_font->link);
 
 	cairo_font_face_destroy(cairo_font->cairo_face);
 	FT_Done_Face(cairo_font->face);
@@ -707,8 +709,11 @@ nk_cairo_create_bkend(void)
 		.TTFonly = true,
 	};
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
+	wl_list_init(&b->base.images);
+	wl_list_init(&b->base.fonts);
+	b->default_font =
+		nk_wl_new_font(default_config, &b->base);
 	b->base.theme_hash = 0;
-	b->default_font = nk_wl_new_font(default_config, &b->base);
 	nk_init_default(&b->base.ctx, b->default_font);
 	return &b->base;
 }
@@ -717,9 +722,13 @@ nk_cairo_create_bkend(void)
 void
 nk_cairo_destroy_bkend(struct nk_wl_backend *bkend)
 {
-	struct nk_cairo_backend *b =
-		container_of(bkend, struct nk_cairo_backend, base);
-	nk_wl_destroy_font(b->default_font, bkend);
+	struct nk_wl_user_font *font, *tmp_font = NULL;
+	struct nk_wl_image *image, *tmp_img = NULL;
+	wl_list_for_each_safe(image, tmp_img, &bkend->images, link)
+		nk_wl_free_image(&image->image);
+	wl_list_for_each_safe(font, tmp_font, &bkend->fonts, link)
+		nk_wl_destroy_font(&font->nk_font);
+
 	nk_free(&bkend->ctx);
 	//we make it here to
 	//float unused_val = nk_sin(1.0);

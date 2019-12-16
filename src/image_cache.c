@@ -52,7 +52,7 @@ rgba_to_argb(unsigned char *dst, const unsigned char *src,
 		}
 }
 
-static inline void
+void
 image_info(const char *path, int *w, int *h, int *nchannels)
 {
 	//take a wild guess on svgs(since most of cases they are icons)
@@ -62,10 +62,12 @@ image_info(const char *path, int *w, int *h, int *nchannels)
 		stbi_info(path, w, h, nchannels);
 }
 
-static unsigned char *
+unsigned char *
 image_load(const char *path, int *w, int *h, int *nchannels)
 {
 	unsigned char *imgdata = NULL;
+	if (!is_file_exist(path))
+		return imgdata;
 
 	if (is_file_type(path, ".svg")) {
 		cairo_surface_t *renderimg = NULL;
@@ -99,6 +101,7 @@ image_load(const char *path, int *w, int *h, int *nchannels)
 	}
 	return imgdata;
 }
+
 
 struct image_cache
 image_cache_from_arrays(const struct wl_array *handle_array,

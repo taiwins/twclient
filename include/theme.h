@@ -458,8 +458,6 @@ struct taiwins_style_window {
  */
 struct taiwins_theme {
 	theme_option_font_size pending_font_size;
-	theme_option_handle text_font;
-	theme_option_handle icon_font;
 	struct taiwins_style_text text;
 	struct taiwins_style_button button;
 	struct taiwins_style_button contextual_button;
