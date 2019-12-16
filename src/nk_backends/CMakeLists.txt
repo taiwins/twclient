@@ -7,6 +7,7 @@ add_library(twclient-nkegl STATIC
 
 target_link_libraries(twclient-nkegl
   twclient
+  twclient-icons
   )
 add_library(twclient::nkegl ALIAS twclient-nkegl)
 
@@ -15,6 +16,7 @@ add_library(twclient-nkcairo STATIC
 
 target_link_libraries(twclient-nkcairo
   twclient
+  twclient-icons
   )
 add_library(twclient::nkcairo ALIAS twclient-nkcairo)
 

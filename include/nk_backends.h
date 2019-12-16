@@ -94,9 +94,10 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app,
  * image loader
  ******************************************************************************/
 
-NK_API struct nk_image
+NK_API struct nk_image *
 nk_wl_load_image(const char *path, enum wl_shm_format format,
-		 int width, int height);
+                 struct nk_wl_backend *b);
+
 NK_API bool
 nk_wl_load_image_for_buffer(const char *path, enum wl_shm_format format,
 			    int width, int height, unsigned char *mem);
@@ -135,8 +136,6 @@ nk_wl_new_font(struct nk_wl_font_config config,
                struct nk_wl_backend *backend);
 
 NK_API void
-nk_wl_destroy_font(struct nk_user_font *font,
-                   struct nk_wl_backend *backend);
-
+nk_wl_destroy_font(struct nk_user_font *font);
 
 #endif
