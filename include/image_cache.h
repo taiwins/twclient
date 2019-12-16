@@ -58,6 +58,13 @@ void search_icon_dirs(struct icontheme_dir *output,
 void search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
 		      const char *themepath, const vector_t *icondir);
 
+//image loaders
+void image_info(const char *path, int *w, int *h, int *nchannels);
+
+//image allocated by malloc, use free to release the memory
+unsigned char *
+image_load(const char *path, int *w, int *h, int *nchannels);
+
 
 #ifdef __cplusplus
 }

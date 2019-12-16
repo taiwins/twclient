@@ -11,12 +11,8 @@ extern "C" {
 #include <helpers.h>
 
 #include <theme.h>
-#define STB_RECT_PACK_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_rect_pack.h>
-#include <stb/stb_image.h>
-
 //include itself
+#include <image_cache.h>
 #include "nk_wl_internal.h"
 
 
@@ -61,88 +57,11 @@ nk_alignment_from_tw(const enum taiwins_text_alignment alignment)
 }
 
 
-static void
-copy_as_subimage(unsigned char *dst, const size_t dst_width,
-		 const unsigned char *src, const stbrp_rect *rect)
-{
-	//stb loads image in rgba byte order.
-	//cairo has argb in the uint32_t, which is bgra in byte order
-	union argb {
-		//byte order readed
-		struct {
-			uint8_t r, g, b, a;
-		} data;
-		uint32_t code;
-	};
-	//cairo alpha is pre-multiplied, we need do the same here
-	union argb pixel;
-	for (int j = 0; j < rect->h; j++)
-		for (int i = 0; i < rect->w; i++) {
-			pixel.code = *((uint32_t*)src + j * rect->w + i);
-			double alpha = pixel.data.a / 256.0;
-			*((uint32_t *)dst + (rect->y+j) * dst_width + (rect->x+i)) =
-				((uint32_t)pixel.data.a << 24) +
-				((uint32_t)(pixel.data.r * alpha) << 16) +
-				((uint32_t)(pixel.data.g * alpha) << 8) +
-				((uint32_t)(pixel.data.b * alpha));
-		}
-}
-
-struct nk_image *
+struct image_cache
 nk_wl_build_theme_images(struct taiwins_theme *theme)
 {
-	size_t nimages = theme->handle_pool.size / sizeof(uint64_t);
-	size_t context_height, context_width = 1000;
-	int row_x = 0, row_y = 0;
-	stbrp_rect *rects = malloc(sizeof(stbrp_rect) * nimages);
-	stbrp_node *nodes = malloc(sizeof(stbrp_node) * context_width + 10);
-	stbrp_context context;
-	struct nk_image *subimages;
-
-	//first pass: collects rects and decide texture size
-	for (int i = 0; i < nimages; i++) {
-		int pos;
-		int w, h, nchannels;
-		pos = *((uint64_t *)theme->handle_pool.data + i);
-		const char *path =
-			(const char *)theme->string_pool.data + pos;
-		stbi_info(path, &w, &h, &nchannels);
-		rects[i].w = w; rects[i].h = h;
-		//advance in tile. If current row still works, we go forward.
-		//otherwise, start a new row
-		row_x = (row_x + w > context_width) ?
-			w : row_x + w;
-		row_y = (row_x + w > context_width) ?
-			row_y + h : MAX(row_y, h);
-	}
-
-	context_height = row_y;
-	stbrp_init_target(&context, context_width, context_height, nodes,
-			  context_width+10);
-	stbrp_setup_allow_out_of_mem(&context, 0);
-	stbrp_pack_rects(&context, rects, nimages);
-
-	//create image data
-	unsigned char *dst = calloc(1, context_width * context_height *
-				    sizeof(uint32_t));
-	subimages = malloc(sizeof(struct nk_image) * nimages);
-	//second pass: copy images
-	for (int i = 0; i < nimages; i++) {
-	  intptr_t pos;
-	  int x, y, comp; // channels
-	  pos = *((uint64_t *)theme->handle_pool.data + i);
-	  const char *path = (const char *)theme->string_pool.data + pos;
-	  unsigned char *pixels =
-	      stbi_load(path, &x, &y, &comp, STBI_rgb_alpha);
-	  copy_as_subimage(dst, context_width, pixels, &rects[i]);
-	  stbi_image_free(pixels);
-	  subimages[i] = nk_subimage_ptr(
-	      dst, context_width, context_height,
-	      nk_rect(rects[i].x, rects[i].h, rects[i].w, rects[i].h));
-	}
-	free(nodes);
-	free(rects);
-	return subimages;
+	return image_cache_from_arrays(&theme->handle_pool,
+	                               &theme->string_pool, NULL);
 }
 
 /******************************** build themes ***********************************/

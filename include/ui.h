@@ -27,17 +27,7 @@ extern "C" {
 /////////////////////////////////Application style definition/////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 struct shm_pool;
-
 extern const struct taiwins_theme_color taiwins_dark_theme;
-
-/**
- * this function exams the theme(color and fonts are valid and do some convert)
- */
-bool tw_validate_theme(struct taiwins_theme_color *);
-
-/* return -1 if path is not long enough, even if you feed a empty string we should return a font */
-int tw_find_font_path(const char *font_name, char *path, size_t path_size);
-
 
 static inline int
 tw_font_pt2px(int pt_size, int ppi)
