@@ -89,7 +89,7 @@ struct nk_egl_backend {
 	};
 	//nuklear resources
 	struct nk_buffer cmds;	//cmd to opengl vertices
-	struct nk_draw_null_texture null;
+	struct nk_draw_null_texture *null;
 
 	unsigned char cmd_buffer[NK_EGL_CMD_SIZE];
 };
@@ -106,7 +106,7 @@ struct nk_wl_user_font {
 	int size;
 	int scale;
 	nk_rune *merged_ranges;
-	struct nk_draw_null_texture *null;
+	struct nk_draw_null_texture null;
 	struct nk_font *font;
 	struct nk_font_atlas atlas;
 	struct nk_image font_image;
@@ -172,7 +172,7 @@ nk_egl_bake_font(struct nk_wl_user_font *font,
 
 	nk_font_atlas_end(&font->atlas,
 	                  nk_handle_id(font->font_image.handle.id),
-	                  font->null);
+	                  &font->null);
 	nk_font_atlas_cleanup(&font->atlas);
 	font->user_font = font->font->handle;
 	return true;
@@ -232,7 +232,6 @@ nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 		return NULL;
 	//setup textures
 	wl_list_init(&user_font->link);
-	user_font->null = &egl_b->null;
 	user_font->size = config.pix_size;
 	user_font->scale = config.scale;
 
@@ -477,13 +476,17 @@ _nk_egl_draw_begin(struct nk_egl_backend *bkend,
 
 	vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 	elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+	//getting null texture
+	struct nk_draw_null_texture null =
+		container_of(bkend->base.fonts.next,
+		             struct nk_wl_user_font, link)->null;
 	{
 		struct nk_convert_config config;
 		nk_memset(&config, 0, sizeof(config));
 		config.vertex_layout = vertex_layout;
 		config.vertex_size = sizeof(struct nk_egl_vertex);
 		config.vertex_alignment = NK_ALIGNOF(struct nk_egl_vertex);
-		config.null = bkend->null;
+		config.null = null;
 		config.circle_segment_count = 2;;
 		config.curve_segment_count = 22;
 		config.arc_segment_count = 2;;
