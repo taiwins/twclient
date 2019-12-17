@@ -53,14 +53,14 @@ nk_wl_ft_unref(FT_Library *lib)
 		FT_Done_FreeType(NK_WL_FTLIB.ftlib);
 }
 
-struct nk_wl_user_font {
-	struct wl_list link;
+struct nk_wl_cairo_font {
+	struct nk_wl_user_font wl_font;
+
 	int size;
 	float scale;
 	FT_Face face;
 	FT_Library *ft_lib;
 	cairo_font_face_t *cairo_face;
-	struct nk_user_font nk_font;
 };
 
 
@@ -68,7 +68,7 @@ static float
 nk_wl_text_width(nk_handle handle, float height, const char *text,
                  int utf8_len)
 {
-	struct nk_wl_user_font *user_font = handle.ptr;
+	struct nk_wl_cairo_font *user_font = handle.ptr;
 	cairo_surface_t *recording = cairo_recording_surface_create(CAIRO_CONTENT_COLOR, NULL);
 	cairo_text_extents_t extents;
 	cairo_t *cr = cairo_create(recording);
@@ -95,7 +95,7 @@ nk_wl_text_width(nk_handle handle, float height, const char *text,
 
 void
 nk_wl_render_text(cairo_t *cr, const struct nk_vec2 *pos,
-                  struct nk_wl_user_font *font,
+                  struct nk_wl_cairo_font *font,
                   const char *text, const int utf8_len)
 {
 	cairo_set_font_face(cr, font->cairo_face);
@@ -137,9 +137,9 @@ nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 	if (!font_path)
 		return NULL;
 	//else, we try to creat
-	struct nk_wl_user_font *user_font =
-		malloc(sizeof(struct nk_wl_user_font));
-	wl_list_init(&user_font->link);
+	struct nk_wl_cairo_font *user_font =
+		malloc(sizeof(struct nk_wl_cairo_font));
+	wl_list_init(&user_font->wl_font.link);
 	user_font->ft_lib = nk_wl_ft_ref();
 	if (!user_font->ft_lib)
 		goto err_lib;
@@ -152,11 +152,11 @@ nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 	user_font->cairo_face = cairo_ft_font_face_create_for_ft_face(user_font->face, 0);
 	if (!user_font->cairo_face)
 		goto err_crface;
-	user_font->nk_font.height = config.pix_size;
-	user_font->nk_font.userdata.ptr = user_font;
-	user_font->nk_font.width = nk_wl_text_width;
+	user_font->wl_font.user_font.height = config.pix_size;
+	user_font->wl_font.user_font.userdata.ptr = user_font;
+	user_font->wl_font.user_font.width = nk_wl_text_width;
 	free(font_path);
-	return &user_font->nk_font;
+	return &user_font->wl_font.user_font;
 
 err_crface:
 	FT_Done_Face(user_font->face);
@@ -171,8 +171,8 @@ err_lib:
 void
 nk_wl_destroy_font(struct nk_user_font *font)
 {
-	struct nk_wl_user_font *cairo_font = font->userdata.ptr;
-	wl_list_remove(&cairo_font->link);
+	struct nk_wl_cairo_font *cairo_font = font->userdata.ptr;
+	wl_list_remove(&cairo_font->wl_font.link);
 
 	cairo_font_face_destroy(cairo_font->cairo_face);
 	FT_Done_Face(cairo_font->face);
@@ -686,7 +686,7 @@ nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
-	struct nk_wl_user_font *user_font = b->default_font->userdata.ptr;
+	struct nk_wl_cairo_font *user_font = b->default_font->userdata.ptr;
 
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, geo);
 	shm_buffer_reallocate(surf, &geo);
@@ -699,15 +699,6 @@ nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 struct nk_wl_backend *
 nk_cairo_create_bkend(void)
 {
-	struct nk_wl_font_config default_config = {
-		.name = "nerd",
-		.slant = NK_WL_SLANT_ROMAN,
-		.pix_size = 16,
-		.scale = 1,
-		.nranges = 0,
-		.ranges = NULL,
-		.TTFonly = true,
-	};
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
 	wl_list_init(&b->base.images);
 	wl_list_init(&b->base.fonts);
@@ -722,14 +713,7 @@ nk_cairo_create_bkend(void)
 void
 nk_cairo_destroy_bkend(struct nk_wl_backend *bkend)
 {
-	struct nk_wl_user_font *font, *tmp_font = NULL;
-	struct nk_wl_image *image, *tmp_img = NULL;
-	wl_list_for_each_safe(image, tmp_img, &bkend->images, link)
-		nk_wl_free_image(&image->image);
-	wl_list_for_each_safe(font, tmp_font, &bkend->fonts, link)
-		nk_wl_destroy_font(&font->nk_font);
-
-	nk_free(&bkend->ctx);
+	nk_wl_backend_cleanup(bkend);
 	//we make it here to
 	//float unused_val = nk_sin(1.0);
 	//unused_val = nk_cos(unused_val);

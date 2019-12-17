@@ -15,7 +15,20 @@
 extern "C" {
 #endif
 
-struct nk_wl_user_font;
+struct nk_wl_user_font {
+	struct wl_list link;
+	struct nk_user_font user_font;
+};
+
+static struct nk_wl_font_config default_config = {
+	.name = "sans",
+	.slant = NK_WL_SLANT_ROMAN,
+	.pix_size = 16,
+	.scale = 1,
+	.nranges = 0,
+	.ranges = NULL,
+	.TTFonly = false,
+};
 
 static char *
 nk_wl_find_font(const struct nk_wl_font_config *user_config)
