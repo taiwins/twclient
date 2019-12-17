@@ -152,7 +152,7 @@ handle_keymap(void *data, struct wl_keyboard *wl_keyboard,
 
 	if (globals->inputs.kcontext)
 		xkb_context_unref(globals->inputs.kcontext);
-	void *addr = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+	void *addr = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
 	globals->inputs.kcontext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	globals->inputs.keymap = xkb_keymap_new_from_string(globals->inputs.kcontext,
 							    (const char *)addr,
