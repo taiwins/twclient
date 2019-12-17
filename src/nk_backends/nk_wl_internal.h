@@ -243,10 +243,8 @@ nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 
 	wl_surface_set_buffer_scale(surf->wl_surface, box.s);
 
-	if (surf->wl_globals) {
+	if (surf->wl_globals)
 		nk_wl_apply_color(bkend, &surf->wl_globals->theme);
-		//TODO try to apply the font here as well.
-	}
 }
 
 static void
@@ -262,11 +260,22 @@ nk_wl_clean_app_surface(struct nk_wl_backend *bkend)
 		free(bkend->internal_clipboard);
 }
 
-static void
+static inline void
+nk_wl_release_resources(struct nk_wl_backend *bkend)
+{
+	struct nk_wl_user_font *font, *tmp_font = NULL;
+	struct nk_wl_image *image, *tmp_img = NULL;
+	wl_list_for_each_safe(image, tmp_img, &bkend->images, link)
+		nk_wl_free_image(&image->image);
+	wl_list_for_each_safe(font, tmp_font, &bkend->fonts, link)
+		nk_wl_destroy_font(&font->user_font);
+}
+
+static inline void
 nk_wl_backend_cleanup(struct nk_wl_backend *bkend)
 {
-	/* struct nk_image *image = NULL; */
-	/* struct nk_user_font *user_font = NULL; */
+	nk_wl_release_resources(bkend);
+	nk_buffer_free(&bkend->cmds);
 	nk_free(&bkend->ctx);
 }
 

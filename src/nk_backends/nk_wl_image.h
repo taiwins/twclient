@@ -20,7 +20,7 @@ struct nk_wl_image {
 #if defined (NK_EGL_BACKEND)
 
 static struct nk_image
-nk_wl_to_gpu_image(const struct nk_image *cpu_image);
+nk_wl_to_gpu_image(const struct nk_image *cpu_image, struct nk_wl_backend *b);
 
 static void
 nk_wl_free_gpu_image(const struct nk_image *gpu_image);
@@ -93,7 +93,7 @@ nk_wl_load_image(const char *path, enum wl_shm_format format,
 				nk_rect(0,0, width, height));
 
 #if defined (NK_EGL_BACKEND)
-	image->image = nk_wl_to_gpu_image(&image->image);
+	image->image = nk_wl_to_gpu_image(&image->image, b);
 #endif
 	wl_list_insert(&b->images, &image->link);
 	return &image->image;

@@ -94,172 +94,8 @@ struct nk_egl_backend {
 	unsigned char cmd_buffer[NK_EGL_CMD_SIZE];
 };
 
-
-///////////////////////////////////////////////////////////////////
-//////////////////////////// FONT /////////////////////////////////
-///////////////////////////////////////////////////////////////////
-
-static const nk_rune basic_range[] = {0x0020, 0x00ff, 0};
-
-struct nk_wl_user_font {
-	struct wl_list link;
-	int size;
-	int scale;
-	nk_rune *merged_ranges;
-	struct nk_draw_null_texture null;
-	struct nk_font *font;
-	struct nk_font_atlas atlas;
-	struct nk_image font_image;
-	struct nk_user_font user_font;
-
-};
-
-static struct nk_image
-nk_wl_to_gpu_image(const struct nk_image *cpu_image)
-{
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-	             (GLsizei)cpu_image->w, (GLsizei)cpu_image->h, 0,
-	             GL_RGBA, GL_UNSIGNED_BYTE, cpu_image->handle.ptr);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	return nk_subimage_id(texture, cpu_image->w, cpu_image->h,
-	                      nk_rect(cpu_image->region[0],
-	                              cpu_image->region[1],
-	                              cpu_image->region[2],
-	                              cpu_image->region[2]));
-}
-
-static void
-nk_wl_free_gpu_image(const struct nk_image *gpu_image)
-{
-	GLuint handle = gpu_image->handle.id;
-	glDeleteTextures(1, &handle);
-}
-
-static bool
-nk_egl_bake_font(struct nk_wl_user_font *font,
-                 const struct nk_wl_font_config *config,
-                 const char *path)
-{
-	int atlas_width, atlas_height;
-	const void *image_data;
-
-	struct nk_font_config cfg =
-		nk_font_config(config->pix_size * config->scale);
-	cfg.range = font->merged_ranges;
-	cfg.merge_mode = nk_false;
-
-	nk_font_atlas_init_default(&font->atlas);
-	nk_font_atlas_begin(&font->atlas);
-	font->font = nk_font_atlas_add_from_file(&font->atlas,
-	                                         path,
-	                                         config->pix_size *
-	                                         config->scale,
-	                                         &cfg);
-	image_data = nk_font_atlas_bake(&font->atlas,
-	                                &atlas_width,
-	                                &atlas_height,
-	                                NK_FONT_ATLAS_RGBA32);
-	font->font_image = nk_subimage_ptr(
-		(void *)image_data,
-		atlas_width, atlas_height,
-		nk_rect(0, 0, atlas_width, atlas_height));
-	font->font_image = nk_wl_to_gpu_image(&font->font_image);
-
-	nk_font_atlas_end(&font->atlas,
-	                  nk_handle_id(font->font_image.handle.id),
-	                  &font->null);
-	nk_font_atlas_cleanup(&font->atlas);
-	font->user_font = font->font->handle;
-	return true;
-}
-
-static bool
-nk_egl_font_cal_ranges(struct nk_wl_user_font *font,
-                       const struct nk_wl_font_config *config)
-{
-	int total_range = 0;
-	//calculate ranges
-	for (int i = 0; i < config->nranges; i++)
-		total_range += nk_range_count(config->ranges[i]);
-	total_range = 2 * total_range + 1;
-
-	font->merged_ranges = malloc(sizeof(nk_rune) * total_range);
-	if (!font->merged_ranges)
-		return false;
-	//create the ranges
-	memcpy(font->merged_ranges, config->ranges[0],
-	       sizeof(nk_rune) * (2 * nk_range_count(config->ranges[0]) + 1));
-	//additional range
-	for (int i = 1; i < config->nranges; i++)
-		merge_unicode_range(font->merged_ranges, config->ranges[i],
-		                    font->merged_ranges);
-	return true;
-}
-
-NK_API struct nk_user_font *
-nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
-{
-	char *font_path;
-	struct nk_egl_backend *egl_b =
-		container_of(b, struct nk_egl_backend, base);
-	const nk_rune *default_ranges[] = {(const nk_rune *)basic_range};
-
-	//make current
-	if (!egl_b->env.egl_context)
-		return NULL;
-	if (!config.name)
-		config.name = "Vera";
-	if (!config.pix_size)
-		config.pix_size = 16;
-	if (!config.scale)
-		config.scale = 1;
-	if (!config.ranges) {
-		config.nranges = 1;
-		config.ranges = default_ranges;
-	}
-	config.TTFonly = true;
-	if ((font_path = nk_wl_find_font(&config)) == NULL)
-	    return NULL;
-
-	struct nk_wl_user_font *user_font =
-		malloc(sizeof(struct nk_wl_user_font));
-	if (!user_font)
-		return NULL;
-	//setup textures
-	wl_list_init(&user_font->link);
-	user_font->size = config.pix_size;
-	user_font->scale = config.scale;
-
-	if (!nk_egl_font_cal_ranges(user_font, &config))
-		goto err_range;
-
-	if (!nk_egl_bake_font(user_font, &config, font_path))
-		goto err_bake;
-	wl_list_insert(&b->fonts, &user_font->link);
-	return &user_font->user_font;
-err_bake:
-	free(user_font->merged_ranges);
-err_range:
-	free(user_font);
-	return NULL;
-}
-
-NK_API void
-nk_wl_destroy_font(struct nk_user_font *font)
-{
-	//this is definitly not the correct way to do it. As nk_font itself
-	//already has user_font
-	struct nk_wl_user_font *user_font = font->userdata.ptr;
-	wl_list_remove(&user_font->link);
-	free(user_font->merged_ranges);
-	nk_font_atlas_clear(&user_font->atlas);
-	nk_wl_free_gpu_image(&user_font->font_image);
-}
+static const struct nk_egl_backend *CURRENT_CONTEXT = NULL;
+static EGLSurface CURRENT_SURFACE = NULL;
 
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////// egl /////////////////////////////////
@@ -268,30 +104,26 @@ nk_wl_destroy_font(struct nk_user_font *font)
 static inline bool
 is_surfless_supported(struct nk_egl_backend *bkend)
 {
-	const char *egl_extensions =  eglQueryString(bkend->env.egl_display, EGL_EXTENSIONS);
-	//nvidia eglcontext does not bind to different surface with same context
-	const char *egl_vendor = eglQueryString(bkend->env.egl_display, EGL_VENDOR);
-
+	const char *egl_extensions =
+		eglQueryString(bkend->env.egl_display, EGL_EXTENSIONS);
+	//nvidia eglcontext used to have problems
 	return (strstr(egl_extensions, "EGL_KHR_create_context") != NULL &&
-		strstr(egl_extensions, "EGL_KHR_surfaceless_context") != NULL &&
-		strstr(egl_vendor, "NVIDIA") == NULL);
+	        strstr(egl_extensions, "EGL_KHR_surfaceless_context") != NULL);
 }
 
-static inline void
-assign_egl_surface(EGLSurface eglsurface, const struct egl_env *env)
+static inline bool
+make_current(struct nk_egl_backend *bkend, EGLSurface eglSurface)
 {
-	assert(eglsurface);
-	//TODO on Nvidia driver, I am getting GL_INVALID_OPERATION on this, but
-	//eglMakeCurrent succeed, a hack to make Nvidia happy
-	EGLint egl_error = eglGetError();
-	/* printf("egl error: %x\n", egl_error); */
-	assert(eglMakeCurrent(env->egl_display, eglsurface,
-			      eglsurface, env->egl_context));
-	egl_error = eglGetError();
-	(void)egl_error;
-	/* printf("egl error: %x\n", egl_error); */
-	/* glViewport(0, 0, app_surface->w * app_surface, app_surface->h); */
-	/* glScissor(0, 0, app_surface->w, app_surface->h); */
+	if (eglSurface == CURRENT_SURFACE &&
+	    bkend == CURRENT_CONTEXT)
+		return true;
+	struct egl_env *env = &bkend->env;
+	assert(eglMakeCurrent(env->egl_display,
+	                      eglSurface, eglSurface,
+	                      env->egl_context));
+	CURRENT_CONTEXT = bkend;
+	CURRENT_SURFACE = eglSurface;
+	return true;
 }
 
 static bool
@@ -302,16 +134,7 @@ compile_backend(struct nk_egl_backend *bkend, EGLSurface eglsurface)
 
 	GLint status, loglen;
 	GLsizei stride;
-	struct egl_env *env = &bkend->env;
-	//part 0) testing the extension
-	/* assign_egl_surface(app_surface, bkend->env); */
-	//maybe I should try this on new driver
-	if (is_surfless_supported(bkend)) {
-		assert(eglMakeCurrent(env->egl_display,
-				      EGL_NO_SURFACE, EGL_NO_SURFACE,
-				      env->egl_context));
-	} else
-		assign_egl_surface(eglsurface, env);
+	make_current(bkend, eglsurface);
 
 	//////////////////// part 1) OpenGL code
 	static const GLchar *vertex_shader =
@@ -398,7 +221,7 @@ compile_backend(struct nk_egl_backend *bkend, EGLSurface eglsurface)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glUseProgram(0);
-	///////////////////////////////////
+
 	return true;
 }
 
@@ -421,6 +244,180 @@ release_backend(struct nk_egl_backend *bkend)
 		eglMakeCurrent(bkend->env.egl_display, NULL, NULL, NULL);
 		bkend->compiled = false;
 	}
+}
+
+///////////////////////////////////////////////////////////////////
+/////////////////////////// IMAGE /////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+static struct nk_image
+nk_wl_to_gpu_image(const struct nk_image *cpu_image, struct nk_wl_backend *b)
+{
+	struct nk_egl_backend *egl_b =
+		container_of(b, struct nk_egl_backend, base);
+	make_current(egl_b, EGL_NO_SURFACE);
+
+	GLuint texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+	             (GLsizei)cpu_image->w, (GLsizei)cpu_image->h, 0,
+	             GL_RGBA, GL_UNSIGNED_BYTE, cpu_image->handle.ptr);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	return nk_subimage_id(texture, cpu_image->w, cpu_image->h,
+	                      nk_rect(cpu_image->region[0],
+	                              cpu_image->region[1],
+	                              cpu_image->region[2],
+	                              cpu_image->region[2]));
+}
+
+static void
+nk_wl_free_gpu_image(const struct nk_image *gpu_image)
+{
+	GLuint handle = gpu_image->handle.id;
+	glDeleteTextures(1, &handle);
+}
+
+///////////////////////////////////////////////////////////////////
+//////////////////////////// FONT /////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+static const nk_rune basic_range[] = {0x0020, 0x00ff, 0};
+
+struct nk_wl_egl_font {
+	struct nk_wl_user_font wl_font;
+
+	int size;
+	int scale;
+	nk_rune *merged_ranges;
+	struct nk_draw_null_texture null;
+	struct nk_font *font;
+	struct nk_font_atlas atlas;
+	struct nk_image font_image;
+};
+
+static bool
+nk_egl_bake_font(struct nk_wl_egl_font *font,
+                 struct nk_wl_backend *b,
+                 const struct nk_wl_font_config *config,
+                 const char *path)
+{
+	int atlas_width, atlas_height;
+	const void *image_data;
+
+	struct nk_font_config cfg =
+		nk_font_config(config->pix_size * config->scale);
+	cfg.range = font->merged_ranges;
+	cfg.merge_mode = nk_false;
+
+	nk_font_atlas_init_default(&font->atlas);
+	nk_font_atlas_begin(&font->atlas);
+	font->font = nk_font_atlas_add_from_file(&font->atlas,
+	                                         path,
+	                                         config->pix_size *
+	                                         config->scale,
+	                                         &cfg);
+	image_data = nk_font_atlas_bake(&font->atlas,
+	                                &atlas_width,
+	                                &atlas_height,
+	                                NK_FONT_ATLAS_RGBA32);
+	font->font_image = nk_subimage_ptr(
+		(void *)image_data,
+		atlas_width, atlas_height,
+		nk_rect(0, 0, atlas_width, atlas_height));
+	font->font_image = nk_wl_to_gpu_image(&font->font_image, b);
+
+	nk_font_atlas_end(&font->atlas,
+	                  nk_handle_id(font->font_image.handle.id),
+	                  &font->null);
+	nk_font_atlas_cleanup(&font->atlas);
+	font->wl_font.user_font = font->font->handle;
+	return true;
+}
+
+static bool
+nk_egl_font_cal_ranges(struct nk_wl_egl_font *font,
+                       const struct nk_wl_font_config *config)
+{
+	int total_range = 0;
+	//calculate ranges
+	for (int i = 0; i < config->nranges; i++)
+		total_range += nk_range_count(config->ranges[i]);
+	total_range = 2 * total_range + 1;
+
+	font->merged_ranges = malloc(sizeof(nk_rune) * total_range);
+	if (!font->merged_ranges)
+		return false;
+	//create the ranges
+	memcpy(font->merged_ranges, config->ranges[0],
+	       sizeof(nk_rune) * (2 * nk_range_count(config->ranges[0]) + 1));
+	//additional range
+	for (int i = 1; i < config->nranges; i++)
+		merge_unicode_range(font->merged_ranges, config->ranges[i],
+		                    font->merged_ranges);
+	return true;
+}
+
+NK_API struct nk_user_font *
+nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
+{
+	char *font_path;
+	struct nk_egl_backend *egl_b =
+		container_of(b, struct nk_egl_backend, base);
+	const nk_rune *default_ranges[] = {(const nk_rune *)basic_range};
+	//make current
+	if (!egl_b->env.egl_context)
+		return NULL;
+	if (!config.name)
+		config.name = "Vera";
+	if (!config.pix_size)
+		config.pix_size = 16;
+	if (!config.scale)
+		config.scale = 1;
+	if (!config.ranges) {
+		config.nranges = 1;
+		config.ranges = default_ranges;
+	}
+	config.TTFonly = true;
+	if ((font_path = nk_wl_find_font(&config)) == NULL)
+	    return NULL;
+
+	struct nk_wl_egl_font *user_font =
+		malloc(sizeof(struct nk_wl_egl_font));
+	if (!user_font)
+		return NULL;
+	//setup textures
+	wl_list_init(&(user_font->wl_font.link));
+	user_font->size = config.pix_size;
+	user_font->scale = config.scale;
+
+	if (!nk_egl_font_cal_ranges(user_font, &config))
+		goto err_range;
+
+	if (!nk_egl_bake_font(user_font, b, &config, font_path))
+		goto err_bake;
+	wl_list_insert(&b->fonts, &user_font->wl_font.link);
+	return &user_font->wl_font.user_font;
+err_bake:
+	free(user_font->merged_ranges);
+err_range:
+	free(user_font);
+	return NULL;
+}
+
+NK_API void
+nk_wl_destroy_font(struct nk_user_font *font)
+{
+	struct nk_wl_user_font *wl_font =
+		container_of(font, struct nk_wl_user_font, user_font);
+	struct nk_wl_egl_font *user_font =
+		container_of(wl_font, struct nk_wl_egl_font, wl_font);
+	wl_list_remove(&user_font->wl_font.link);
+	free(user_font->merged_ranges);
+	nk_font_atlas_clear(&user_font->atlas);
+	nk_wl_free_gpu_image(&user_font->font_image);
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -477,9 +474,12 @@ _nk_egl_draw_begin(struct nk_egl_backend *bkend,
 	vertices = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
 	elements = glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
 	//getting null texture
-	struct nk_draw_null_texture null =
+	struct nk_wl_user_font *wl_font =
 		container_of(bkend->base.fonts.next,
-		             struct nk_wl_user_font, link)->null;
+		             struct nk_wl_user_font, link);
+	struct nk_wl_egl_font *user_font =
+		container_of(wl_font, struct nk_wl_egl_font, wl_font);
+	struct nk_draw_null_texture null = user_font->null;
 	{
 		struct nk_convert_config config;
 		nk_memset(&config, 0, sizeof(config));
@@ -544,7 +544,6 @@ nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 	tw_event_queue_add_idle(&surf->wl_globals->event_queue, &re);
 }
 
-
 static void
 nk_wl_render(struct nk_wl_backend *b)
 {
@@ -558,9 +557,7 @@ nk_wl_render(struct nk_wl_backend *b)
 
 	if (nk_wl_maybe_skip(b))
 		return;
-	//make current to current
-	eglMakeCurrent(env->egl_display, app->eglsurface,
-		       app->eglsurface, env->egl_context);
+	make_current(bkend, app->eglsurface);
 	glViewport(0, 0, width * scale, height * scale);
 
 	const struct nk_draw_command *cmd;
@@ -602,46 +599,43 @@ nk_egl_destroy_app_surface(struct app_surface *app)
 {
 	struct nk_wl_backend *b = app->user_data;
 	struct nk_egl_backend *bkend = container_of(b, struct nk_egl_backend, base);
-	if (!is_surfless_supported(bkend))
+	if (!is_surfless_supported(bkend)) {
 		release_backend(bkend);
+		nk_wl_release_resources(&bkend->base);
+	}
 	app_surface_clean_egl(app, &bkend->env);
 	nk_wl_clean_app_surface(b);
 }
 
-
 /********************* exposed APIS *************************/
-
-/* this function is expected to be called every time when you want to open a surface.
- * the backend is occupied entirely by this app_surface through his lifetime */
 void
 nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 			nk_wl_drawcall_t draw_cb, const struct bbox box)
 
 {
-	struct nk_egl_backend *b = container_of(bkend, struct nk_egl_backend, base);
+	struct nk_egl_backend *b =
+		container_of(bkend, struct nk_egl_backend, base);
+
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, box);
 	surf->destroy = nk_egl_destroy_app_surface;
-	//assume it is compiled
 	app_surface_init_egl(surf, &b->env);
-	//font is not initialized here
-	b->compiled = compile_backend(b, surf->eglsurface);
-	assign_egl_surface(surf->eglsurface, &b->env);
+
+	if (!is_surfless_supported(b)) {
+		b->compiled = compile_backend(b, surf->eglsurface);
+		nk_wl_release_resources(bkend);
+		struct nk_user_font *user_font =
+			nk_wl_new_font(default_config, bkend);
+		nk_style_set_font(&bkend->ctx, user_font);
+	}
 }
 
 struct nk_wl_backend*
 nk_egl_create_backend(const struct wl_display *display)
 {
-	struct nk_wl_font_config default_config = {
-		.name = "nerd",
-		.slant = NK_WL_SLANT_ROMAN,
-		.pix_size = 16,
-		.scale = 1,
-		.nranges = 0,
-		.ranges = NULL,
-		.TTFonly = true,
-	};
 	//we do not have any font here,
-	struct nk_egl_backend *bkend = (struct nk_egl_backend *)calloc(1, sizeof(*bkend));
+	struct nk_egl_backend *bkend = calloc(1, sizeof(*bkend));
+	struct nk_user_font *default_font = NULL;
+
 	wl_list_init(&bkend->base.fonts);
 	wl_list_init(&bkend->base.images);
 
@@ -650,11 +644,15 @@ nk_egl_create_backend(const struct wl_display *display)
 	bkend->base.row_size = 16;
 	bkend->compiled = false;
 	//default font
-	struct nk_user_font *default_font =
-		nk_wl_new_font(default_config, &bkend->base);
+	if (is_surfless_supported(bkend)) {
+		bkend->compiled = compile_backend(bkend, EGL_NO_SURFACE);
+		default_font =
+			nk_wl_new_font(default_config, &bkend->base);
+	}
 
 	nk_init_default(&bkend->base.ctx, default_font);
-	nk_buffer_init_fixed(&bkend->cmds, bkend->cmd_buffer, sizeof(bkend->cmd_buffer));
+	nk_buffer_init_fixed(&bkend->cmds, bkend->cmd_buffer,
+	                     sizeof(bkend->cmd_buffer));
 	nk_buffer_clear(&bkend->cmds);
 
 	return &bkend->base;
@@ -666,22 +664,10 @@ nk_egl_destroy_backend(struct nk_wl_backend *b)
 	struct nk_egl_backend *bkend =
 		container_of(b, struct nk_egl_backend, base);
 	release_backend(bkend);
-	struct nk_wl_user_font *font, *tmp_font = NULL;
-	struct nk_wl_image *image, *tmp_img = NULL;
-	wl_list_for_each_safe(image, tmp_img, &b->images, link)
-		nk_wl_free_image(&image->image);
-	wl_list_for_each_safe(font, tmp_font, &b->fonts, link)
-		nk_wl_destroy_font(&font->user_font);
-
+	nk_wl_backend_cleanup(b);
 	egl_env_end(&bkend->env);
-	nk_free(&bkend->base.ctx);
-	nk_buffer_free(&bkend->cmds);
 	free(bkend);
-
 }
-
-//this need to include in a c file and we include it from there
-
 
 #ifdef __DEBUG
 /*
