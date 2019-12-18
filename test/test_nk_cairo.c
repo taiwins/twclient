@@ -21,6 +21,7 @@ static struct application {
 	struct wl_shell_surface *shell_surface;
 	bool done;
 	struct nk_image image;
+	struct nk_user_font *user_font;
 } App;
 
 
@@ -63,6 +64,8 @@ sample_widget(struct nk_context *ctx, float width, float height, struct app_surf
 	int unicodes[] = {0xf1c1, 'C', 0xf1c2, 0xf1c3, 0xf1c4, 0xf1c5};
 	char strings[256];
 	int count = 0;
+
+	nk_style_set_font(ctx, App.user_font);
 
 	if (!init_text_edit) {
 		init_text_edit = true;
@@ -153,6 +156,16 @@ single_widget(struct nk_context *ctx, float width, float height, struct app_surf
 
 int main(int argc, char *argv[])
 {
+        const struct nk_wl_font_config config = {
+	        .name = "icons",
+	        .slant = NK_WL_SLANT_ROMAN,
+	        .pix_size = 16,
+	        .scale = 1,
+	        .TTFonly = true,
+	        .nranges = 0,
+	        .ranges = NULL,
+        };
+
 	struct wl_display *wl_display = wl_display_connect(NULL);
 	if (!wl_display)
 		fprintf(stderr, "okay, I don't even have wayland display\n");
@@ -162,8 +175,6 @@ int main(int argc, char *argv[])
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);
 	App.done = false;
-	/* App.image = nk_wl_load_image(argv[1]); */
-
 
 	wl_display_dispatch(wl_display);
 	wl_display_roundtrip(wl_display);
@@ -179,7 +190,8 @@ int main(int argc, char *argv[])
 	App.shell_surface = shell_surface;
 	App.surface.known_mimes[MIME_TYPE_TEXT] = "text/";
 	App.bkend = nk_cairo_create_bkend();
-	//the drawing is easy, but input handler is not
+	App.user_font = nk_wl_new_font(config, App.bkend);
+
 	nk_cairo_impl_app_surface(&App.surface, App.bkend, sample_widget,
 				  make_bbox_origin(200, 400, 2));
 
