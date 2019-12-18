@@ -454,7 +454,6 @@ void
 wl_globals_release(struct wl_globals *globals)
 {
 	wl_data_device_release(globals->inputs.wl_data_device);
-	wl_data_device_destroy(globals->inputs.wl_data_device);
 	seat_destroy(globals->inputs.wl_seat, globals);
 	wl_shm_destroy(globals->shm);
 	wl_compositor_destroy(globals->compositor);

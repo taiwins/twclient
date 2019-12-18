@@ -24,11 +24,13 @@ extern "C" {
 #endif
 
 #if defined(__GNUC__)
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wunused-function"
 #elif defined (__clang__)
+#pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-but-set-variable"
-#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wunused-function"
 #endif
 
 //this will make our struct various size, so lets put the buffer in the end
@@ -81,7 +83,6 @@ struct nk_wl_backend {
 		struct app_surface *app_surface;
 		nk_wl_drawcall_t frame;
 		nk_wl_postcall_t post_cb;
-		struct wl_data_source *copy_source;
 		char *internal_clipboard;
 
 		xkb_keysym_t ckey; //cleaned up every frame
@@ -333,6 +334,12 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app, nk_wl_draw
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->cbtn = -1;
 }
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#elif defined (__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #ifdef __cplusplus
 }

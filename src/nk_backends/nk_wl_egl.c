@@ -385,7 +385,7 @@ nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 	struct nk_wl_egl_font *user_font =
 		malloc(sizeof(struct nk_wl_egl_font));
 	if (!user_font)
-		return NULL;
+		goto err_font;
 	//setup textures
 	wl_list_init(&(user_font->wl_font.link));
 	user_font->size = config.pix_size;
@@ -397,11 +397,14 @@ nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 	if (!nk_egl_bake_font(user_font, b, &config, font_path))
 		goto err_bake;
 	wl_list_insert(&b->fonts, &user_font->wl_font.link);
+	free(font_path);
 	return &user_font->wl_font.user_font;
 err_bake:
 	free(user_font->merged_ranges);
 err_range:
 	free(user_font);
+err_font:
+	free(font_path);
 	return NULL;
 }
 
@@ -416,6 +419,7 @@ nk_wl_destroy_font(struct nk_user_font *font)
 	free(user_font->merged_ranges);
 	nk_font_atlas_clear(&user_font->atlas);
 	nk_wl_free_gpu_image(&user_font->font_image);
+	free(user_font);
 }
 
 ///////////////////////////////////////////////////////////////////
