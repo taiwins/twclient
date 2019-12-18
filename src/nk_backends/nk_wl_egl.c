@@ -284,8 +284,6 @@ nk_wl_free_gpu_image(const struct nk_image *gpu_image)
 //////////////////////////// FONT /////////////////////////////////
 ///////////////////////////////////////////////////////////////////
 
-static const nk_rune basic_range[] = {0x0020, 0x00ff, 0};
-
 struct nk_wl_egl_font {
 	struct nk_wl_user_font wl_font;
 
@@ -366,7 +364,7 @@ nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 	char *font_path;
 	struct nk_egl_backend *egl_b =
 		container_of(b, struct nk_egl_backend, base);
-	const nk_rune *default_ranges[] = {(const nk_rune *)basic_range};
+	const nk_rune *default_ranges[] = {nk_font_default_glyph_ranges()};
 	//make current
 	if (!egl_b->env.egl_context)
 		return NULL;
