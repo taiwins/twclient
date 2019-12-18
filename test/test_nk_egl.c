@@ -25,6 +25,7 @@ static struct application {
 	struct wl_shell_surface *shell_surface;
 	bool done;
 	struct nk_image image;
+	struct nk_user_font *user_font;
 } App;
 
 static void
@@ -81,18 +82,11 @@ load_texture(const char *filename)
 static void
 sample_widget(struct nk_context *ctx, float width, float height, struct app_surface *data)
 {
-	//struct application *app = &App;
-	/* //just draw the image */
-	/* struct nk_command_buffer *canvas = nk_window_get_canvas(ctx); */
-	/* struct nk_rect total_space = nk_window_get_content_region(ctx); */
-	/* nk_draw_image(canvas, total_space, &app->image, nk_rgba(255, 255, 255, 255)); */
-	/* return; */
+	struct application *app = &App;
+	nk_style_set_font(ctx, app->user_font);
 
-	//enum nk_buttons btn;
-	//uint32_t sx, sy;
-	//TODO, change the draw function to app->draw_widget(app);
 	enum {EASY, HARD};
-	//static int op = EASY;
+
 	static struct nk_text_edit text_edit;
 	static bool inanimation = false;
 	static bool init_text_edit = false;
@@ -147,9 +141,25 @@ int main(int argc, char *argv[])
 	/* fprintf(log, "%d\n", fd); */
 	/* fflush(log); */
 	/* fclose(log); */
+	const nk_rune basic_range[] = {0x0020, 0x00ff, 0};
+	const nk_rune pua_range[] = {0xe000, 0xf8ff, 0};
+	const nk_rune *ranges[] = {
+		basic_range,
+		pua_range,
+	};
 
-	struct wl_display *wl_display = wl_display_connect(NULL);
-	if (!wl_display)
+        const struct nk_wl_font_config config = {
+	        .name = "icons",
+	        .slant = NK_WL_SLANT_ROMAN,
+	        .pix_size = 16,
+	        .scale = 1,
+	        .TTFonly = true,
+	        .nranges = 2,
+	        .ranges = (const nk_rune **)ranges,
+        };
+
+        struct wl_display *wl_display = wl_display_connect(NULL);
+        if (!wl_display)
 		fprintf(stderr, "okay, I don't even have wayland display\n");
 	wl_globals_init(&App.global, wl_display);
 	App.global.theme = taiwins_dark_theme;
@@ -171,13 +181,12 @@ int main(int argc, char *argv[])
 	App.shell_surface = shell_surface;
 
 	App.bkend = nk_egl_create_backend(wl_display);
+	App.user_font = nk_wl_new_font(config, App.bkend);
 
 	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, make_bbox_origin(200, 400, 2));
 
-	/* App.image = load_texture(argv[1]); */
 	app_surface_frame(&App.surface, false);
 
-	fprintf(stdout, "here\n");
 	wl_globals_dispatch_event_queue(&App.global);
 
 	wl_shell_surface_destroy(shell_surface);
