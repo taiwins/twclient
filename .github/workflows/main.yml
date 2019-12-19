@@ -11,11 +11,7 @@ jobs:
     - uses: actions/checkout@v1
     - name: submodule
       run: git submodule update --init --recursive
-    - name: docker env
+    - name: run with docker env
       uses: docker://archlinux/base:latest
-    - name: env
-      run: |
-        sudo pacman -Syu --needed --noconfirm weston libxkbcommon pixman mesa wayland libglvnd wayland-protocols fontconfig freetype2
-        sudo pacman -Syu --needed --noconform cmake make gcc clang musl git meson ninja rsync
-    - name: build
-      run: mkdir -p build && cd build && cmake .. && make 
+      with:
+        entrypoint: ./.github/actions/entrypoint.sh
