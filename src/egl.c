@@ -23,10 +23,6 @@
 #include <assert.h>
 #include <string.h>
 
-#ifdef _WITH_NVIDIA
-#include <eglexternalplatform.h>
-#endif
-
 #ifndef GL_GLEXT_PROTOTYPES
 #define GL_GLEXT_PROTOTYPES
 #endif
