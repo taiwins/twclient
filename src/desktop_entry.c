@@ -73,7 +73,8 @@ xdg_app_entry_from_file(const char *path, struct xdg_app_entry *entry)
 
 {
 	FILE *file = NULL;
-	size_t len = 0, allocated = 1000;
+	ssize_t len = 0;
+	size_t allocated = 1000;
 	char *rawline = malloc(allocated);
 	enum xdg_app_section_type curr_section = XDG_APP_SEC_UNKNOWN;
 

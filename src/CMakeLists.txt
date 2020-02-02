@@ -49,6 +49,7 @@ target_include_directories(twclient-icons PUBLIC
 target_link_libraries(twclient-icons
   Cairo::Cairo
   LibRSVG::LibRSVG
+  stb
   ctypes
   m
   )
