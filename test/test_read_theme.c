@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 		&themedir.apps, &themedir.mimes, &themedir.devices,
 		&themedir.places, &themedir.status
 	};
-	for (int i = 0; i < NUMOF(to_searches); i++) {
+	for (unsigned i = 0; i < NUMOF(to_searches); i++) {
 		wl_array_init(&string_pool);
 		wl_array_init(&handle_pool);
 		search_icon_imgs(&handle_pool, &string_pool,

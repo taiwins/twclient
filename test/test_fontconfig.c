@@ -42,9 +42,9 @@ string_from_fc_weight(int weight)
 static inline nk_rune*
 charset_point(vector_t *charset, uint32_t cursor)
 {
-	if (charset->len > cursor)
+	if ((unsigned)charset->len > cursor)
 		return vector_at(charset, cursor);
-	assert(cursor == charset->len);
+	assert(cursor == (unsigned)charset->len);
 	return vector_newelem(charset);
 }
 

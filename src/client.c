@@ -371,7 +371,7 @@ static struct wl_data_device_listener data_device_listener = {
 static int
 data_write_finished(struct tw_event *event, int fd)
 {
-	size_t offset = 0, size = 0;
+	ssize_t offset = 0, size = 0;
 	struct wl_globals *globals = event->data;
 	struct anonymous_buff_t buffer;
 	struct wl_data_offer *offer = globals->inputs.wl_data_offer;

@@ -51,7 +51,7 @@ struct icon_dir {
 };
 
 
-static void inline
+static inline void
 copy_icon_dir(struct icon_dir *dir, const uint32_t size, const char *path)
 {
 	strcpy(dir->dir, path);
@@ -222,7 +222,8 @@ search_icon_dirs(struct icontheme_dir *output,
 {
 	struct size_state state = {{0}, -1, -1, -1, 1};
 	char theme_file[1000];
-	size_t allocated = 1000, len = 0;
+	size_t allocated = 1000;
+	ssize_t len = 0;
 	DIR *dir = opendir(output->theme_dir);
 	if (!dir)
 		return;
