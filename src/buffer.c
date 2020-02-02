@@ -118,7 +118,7 @@ shm_pool_alloc_buffer(struct shm_pool *pool, size_t width, size_t height)
 	size_t stride = stride_of_wl_shm_format(pool->format);
 	size_t size = stride * height * width;
 
-	size_t origin_size = pool->file.size;
+	int origin_size = pool->file.size;
 	off_t offset = anonymous_buff_alloc_by_offset(&pool->file, size);
 	if (pool->file.size > origin_size)
 		shm_pool_resize(pool, pool->file.size);

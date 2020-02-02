@@ -146,7 +146,7 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 	wl_array_init(&cache.strings);
 	wl_array_init(&cache.image_boxes);
 	//first pass: loading decides atlas size
-	for (int i = 0; i < nimages; i++) {
+	for (unsigned i = 0; i < nimages; i++) {
 		int w, h, nchannels;
 		off_t handle = *((uint64_t *)handle_array->data + i);
 		const char *path = (char *)str_array->data + handle;
@@ -155,9 +155,9 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 		rects[i].h = h;
 		//advance in tile. If current row still works, we go forward.
 		//otherwise, start a new row
-		row_x = (row_x + w > context_width) ?
+		row_x = (row_x + w > (signed)context_width) ?
 			w : row_x + w;
-		row_y = (row_x + w > context_width) ?
+		row_y = (row_x + w > (signed)context_width) ?
 			row_y + h : MAX(row_y, h);
 	}
 	context_height = row_y;
@@ -174,7 +174,7 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 	cr = cairo_create(atlas_surface);
 	cache.dimension = make_bbox_origin(context_width, context_height, 1);
 	//pass 2 copy images
-	for (int i = 0; i < nimages; i++) {
+	for (unsigned i = 0; i < nimages; i++) {
 		if (rects[i].was_packed == 0)
 			continue;
 		int w, h, nchannels; // channels
