@@ -33,16 +33,16 @@
 extern "C" {
 #endif
 
-struct egl_env {
+struct tw_egl_env {
 	EGLDisplay egl_display;
 	EGLContext egl_context;
 	struct wl_display *wl_display;
 	EGLConfig config;
 };
 
-bool egl_env_init(struct egl_env *env, const struct wl_display *disp);
-bool egl_env_init_shared(struct egl_env *this, const struct egl_env *another);
-void egl_env_end(struct egl_env *env);
+bool tw_egl_env_init(struct tw_egl_env *env, const struct wl_display *disp);
+bool tw_egl_env_init_shared(struct tw_egl_env *this, const struct tw_egl_env *another);
+void tw_egl_env_end(struct tw_egl_env *env);
 
 #ifdef __cplusplus
 }

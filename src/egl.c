@@ -87,7 +87,7 @@ extern EGLBoolean loadEGLExternalPlatform(int major, int minor,
 #endif
 
 bool
-egl_env_init(struct egl_env *env, const struct wl_display *d)
+tw_egl_env_init(struct tw_egl_env *env, const struct wl_display *d)
 {
 #ifndef EGL_VERSION_1_5
 	fprintf(stderr, "the feature requires EGL 1.5 and it is not supported\n");
@@ -122,7 +122,7 @@ egl_env_init(struct egl_env *env, const struct wl_display *d)
 }
 
 bool
-egl_env_init_shared(struct egl_env *this, const struct egl_env *another)
+tw_egl_env_init_shared(struct tw_egl_env *this, const struct tw_egl_env *another)
 {
 	this->wl_display = another->wl_display;
 	this->egl_display = another->egl_display;
@@ -137,7 +137,7 @@ egl_env_init_shared(struct egl_env *this, const struct egl_env *another)
 
 
 void
-egl_env_end(struct egl_env *env)
+tw_egl_env_end(struct tw_egl_env *env)
 {
 	eglDestroyContext(env->egl_display, env->egl_context);
 	eglTerminate(env->egl_display);

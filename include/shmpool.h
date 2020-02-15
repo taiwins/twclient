@@ -22,6 +22,8 @@
 #ifndef TW_SHMPOOL_H
 #define TW_SHMPOOL_H
 
+#include <stdbool.h>
+#include <stdint.h>
 
 #include <wayland-client.h>
 #include <wayland-cursor.h>
@@ -40,7 +42,7 @@ extern "C" {
  * a wl_buffer managerment solution, using a pool based approach
  *
  *****************************************************************************/
-struct shm_pool {
+struct tw_shm_pool {
 	struct anonymous_buff_t file;
 	struct wl_shm *shm;
 	struct wl_shm_pool *pool;
@@ -48,8 +50,9 @@ struct shm_pool {
 	enum wl_shm_format format;
 };
 
-//we should also add format
-int shm_pool_init(struct shm_pool *pool, struct wl_shm *shm, size_t size, enum wl_shm_format format);
+int tw_shm_pool_init(struct tw_shm_pool *pool, struct wl_shm *shm, size_t size, enum wl_shm_format format);
+
+void tw_shm_pool_release(struct tw_shm_pool *pool);
 
 /**
  * /brief allocated a wl_buffer with allocated memory
@@ -57,31 +60,27 @@ int shm_pool_init(struct shm_pool *pool, struct wl_shm *shm, size_t size, enum w
  * Do not set the listener or user_data for wl_buffer once it is created like
  * this
  */
-struct wl_buffer *shm_pool_alloc_buffer(struct shm_pool *pool, size_t width, size_t height);
+struct wl_buffer *tw_shm_pool_alloc_buffer(struct tw_shm_pool *pool, size_t width, size_t height);
 
 /**
  * @brief declare this buffer is not in use anymore
- * @return return the shm_pool for resource management purpose
+ * @return return the tw_shm_pool for resource management purpose
  */
-struct shm_pool *shm_pool_buffer_free(struct wl_buffer *wl_buffer);
+struct tw_shm_pool *tw_shm_pool_buffer_free(struct wl_buffer *wl_buffer);
 
-bool shm_pool_release_if_unused(struct shm_pool *pool);
-
+bool tw_shm_pool_release_if_unused(struct tw_shm_pool *pool);
 
 /**
- * /brief set wl_buffer_release_notify callback here since shm_pool_buffer node
+ * @brief set wl_buffer_release_notify callback here since tw_shm_pool_buffer node
  * ocuppies the user_data of wl_buffer
  */
-void shm_pool_set_buffer_release_notify(struct wl_buffer *wl_buffer,
+void tw_shm_pool_set_buffer_release_notify(struct wl_buffer *wl_buffer,
 					void (*cb)(void *, struct wl_buffer *),
 					void *data);
 
-void *shm_pool_buffer_access(struct wl_buffer *wl_buffer);
+void *tw_shm_pool_buffer_access(struct wl_buffer *wl_buffer);
 
-size_t shm_pool_buffer_size(struct wl_buffer *wl_buffer);
-
-void shm_pool_release(struct shm_pool *pool);
-
+size_t tw_shm_pool_buffer_size(struct wl_buffer *wl_buffer);
 
 #ifdef __cplusplus
 }

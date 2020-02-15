@@ -10,13 +10,13 @@ struct nk_wl_backend * nk_cairo_create_bkend(void);
 void nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
 
 
-typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct app_surface *app);
+typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct tw_appsurf *app);
 
 
 static struct application {
 	struct wl_shell *shell;
-	struct wl_globals global;
-	struct app_surface surface;
+	struct tw_globals global;
+	struct tw_appsurf surface;
 	struct nk_wl_backend *bkend;
 	struct wl_shell_surface *shell_surface;
 	bool done;
@@ -36,7 +36,7 @@ global_registry_handler(void *data,
 		App.shell = wl_registry_bind(registry, id, &wl_shell_interface, version);
 		fprintf(stdout, "wl_shell %d announced\n", id);
 	} else
-		wl_globals_announce(&App.global, registry, id, interface, version);
+		tw_globals_announce(&App.global, registry, id, interface, version);
 }
 
 
@@ -54,7 +54,7 @@ static struct wl_registry_listener registry_listener = {
 
 
 void
-sample_widget(struct nk_context *ctx, float width, float height, struct app_surface *data)
+sample_widget(struct nk_context *ctx, float width, float height, struct tw_appsurf *data)
 {
 	enum {EASY, HARD};
 	static struct nk_text_edit text_edit;
@@ -106,7 +106,7 @@ sample_widget(struct nk_context *ctx, float width, float height, struct app_surf
 }
 
 void
-single_widget(struct nk_context *ctx, float width, float height, struct app_surface *data)
+single_widget(struct nk_context *ctx, float width, float height, struct tw_appsurf *data)
 {
 	enum {EASY, HARD};
 	//static int op = EASY;
@@ -133,9 +133,9 @@ single_widget(struct nk_context *ctx, float width, float height, struct app_surf
 	nk_layout_row_static(ctx, 30, 80, 2);
 	inanimation = (nk_button_label(ctx, strings)) ? !inanimation : inanimation;
 	if (inanimation && !last_frame)
-		app_surface_request_frame(data);
+		tw_appsurf_request_frame(data);
 	else if (!inanimation)
-		app_surface_end_frame_request(data);
+		tw_appsurf_end_frame_request(data);
 
 	/* nk_button_label(ctx, strings); */
 	nk_label(ctx, "another", NK_TEXT_LEFT);
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
 	struct wl_display *wl_display = wl_display_connect(NULL);
 	if (!wl_display)
 		fprintf(stderr, "okay, I don't even have wayland display\n");
-	wl_globals_init(&App.global, wl_display);
+	tw_globals_init(&App.global, wl_display);
 	App.global.theme = taiwins_dark_theme;
 
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
@@ -181,28 +181,28 @@ int main(int argc, char *argv[])
 
 	struct wl_surface *wl_surface = wl_compositor_create_surface(App.global.compositor);
 	struct wl_shell_surface *shell_surface = wl_shell_get_shell_surface(App.shell, wl_surface);
-	app_surface_init(&App.surface, wl_surface,
-			 &App.global, APP_SURFACE_APP,
-			 APP_SURFACE_COMPOSITE);
+	tw_appsurf_init(&App.surface, wl_surface,
+			 &App.global, TW_APPSURF_APP,
+			 TW_APPSURF_COMPOSITE);
 
 	nk_wl_impl_wl_shell_surface(&App.surface, shell_surface);
 	wl_shell_surface_set_toplevel(shell_surface);
 	App.shell_surface = shell_surface;
-	App.surface.known_mimes[MIME_TYPE_TEXT] = "text/";
+	App.surface.known_mimes[TW_MIME_TYPE_TEXT] = "text/";
 	App.bkend = nk_cairo_create_bkend();
 	App.user_font = nk_wl_new_font(config, App.bkend);
 
 	nk_cairo_impl_app_surface(&App.surface, App.bkend, sample_widget,
-				  make_bbox_origin(200, 400, 2));
+				  tw_make_bbox_origin(200, 400, 2));
 
-	app_surface_frame(&App.surface, false);
+	tw_appsurf_frame(&App.surface, false);
 
-	wl_globals_dispatch_event_queue(&App.global);
+	tw_globals_dispatch_event_queue(&App.global);
 	wl_shell_surface_destroy(shell_surface);
-	app_surface_release(&App.surface);
+	tw_appsurf_release(&App.surface);
 	nk_cairo_destroy_bkend(App.bkend);
 
-	wl_globals_release(&App.global);
+	tw_globals_release(&App.global);
 	wl_registry_destroy(registry);
 	wl_display_disconnect(wl_display);
 	/* nk_wl_free_image(&App.image); */

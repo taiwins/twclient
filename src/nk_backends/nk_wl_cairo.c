@@ -46,6 +46,7 @@
 #define NK_ZERO_COMMAND_MEMORY
 
 #include "nk_wl_internal.h"
+#include <shmpool.h>
 
 //////////////////////////////////// NK_CAIRO FONTS /////////////////////////////////////
 
@@ -207,7 +208,6 @@ struct nk_cairo_backend {
 	struct nk_wl_backend base;
 	nk_max_cmd_t last_cmds[2];
 	struct nk_user_font *default_font;
-	//this is a stack we keep right now, all other method failed.
 };
 
 
@@ -222,7 +222,8 @@ typedef void (*nk_cairo_op) (cairo_t *cr, const struct nk_command *cmd);
 #endif
 
 static inline void
-nk_cairo_set_painter(cairo_t *cr, const struct nk_color *color, unsigned short line_width)
+nk_cairo_set_painter(cairo_t *cr, const struct nk_color *color,
+                     unsigned short line_width)
 {
 	cairo_set_source_rgba(
 		cr,
@@ -235,7 +236,8 @@ nk_cairo_set_painter(cairo_t *cr, const struct nk_color *color, unsigned short l
 }
 
 static inline void
-nk_cairo_mesh_pattern_set_corner_color(cairo_pattern_t *pat, int idx, struct nk_color color)
+nk_cairo_mesh_pattern_set_corner_color(cairo_pattern_t *pat, int idx,
+                                       struct nk_color color)
 {
 	float r, g, b, a;
 	r = NK_COLOR_TO_FLOAT(color.r);
@@ -526,7 +528,8 @@ nk_cairo_text(cairo_t *cr, const struct nk_command *cmd)
 			     NK_COLOR_TO_FLOAT(t->foreground.g),
 			     NK_COLOR_TO_FLOAT(t->foreground.b));
 	struct nk_vec2 rpos = nk_vec2(t->x, t->y);
-	nk_wl_render_text(cr, &rpos, t->font->userdata.ptr, t->string, t->length);
+	nk_wl_render_text(cr, &rpos, t->font->userdata.ptr,
+	                  t->string, t->length);
 
 	/* struct nk_cairo_font *font = t->font->userdata.ptr; */
 	/* nk_cairo_render_text(cr, &rpos, font, t->string, t->length); */
@@ -538,7 +541,8 @@ nk_cairo_image(cairo_t *cr, const struct nk_command *cmd)
 	const struct nk_command_image *im =
 		(const struct nk_command_image *)cmd;
 	cairo_surface_t *img_surf = im->img.handle.ptr;
-	if (!img_surf || cairo_image_surface_get_format(img_surf) == CAIRO_FORMAT_INVALID)
+	if (!img_surf ||
+	    cairo_image_surface_get_format(img_surf) == CAIRO_FORMAT_INVALID)
 		return;
 
 	double w = cairo_image_surface_get_width(img_surf);
@@ -613,7 +617,7 @@ _Static_assert(NK_COMMAND_CUSTOM == 18, NO_COMMAND);
 
 static void
 nk_cairo_render(struct wl_buffer *buffer, struct nk_cairo_backend *b,
-		struct app_surface *surf)
+		struct tw_appsurf *surf)
 {
 	int w = surf->allocation.w;
 	int h = surf->allocation.h;
@@ -623,7 +627,7 @@ nk_cairo_render(struct wl_buffer *buffer, struct nk_cairo_backend *b,
 	cairo_format_t format = translate_wl_shm_format(surf->pool->format);
 	cairo_surface_t *image_surface =
 		cairo_image_surface_create_for_data(
-			shm_pool_buffer_access(buffer),
+			tw_shm_pool_buffer_access(buffer),
 			format, w * s, h * s,
 			cairo_format_stride_for_width(format, w * s));
 	cairo_t *cr = cairo_create(image_surface);
@@ -654,7 +658,7 @@ nk_wl_render(struct nk_wl_backend *bkend)
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);
-	struct app_surface *surf = bkend->app_surface;
+	struct tw_appsurf *surf = bkend->app_surface;
 	struct wl_buffer *free_buffer = NULL;
 	bool *to_commit = NULL;
 	bool *to_dirty = NULL;
@@ -685,7 +689,7 @@ nk_wl_render(struct nk_wl_backend *bkend)
 
 
 static void
-nk_wl_resize(struct app_surface *surf, const struct app_event *e)
+nk_wl_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	shm_buffer_resize(surf, e);
 }
@@ -693,7 +697,7 @@ nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 
 
 static void
-nk_cairo_destroy_app_surface(struct app_surface *app)
+nk_cairo_destroy_app_surface(struct tw_appsurf *app)
 {
 	struct nk_wl_backend *b = app->user_data;
 	nk_wl_clean_app_surface(b);
@@ -702,8 +706,8 @@ nk_cairo_destroy_app_surface(struct app_surface *app)
 
 
 void
-nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			  nk_wl_drawcall_t draw_cb, struct bbox geo)
+nk_cairo_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
+			  nk_wl_drawcall_t draw_cb, struct tw_bbox geo)
 {
 	struct nk_cairo_backend *b =
 		container_of(bkend, struct nk_cairo_backend, base);

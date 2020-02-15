@@ -47,12 +47,12 @@ nk_input_reset(struct nk_context *ctx)
 static void
 nk_wl_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 {
-	struct app_surface *app = usr.ptr;
+	struct tw_appsurf *app = usr.ptr;
 	struct nk_wl_backend *bkend = app->user_data;
-	struct wl_globals *globals = app->wl_globals;
+	struct tw_globals *globals = app->tw_globals;
 
 	if (globals->inputs.wl_data_offer) {
-		wl_globals_receive_data_offer(globals->inputs.wl_data_offer,
+		tw_globals_receive_data_offer(globals->inputs.wl_data_offer,
 					      app->wl_surface, false);
 	} else if (bkend->internal_clipboard) {
 		const char *text = bkend->internal_clipboard;
@@ -63,7 +63,7 @@ nk_wl_clipboard_paste(nk_handle usr, struct nk_text_edit *edit)
 static void
 nk_wl_clipboard_copy(nk_handle usr, const char *text, int len)
 {
-	struct app_surface *app = usr.ptr;
+	struct tw_appsurf *app = usr.ptr;
 	struct nk_wl_backend *bkend = app->user_data;
 	if (bkend->internal_clipboard)
 		free(bkend->internal_clipboard);
@@ -71,10 +71,10 @@ nk_wl_clipboard_copy(nk_handle usr, const char *text, int len)
 }
 
 static inline void
-nk_wl_copyto_clipboard(struct app_surface *app, const struct app_event *e)
+nk_wl_copyto_clipboard(struct tw_appsurf *app, const struct tw_app_event *e)
 {
 	struct nk_wl_backend *bkend = app->user_data;
-	if (!app->known_mimes[MIME_TYPE_TEXT])
+	if (!app->known_mimes[TW_MIME_TYPE_TEXT])
 		return;
 	nk_wl_clipboard_copy(nk_handle_ptr(app), e->clipboard.data,
 			     e->clipboard.size);
@@ -87,7 +87,7 @@ nk_wl_copyto_clipboard(struct app_surface *app, const struct app_event *e)
 //this is so verbose
 
 static void
-nk_keycb(struct app_surface *surf, const struct app_event *e)
+nk_keycb(struct tw_appsurf *surf, const struct tw_app_event *e)
 	 /* xkb_keysym_t keysym, uint32_t modifier, int state) */
 {
 	//nk_input_key and nk_input_unicode are different, you kinda need to
@@ -142,7 +142,7 @@ nk_keycb(struct app_surface *surf, const struct app_event *e)
 }
 
 static void
-nk_pointron(struct app_surface *surf, const struct app_event *e)
+nk_pointron(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
 	nk_input_begin(&bkend->ctx);
@@ -153,7 +153,7 @@ nk_pointron(struct app_surface *surf, const struct app_event *e)
 }
 
 static void
-nk_pointrbtn(struct app_surface *surf, const struct app_event *e)
+nk_pointrbtn(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
 	enum nk_buttons b;
@@ -185,7 +185,7 @@ nk_pointrbtn(struct app_surface *surf, const struct app_event *e)
 }
 
 static void
-nk_pointraxis(struct app_surface *surf, const struct app_event *e)
+nk_pointraxis(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	struct nk_wl_backend *bkend = (struct nk_wl_backend *)surf->user_data;
 	nk_input_begin(&bkend->ctx);
