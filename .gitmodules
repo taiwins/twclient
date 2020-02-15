@@ -7,3 +7,6 @@
 [submodule "include/stb"]
 	path = include/stb
 	url = https://github.com/nothings/stb
+[submodule "protocols"]
+	path = protocols
+	url = https://github.com/taiwins/taiwins-protocols.git
