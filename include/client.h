@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef TWCLIENT_H
-#define TWCLIENT_H
+#ifndef TW_CLIENT_H
+#define TW_CLIENT_H
 
 #include <string.h>
 #include <fcntl.h>
@@ -45,7 +45,6 @@
 #include <wayland-egl.h>
 
 #include "event_queue.h"
-#include "shmpool.h"
 #include "ui.h"
 
 #ifdef __cplusplus
@@ -61,7 +60,7 @@ extern "C" {
  * This struct is indeed rather big (currently 488 bytes), we would want to fit
  * in L1 Cache
  */
-struct wl_globals {
+struct tw_globals {
 	struct wl_compositor *compositor;
 	struct wl_display *display;
 	struct wl_shm *shm;
@@ -120,7 +119,7 @@ struct wl_globals {
 
 
 /* here you need a data structure that glues the anonoymous_buff and wl_buffer wl_shm_pool */
-int wl_globals_announce(struct wl_globals *globals,
+int tw_globals_announce(struct tw_globals *globals,
 			struct wl_registry *wl_registry,
 			uint32_t name,
 			const char *interface,
@@ -129,12 +128,12 @@ int wl_globals_announce(struct wl_globals *globals,
 //unless you have better method to setup the theme, I think you can simply set it up my hand
 
 /* Constructor */
-void wl_globals_init(struct wl_globals *globals, struct wl_display *display);
+void tw_globals_init(struct tw_globals *globals, struct wl_display *display);
 /* destructor */
-void wl_globals_release(struct wl_globals *globals);
+void tw_globals_release(struct tw_globals *globals);
 
 static inline void
-wl_globals_dispatch_event_queue(struct wl_globals *globals)
+tw_globals_dispatch_event_queue(struct tw_globals *globals)
 {
 	tw_event_queue_run(&globals->event_queue);
 }
@@ -142,10 +141,10 @@ wl_globals_dispatch_event_queue(struct wl_globals *globals)
 bool is_shm_format_valid(uint32_t format);
 
 //we can have several input code
-void wl_globals_get_input_state(const struct wl_globals *globals);
+void tw_globals_get_input_state(const struct tw_globals *globals);
 //you will have a few functions
 
-void wl_globals_receive_data_offer(struct wl_data_offer *offer,
+void tw_globals_receive_data_offer(struct wl_data_offer *offer,
 				   struct wl_surface *surface,
 				   bool drag_n_drop);
 

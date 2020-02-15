@@ -42,7 +42,7 @@
 static struct wl_pointer_listener pointer_listener = {0};
 static void default_pointer_grab(struct wl_pointer_listener *);
 static void resize_pointer_grab(struct wl_pointer_listener *);
-extern void _app_surface_run_frame(struct app_surface *surf, const struct app_event *e);
+extern void _tw_appsurf_run_frame(struct tw_appsurf *surf, const struct tw_app_event *e);
 
 
 enum POINTER_EVENT_CODE {
@@ -58,7 +58,7 @@ enum POINTER_EVENT_CODE {
 };
 
 static inline void
-pointer_event_clean(struct wl_globals *globals)
+pointer_event_clean(struct tw_globals *globals)
 {
 	//we dont change the pointer state here since you may want to query it
 	//later
@@ -79,7 +79,7 @@ pointer_event_clean(struct wl_globals *globals)
 static void
 pointer_set_cursor(struct wl_pointer *wl_pointer)
 {
-	struct wl_globals *globals = wl_pointer_get_user_data(wl_pointer);
+	struct tw_globals *globals = wl_pointer_get_user_data(wl_pointer);
 	/* struct wl_callback *callback = */
 	/*	wl_surface_frame(globals->inputs.cursor_surface); */
 	/* globals->inputs.cursor_done_listener.done = pointer_cursor_done; */
@@ -105,13 +105,13 @@ pointer_enter(void *data,
 	      wl_fixed_t surface_x,
 	      wl_fixed_t surface_y)
 {
-	struct wl_globals *globals = data;
-	struct app_surface *app = app_surface_from_wl_surface(surface);
+	struct tw_globals *globals = data;
+	struct tw_appsurf *app = tw_appsurf_from_wl_surface(surface);
 	globals->inputs.pointer_focused = surface;
 	globals->inputs.enter_serial = serial;
 	globals->inputs.serial = serial;
 	if (app)
-		app->wl_globals = globals;
+		app->tw_globals = globals;
 
 	globals->inputs.pointer_events = POINTER_ENTER;
 	//this works only if you have one surface, we may need to set cursor
@@ -127,7 +127,7 @@ pointer_leave(void *data,
 	      uint32_t serial,
 	      struct wl_surface *surface)
 {
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	globals->inputs.serial = serial;
 	globals->inputs.pointer_focused = NULL;
 	globals->inputs.pointer_events = POINTER_LEAVE;
@@ -140,7 +140,7 @@ pointer_motion(void *data,
 	       wl_fixed_t x,
 	       wl_fixed_t y)
 {
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	globals->inputs.serial = serial;
 	globals->inputs.dx = wl_fixed_to_int(x) - globals->inputs.sx;
 	globals->inputs.dy = wl_fixed_to_int(y) - globals->inputs.sy;
@@ -149,8 +149,8 @@ pointer_motion(void *data,
 	globals->inputs.pointer_events |=  POINTER_MOTION;
 }
 
-static inline struct app_surface *
-pointer_button_meta(struct wl_globals *globals,
+static inline struct tw_appsurf *
+pointer_button_meta(struct tw_globals *globals,
 		    uint32_t serial,
 		    uint32_t time,
 		    uint32_t button,
@@ -163,8 +163,8 @@ pointer_button_meta(struct wl_globals *globals,
 	globals->inputs.serial = serial;
 
 	struct wl_surface *surf = globals->inputs.pointer_focused;
-	struct app_surface *app = (!surf) ? NULL :
-		app_surface_from_wl_surface(surf);
+	struct tw_appsurf *app = (!surf) ? NULL :
+		tw_appsurf_from_wl_surface(surf);
 	return app;
 }
 
@@ -177,8 +177,8 @@ pointer_button(void *data,
 	       uint32_t state)
 {
 
-	struct wl_globals *globals = data;
-	struct app_surface *app =
+	struct tw_globals *globals = data;
+	struct tw_appsurf *app =
 		pointer_button_meta(globals, serial, time, button,
 				    state);
 	if (!app)
@@ -202,7 +202,7 @@ pointer_axis(void *data,
 	     uint32_t axis, //vertial or horizental
 	     wl_fixed_t value)
 {
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	globals->inputs.millisec = time;
 
 	globals->inputs.dx_axis += (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) ?
@@ -224,7 +224,7 @@ pointer_axis_stop(void *data,
 		  struct wl_pointer *wl_pointer,
 		  uint32_t time, uint32_t axis)
 {
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	globals->inputs.millisec = time;
 	//we do not implement kinect scrolling
 }
@@ -241,14 +241,14 @@ pointer_axis_discrete(void *data, struct wl_pointer *wl_pointer,
 //once a frame event generate, we need to accumelate all previous pointer events
 //and then send them all. Call frame on them, all though you should not receive
 //more than one type of pointer event
-static inline struct app_surface *
-pointer_frame_meta(struct wl_globals *globals)
+static inline struct tw_appsurf *
+pointer_frame_meta(struct tw_globals *globals)
 {
 	if (!globals->inputs.pointer_events)
 		return NULL;
 	struct wl_surface *focused = globals->inputs.pointer_focused;
-	struct app_surface *appsurf = (focused) ?
-		app_surface_from_wl_surface(focused) : NULL;
+	struct tw_appsurf *appsurf = (focused) ?
+		tw_appsurf_from_wl_surface(focused) : NULL;
 	if (!appsurf || !appsurf->do_frame)
 		return NULL;
 	return appsurf;
@@ -259,12 +259,12 @@ pointer_frame(void *data,
 	      struct wl_pointer *wl_pointer)
 {
 	//we need somehow generate a timestamp
-	struct wl_globals *globals = data;
-	struct app_surface *appsurf = pointer_frame_meta(globals);
+	struct tw_globals *globals = data;
+	struct tw_appsurf *appsurf = pointer_frame_meta(globals);
 	if (!appsurf)
 		return;
 
-	struct app_event e;
+	struct tw_app_event e;
 	e.time = globals->inputs.millisec;
 	uint32_t event = globals->inputs.pointer_events;
 	if (event & POINTER_AXIS) {
@@ -278,7 +278,7 @@ pointer_frame(void *data,
 		e.ptr.x = globals->inputs.sx;
 		e.ptr.y = globals->inputs.sy;
 		e.ptr.mod = globals->inputs.modifiers;
-		_app_surface_run_frame(appsurf, &e);
+		_tw_appsurf_run_frame(appsurf, &e);
 	}
 	if (event & POINTER_BTN) {
 		e.type = TW_POINTER_BTN;
@@ -287,7 +287,7 @@ pointer_frame(void *data,
 		e.ptr.y = globals->inputs.sy;;
 		e.ptr.state = globals->inputs.btn_pressed;
 		e.ptr.mod = globals->inputs.modifiers;
-		_app_surface_run_frame(appsurf, &e);
+		_tw_appsurf_run_frame(appsurf, &e);
 	}
 	pointer_event_clean(globals);
 }
@@ -319,10 +319,10 @@ resize_pointer_button(void *data,
 		      uint32_t state)
 {
 	//this is the ugly part we have to copy them again
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	pointer_button_meta(globals, serial, time, button, state);
 
-	/* struct wl_globals *globals = data; */
+	/* struct tw_globals *globals = data; */
 	if (state == WL_POINTER_BUTTON_STATE_RELEASED &&
 	    button == BTN_LEFT) {
 		default_pointer_grab(&pointer_listener);
@@ -334,15 +334,15 @@ resize_pointer_frame(void *data,
 		     struct wl_pointer *wl_pointer)
 {
 	//we need somehow generate a timestamp
-	struct wl_globals *globals = data;
-	struct app_surface *app = pointer_frame_meta(globals);
+	struct tw_globals *globals = data;
+	struct tw_appsurf *app = pointer_frame_meta(globals);
 	if (!app)
 		return;
 
 	uint32_t event = globals->inputs.pointer_events;
 	//REPEAT CODE
 	if (event & POINTER_MOTION)
-		app_surface_resize(app,
+		tw_appsurf_resize(app,
 				   (int)app->allocation.w + globals->inputs.dx,
 				   (int)app->allocation.h + globals->inputs.dy,
 				   app->allocation.s);
@@ -367,7 +367,7 @@ resize_pointer_grab(struct wl_pointer_listener *grab)
 ///////////////////////////////////////////////////////////
 
 void
-tw_pointer_init(struct wl_pointer *wl_pointer, struct wl_globals *globals)
+tw_pointer_init(struct wl_pointer *wl_pointer, struct tw_globals *globals)
 {
 	if (!globals)
 		return;
@@ -390,7 +390,7 @@ tw_pointer_init(struct wl_pointer *wl_pointer, struct wl_globals *globals)
 void
 tw_pointer_destroy(struct wl_pointer *wl_pointer)
 {
-	struct wl_globals *globals = wl_pointer_get_user_data(wl_pointer);
+	struct tw_globals *globals = wl_pointer_get_user_data(wl_pointer);
 	wl_cursor_theme_destroy(globals->inputs.cursor_theme);
 	wl_surface_destroy(globals->inputs.cursor_surface);
 
@@ -415,7 +415,7 @@ handle_touch_down(void *data,
 		  wl_fixed_t y)
 {
 	(void)id;
-	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	struct tw_globals *g = wl_touch_get_user_data(wl_touch);
 	if (!g->inputs.wl_pointer)
 		return;
 	//setup the position and surface
@@ -438,7 +438,7 @@ handle_touch_up(void *data,
 		int32_t id)
 {
 	(void)id;
-	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	struct tw_globals *g = wl_touch_get_user_data(wl_touch);
 	if (!g->inputs.wl_pointer)
 		return;
 	/* g->inputs.pointer_focused = NULL; */
@@ -456,7 +456,7 @@ handle_touch_motion(void *data,
 		    wl_fixed_t y)
 {
 	(void)id;
-	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	struct tw_globals *g = wl_touch_get_user_data(wl_touch);
 	if (!g->inputs.wl_pointer)
 		return;
 	pointer_motion(data, g->inputs.wl_pointer, time, x, y);
@@ -467,7 +467,7 @@ static void
 handle_touch_cancel(void *data,
 		    struct wl_touch *wl_touch)
 {
-	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	struct tw_globals *g = wl_touch_get_user_data(wl_touch);
 	if (!g->inputs.wl_pointer)
 		return;
 	pointer_event_clean(g);
@@ -478,7 +478,7 @@ static void
 handle_touch_frame(void *data,
 		   struct wl_touch *wl_touch)
 {
-	struct wl_globals *g = wl_touch_get_user_data(wl_touch);
+	struct tw_globals *g = wl_touch_get_user_data(wl_touch);
 	if (!g->inputs.wl_pointer)
 		return;
 	pointer_frame(data, g->inputs.wl_pointer);
@@ -515,7 +515,7 @@ static struct wl_touch_listener touch_listener = {
 
 
 void
-tw_touch_init(struct wl_touch *wl_touch, struct wl_globals *globals)
+tw_touch_init(struct wl_touch *wl_touch, struct tw_globals *globals)
 {
 	wl_touch_add_listener(wl_touch, &touch_listener, globals);
 }

@@ -36,7 +36,7 @@ extern "C" {
 
 
 struct image_cache {
-	struct bbox dimension;
+	struct tw_bbox dimension;
 	//an array of images
 	struct wl_array image_boxes;
 	unsigned char *atlas;

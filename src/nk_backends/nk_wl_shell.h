@@ -47,8 +47,8 @@ static void
 nk_wl_shell_handle_configure(void *data, struct wl_shell_surface *shell_surface,
 		 uint32_t edges, int32_t width, int32_t height)
 {
-	struct app_surface *app = data;
-	app_surface_resize(app, width, height, app->allocation.s);
+	struct tw_appsurf *app = data;
+	tw_appsurf_resize(app, width, height, app->allocation.s);
 }
 
 static struct wl_shell_surface_listener nk_wl_shell_impl = {
@@ -59,7 +59,7 @@ static struct wl_shell_surface_listener nk_wl_shell_impl = {
 
 
 NK_API void
-nk_wl_impl_wl_shell_surface(struct app_surface *app,
+nk_wl_impl_wl_shell_surface(struct tw_appsurf *app,
 			    struct wl_shell_surface *protocol)
 {
 	wl_shell_surface_add_listener(protocol,
@@ -75,12 +75,12 @@ nk_wl_impl_xdg_configure(void *data,
 {
 
 	struct xdg_surface *xdg_surface = data;
-	struct app_surface *app =
+	struct tw_appsurf *app =
 		xdg_surface_get_user_data(xdg_surface);
-	app_surface_resize(app, width, height, app->allocation.s);
+	tw_appsurf_resize(app, width, height, app->allocation.s);
 	/* xdg_top */
 	xdg_surface_ack_configure(xdg_surface,
-				  app->wl_globals->inputs.serial);
+				  app->tw_globals->inputs.serial);
 }
 
 static void
@@ -88,12 +88,12 @@ nk_wl_xdg_toplevel_close(void *data,
 			 struct xdg_toplevel *xdg_toplevel)
 {
 	struct xdg_surface *xdg_surface = data;
-	struct app_surface *app =
+	struct tw_appsurf *app =
 		xdg_surface_get_user_data(xdg_surface);
 
 	xdg_toplevel_destroy(xdg_toplevel);
 	xdg_surface_destroy(xdg_surface);
-	app_surface_release(app);
+	tw_appsurf_release(app);
 }
 
 static void
@@ -101,8 +101,8 @@ nk_wl_xdg_surface_handle_configure(void *data,
 				   struct xdg_surface *xdg_surface,
 				   uint32_t serial)
 {
-	struct app_surface *app = data;
-	app->wl_globals->inputs.serial = serial;
+	struct tw_appsurf *app = data;
+	app->tw_globals->inputs.serial = serial;
 }
 
 static struct xdg_toplevel_listener nk_wl_xdgtoplevel_impl =  {
@@ -115,7 +115,7 @@ static struct xdg_surface_listener nk_wl_xdgsurface_impl = {
 };
 
 NK_API struct xdg_toplevel *
-nk_wl_impl_xdg_shell_surface(struct app_surface *app,
+nk_wl_impl_xdg_shell_surface(struct tw_appsurf *app,
 			     struct xdg_surface *xdg_surface)
 {
 	struct xdg_toplevel *toplevel = xdg_surface_get_toplevel(

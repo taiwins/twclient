@@ -96,7 +96,7 @@ struct nk_egl_backend {
 	struct nk_wl_backend base;
 	//OpenGL resource
 	struct {
-		struct egl_env env;
+		struct tw_egl_env env;
 		bool compiled;
 		GLuint glprog, vs, fs;
 		GLuint vao, vbo, ebo;
@@ -138,7 +138,7 @@ make_current(struct nk_egl_backend *bkend, EGLSurface eglSurface)
 	if (eglSurface == CURRENT_SURFACE &&
 	    bkend == CURRENT_CONTEXT)
 		return true;
-	struct egl_env *env = &bkend->env;
+	struct tw_egl_env *env = &bkend->env;
 	assert(eglMakeCurrent(env->egl_display,
 	                      eglSurface, eglSurface,
 	                      env->egl_context));
@@ -540,7 +540,7 @@ _nk_egl_draw_end(struct nk_egl_backend *bkend)
 static int
 nk_egl_resize(struct tw_event *e, int fd)
 {
-	struct app_surface *surf = e->data;
+	struct tw_appsurf *surf = e->data;
 	if (surf->pending_allocation.w == surf->allocation.w &&
 	    surf->pending_allocation.h == surf->allocation.h &&
 	    surf->pending_allocation.s == surf->allocation.s)
@@ -554,7 +554,7 @@ nk_egl_resize(struct tw_event *e, int fd)
 }
 
 void
-nk_wl_resize(struct app_surface *surf, const struct app_event *e)
+nk_wl_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	surf->pending_allocation.w = e->resize.nw;
 	surf->pending_allocation.h = e->resize.nh;
@@ -564,15 +564,15 @@ nk_wl_resize(struct app_surface *surf, const struct app_event *e)
 		.data = surf,
 		.cb = nk_egl_resize,
 	};
-	tw_event_queue_add_idle(&surf->wl_globals->event_queue, &re);
+	tw_event_queue_add_idle(&surf->tw_globals->event_queue, &re);
 }
 
 static void
 nk_wl_render(struct nk_wl_backend *b)
 {
 	struct nk_egl_backend *bkend = container_of(b, struct nk_egl_backend, base);
-	struct egl_env *env = &bkend->env;
-	struct app_surface *app = b->app_surface;
+	struct tw_egl_env *env = &bkend->env;
+	struct tw_appsurf *app = b->app_surface;
 	struct nk_context *ctx = &b->ctx;
 	int width = app->allocation.w;
 	int height = app->allocation.h;
@@ -618,7 +618,7 @@ nk_wl_render(struct nk_wl_backend *b)
 }
 
 static void
-nk_egl_destroy_app_surface(struct app_surface *app)
+nk_egl_destroy_app_surface(struct tw_appsurf *app)
 {
 	struct nk_wl_backend *b = app->user_data;
 	struct nk_egl_backend *bkend = container_of(b, struct nk_egl_backend, base);
@@ -626,14 +626,14 @@ nk_egl_destroy_app_surface(struct app_surface *app)
 		release_backend(bkend);
 		nk_wl_release_resources(&bkend->base);
 	}
-	app_surface_clean_egl(app, &bkend->env);
+	tw_appsurf_clean_egl(app, &bkend->env);
 	nk_wl_clean_app_surface(b);
 }
 
 /********************* exposed APIS *************************/
 void
-nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-			nk_wl_drawcall_t draw_cb, const struct bbox box)
+nk_egl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
+			nk_wl_drawcall_t draw_cb, const struct tw_bbox box)
 
 {
 	struct nk_egl_backend *b =
@@ -641,7 +641,7 @@ nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, box);
 	surf->destroy = nk_egl_destroy_app_surface;
-	app_surface_init_egl(surf, &b->env);
+	tw_appsurf_init_egl(surf, &b->env);
 
 	if (!is_surfless_supported(b)) {
 		b->compiled = compile_backend(b, surf->eglsurface);
@@ -662,7 +662,7 @@ nk_egl_create_backend(const struct wl_display *display)
 	wl_list_init(&bkend->base.fonts);
 	wl_list_init(&bkend->base.images);
 
-	egl_env_init(&bkend->env, display);
+	tw_egl_env_init(&bkend->env, display);
 	//let us assign a default row size
 	bkend->base.row_size = 16;
 	bkend->compiled = false;
@@ -688,7 +688,7 @@ nk_egl_destroy_backend(struct nk_wl_backend *b)
 		container_of(b, struct nk_egl_backend, base);
 	release_backend(bkend);
 	nk_wl_backend_cleanup(b);
-	egl_env_end(&bkend->env);
+	tw_egl_env_end(&bkend->env);
 	free(bkend);
 }
 
@@ -697,7 +697,7 @@ nk_egl_destroy_backend(struct nk_wl_backend *b)
 void
 nk_egl_resize(struct nk_egl_backend *bkend, int32_t width, int32_t height)
 {
-	struct app_surface *app_surface = bkend->app_surface;
+	struct tw_appsurf *app_surface = bkend->app_surface;
 	app_surface->w = width;
 	app_surface->h = height;
 	wl_egl_window_resize(app_surface->eglwin, width, height, 0, 0);
