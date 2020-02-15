@@ -52,6 +52,11 @@ find_package(LibRSVG REQUIRED)
 set(TWCLIENT_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/include")
 
 ################################################################################
+# protocols
+################################################################################
+include(AddProtocols)
+
+################################################################################
 # include
 ################################################################################
 add_library(nuklear INTERFACE)
@@ -62,7 +67,6 @@ target_include_directories(stb INTERFACE "${TWCLIENT_INCLUDE_DIR}")
 target_compile_options(stb INTERFACE "-Wno-type-limits")
 
 add_subdirectory(ctypes)
-add_subdirectory(protocols)
 add_subdirectory(src)
 add_subdirectory(test)
 

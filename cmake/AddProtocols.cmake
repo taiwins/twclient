@@ -3,8 +3,10 @@
 ################################################################################
 include(Wayland)
 
+set(TAIWINS_PROTOS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protocols")
+
 WAYLAND_ADD_PROTOCOL_CLIENT(proto_twtheme_client
-  taiwins_theme.xml
+  "${TAIWINS_PROTOS_DIR}/taiwins-theme.xml"
   taiwins-theme
   )
 
@@ -23,10 +25,3 @@ target_include_directories(twclient-protos PUBLIC
 
 #those are alias, but can we actually move those alias into a findpackage file?
 add_library(twclient::protos ALIAS twclient-protos)
-
-################################################################################
-# install
-################################################################################
-include(GNUInstallDirs)
-install(FILES taiwins_theme.xml
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/taiwins/protocols)
