@@ -42,18 +42,18 @@ struct nk_style;
 struct xdg_toplevel;
 struct xdg_surface;
 
-typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct app_surface *app);
-typedef void (*nk_wl_postcall_t)(struct app_surface *app);
+typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct tw_appsurf *app);
+typedef void (*nk_wl_postcall_t)(struct tw_appsurf *app);
 
 /*******************************************************************************
  * shell implementation
  ******************************************************************************/
 NK_API struct xdg_toplevel *
-nk_wl_impl_xdg_shell_surface(struct app_surface *app,
+nk_wl_impl_xdg_shell_surface(struct tw_appsurf *app,
                              struct xdg_surface *xdg_surface);
 
 NK_API void
-nk_wl_impl_wl_shell_surface(struct app_surface *app,
+nk_wl_impl_wl_shell_surface(struct tw_appsurf *app,
                             struct wl_shell_surface *protocol);
 
 /*******************************************************************************
@@ -68,8 +68,8 @@ void
 nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
 
 void
-nk_cairo_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-                          nk_wl_drawcall_t draw_cb,  const struct bbox geo);
+nk_cairo_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
+                          nk_wl_drawcall_t draw_cb,  const struct tw_bbox geo);
 
 
 /* egl_backend */
@@ -80,8 +80,8 @@ void
 nk_egl_destroy_backend(struct nk_wl_backend *b);
 
 void
-nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-                        nk_wl_drawcall_t draw_cb, const struct bbox geo);
+nk_egl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
+                        nk_wl_drawcall_t draw_cb, const struct tw_bbox geo);
 
 
 /* vulkan_backend */
@@ -89,8 +89,8 @@ nk_egl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 /* struct nk_wl_backend *nk_vulkan_backend_clone(struct nk_wl_backend *b); */
 /* void nk_vulkan_backend_destroy(struct nk_wl_backend *b); */
 /* void */
-/* nk_vulkan_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend, */
-/*			   nk_wl_drawcall_t draw_cb, const struct bbox geo); */
+/* nk_vulkan_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend, */
+/*			   nk_wl_drawcall_t draw_cb, const struct tw_bbox geo); */
 
 
 NK_API xkb_keysym_t
@@ -107,7 +107,7 @@ NK_API const struct nk_style *
 nk_wl_get_curr_style(struct nk_wl_backend *bkend);
 
 NK_API void
-nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app,
+nk_wl_test_draw(struct nk_wl_backend *bkend, struct tw_appsurf *app,
 		nk_wl_drawcall_t draw_call);
 
 

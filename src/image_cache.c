@@ -172,7 +172,7 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 		cache.atlas, format, context_width, context_height,
 		cairo_format_stride_for_width(format, context_width));
 	cr = cairo_create(atlas_surface);
-	cache.dimension = make_bbox_origin(context_width, context_height, 1);
+	cache.dimension = tw_make_bbox_origin(context_width, context_height, 1);
 	//pass 2 copy images
 	for (unsigned i = 0; i < nimages; i++) {
 		if (rects[i].was_packed == 0)
@@ -196,9 +196,9 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 		char *tocpy = wl_array_add(&cache.strings, sizeof(path)+1);
 		*(off_t *)wl_array_add(&cache.handles, sizeof(off_t)) =
 			(tocpy - (char *)cache.strings.data);
-		*(struct bbox *)wl_array_add(&cache.image_boxes,
-		                            sizeof(struct bbox)) =
-			make_bbox(rects[i].x, rects[i].y, w, h, 1);
+		*(struct tw_bbox *)wl_array_add(&cache.image_boxes,
+		                            sizeof(struct tw_bbox)) =
+			tw_make_bbox(rects[i].x, rects[i].y, w, h, 1);
 
 
 	}
@@ -319,7 +319,7 @@ image_cache_from_fd(int fd)
 	int s = cairo_image_surface_get_stride(surf);
 	if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS)
 		goto err;
-	cache.dimension = make_bbox_origin(w, h, 1);
+	cache.dimension = tw_make_bbox_origin(w, h, 1);
 	cache.atlas = malloc(h * s);
 	memcpy(cache.atlas, cairo_image_surface_get_data(surf), h * s);
 

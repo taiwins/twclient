@@ -49,16 +49,16 @@
  * externs
  ******************************************************************************/
 extern void tw_event_queue_close(struct tw_event_queue *queue);
-extern void tw_keyboard_init(struct wl_keyboard *, struct wl_globals *);
+extern void tw_keyboard_init(struct wl_keyboard *, struct tw_globals *);
 extern void tw_keyboard_destroy(struct wl_keyboard *);
 
-extern void tw_pointer_init(struct wl_pointer *, struct wl_globals *);
+extern void tw_pointer_init(struct wl_pointer *, struct tw_globals *);
 extern void tw_pointer_destroy(struct wl_pointer *);
 
-extern void tw_touch_init(struct wl_touch *, struct wl_globals *);
+extern void tw_touch_init(struct wl_touch *, struct tw_globals *);
 extern void tw_touch_destroy(struct wl_touch *);
-extern void _app_surface_run_frame(struct app_surface *surf,
-				   const struct app_event *e);
+extern void _tw_appsurf_run_frame(struct tw_appsurf *surf,
+				   const struct tw_app_event *e);
 
 /*******************************************************************************
  * wl_shm
@@ -68,7 +68,7 @@ static void
 shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
 {
 	//the priority of the format ARGB8888 > RGBA8888 > RGB888
-	struct wl_globals *globals = (struct wl_globals *)data;
+	struct tw_globals *globals = (struct tw_globals *)data;
 	//we have to use ARGB because cairo uses this format
 	if (format == WL_SHM_FORMAT_ARGB8888) {
 		globals->buffer_format = WL_SHM_FORMAT_ARGB8888;
@@ -85,7 +85,7 @@ shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
 		globals->buffer_format = WL_SHM_FORMAT_RGB888;
 		//fprintf(stderr, "we choosed rgb888 for the application\n");
 	} else {
-		//fprintf(stderr, "okay, the shm_format that we don't know 0x%x\n", format);
+		//fprintf(stderr, "okay, that we don't know 0x%x\n", format);
 	}
 }
 
@@ -106,7 +106,7 @@ static struct wl_shm_listener shm_listener = {
 static void
 seat_name(void *data, struct wl_seat *wl_seat, const char *name)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
+	struct tw_globals *globals = (struct tw_globals *)data;
 	strop_ncpy(globals->inputs.name, name, 64);
 	fprintf(stderr, "we have this seat with a name called %s\n", name);
 }
@@ -116,7 +116,7 @@ seat_capabilities(void *data,
 		       struct wl_seat *wl_seat,
 		       uint32_t capabilities)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
+	struct tw_globals *globals = (struct tw_globals *)data;
 	if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
 		fprintf(stderr, "got a keyboard\n");
 		globals->inputs.wl_keyboard = wl_seat_get_keyboard(wl_seat);
@@ -134,7 +134,7 @@ seat_capabilities(void *data,
 }
 
 static void
-seat_destroy(struct wl_seat *wl_seat, struct wl_globals *globals)
+seat_destroy(struct wl_seat *wl_seat, struct tw_globals *globals)
 {
 	if (globals->inputs.wl_pointer)
 		tw_pointer_destroy(globals->inputs.wl_pointer);
@@ -156,7 +156,7 @@ static struct wl_seat_listener seat_listener = {
  * wl_data_device
  ******************************************************************************/
 struct data_offer_data {
-	struct wl_globals *globals;
+	struct tw_globals *globals;
 	struct wl_data_offer *wl_data_offer;
 	struct wl_surface *surface;
 	struct wl_array mime_offered;
@@ -173,16 +173,17 @@ data_offer_match_mimes(struct wl_data_offer *offer,
 {
 	struct data_offer_data *offer_data =
 		wl_data_offer_get_user_data(offer);
-	struct app_surface *app = app_surface_from_wl_surface(surface);
+	struct tw_appsurf *app = tw_appsurf_from_wl_surface(surface);
 	const char **p;
-	for (int i = 0; i < MIME_TYPE_MAX; i++) {
+	for (int i = 0; i < TW_MIME_TYPE_MAX; i++) {
 		if (!app->known_mimes[i])
 			continue;
 		wl_array_for_each(p, &offer_data->mime_offered) {
 			if (strstr(*p, app->known_mimes[i]) == *p) {
 				offer_data->mime_accepted =
 					strdup(*p);
-				wl_data_offer_accept(offer, offer_data->serial, *p);
+				wl_data_offer_accept(offer, offer_data->serial,
+				                     *p);
 				goto out;
 			}
 		}
@@ -240,7 +241,7 @@ static struct wl_data_offer_listener data_offer_listener = {
 };
 
 static inline void
-data_offer_create(struct wl_data_offer *offer, struct wl_globals *globals)
+data_offer_create(struct wl_data_offer *offer, struct tw_globals *globals)
 {
 	struct data_offer_data *offer_data =
 		calloc(1, sizeof(struct data_offer_data));
@@ -276,7 +277,7 @@ data_offer(void *data,
 	   struct wl_data_device *wl_data_device,
 	   struct wl_data_offer *id)
 {
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	if (globals->inputs.wl_data_offer)
 		data_offer_destroy(globals->inputs.wl_data_offer);
 	globals->inputs.wl_data_offer = id;
@@ -292,7 +293,7 @@ data_enter(void *data,
 	   wl_fixed_t y,
 	   struct wl_data_offer *id)
 {
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	struct wl_data_offer *offer = globals->inputs.wl_data_offer;
 	struct data_offer_data *offer_data =
 		wl_data_offer_get_user_data(offer);
@@ -310,7 +311,7 @@ static void
 data_leave(void *data,
 	   struct wl_data_device *wl_data_device)
 {
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	data_offer_destroy(globals->inputs.wl_data_offer);
 	globals->inputs.wl_data_offer = NULL;
 }
@@ -327,11 +328,11 @@ static void
 data_drop(void *data,
 	  struct wl_data_device *wl_data_device)
 {
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	struct wl_data_offer *offer = globals->inputs.wl_data_offer;
 	struct data_offer_data *offer_data =
 		wl_data_offer_get_user_data(offer);
-	wl_globals_receive_data_offer(offer, offer_data->surface, true);
+	tw_globals_receive_data_offer(offer, offer_data->surface, true);
 }
 
 
@@ -340,7 +341,7 @@ data_selection(void *data,
 	       struct wl_data_device *wl_data_device,
 	       struct wl_data_offer *id)
 {
-	struct wl_globals *globals = data;
+	struct tw_globals *globals = data;
 	if (id == NULL)
 		return;
 	if (globals->inputs.wl_data_offer &&
@@ -372,7 +373,7 @@ static int
 data_write_finished(struct tw_event *event, int fd)
 {
 	ssize_t offset = 0, size = 0;
-	struct wl_globals *globals = event->data;
+	struct tw_globals *globals = event->data;
 	struct anonymous_buff_t buffer;
 	struct wl_data_offer *offer = globals->inputs.wl_data_offer;
 	struct data_offer_data *data = (offer) ?
@@ -381,8 +382,8 @@ data_write_finished(struct tw_event *event, int fd)
 		return TW_EVENT_DEL;
 
 	//if selection
-	struct app_surface *app =
-		app_surface_from_wl_surface(data->surface);
+	struct tw_appsurf *app =
+		tw_appsurf_from_wl_surface(data->surface);
 
 	assert(data->fd == fd);
 	//write to entire buffer
@@ -396,12 +397,12 @@ data_write_finished(struct tw_event *event, int fd)
 	}
 	//clean off the wl_data_offer here so users will not think it has copy to do
 	data->globals->inputs.wl_data_offer = NULL;
-	struct app_event e = {
+	struct tw_app_event e = {
 		.type = TW_PASTE,
 		.clipboard.data = buffer.addr,
 		.clipboard.size = offset,
 	};
-	_app_surface_run_frame(app, &e);
+	_tw_appsurf_run_frame(app, &e);
 	anonymous_buff_close_file(&buffer);
 	//finish the this data offer
 	if (data->dnd)
@@ -412,13 +413,13 @@ data_write_finished(struct tw_event *event, int fd)
 }
 
 void
-wl_globals_receive_data_offer(struct wl_data_offer *offer,
+tw_globals_receive_data_offer(struct wl_data_offer *offer,
 			      struct wl_surface *wl_surface,
 			      bool drag_n_drop)
 {
 	struct data_offer_data *offer_data =
 		wl_data_offer_get_user_data(offer);
-	struct wl_globals *globals = offer_data->globals;
+	struct tw_globals *globals = offer_data->globals;
 	struct tw_event_queue *queue = &globals->event_queue;
 	struct tw_event event = {
 		.data = globals,
@@ -451,19 +452,19 @@ cancel_receive:
 
 
 /*******************************************************************************
- * wl_globals
+ * tw_globals
  ******************************************************************************/
 
 #ifdef _GNU_SOURCE
-/* we want to fit wl_globals inside L1 cache */
-_Static_assert(sizeof(struct wl_globals) <= 32 * 1024, "wl_globals is too big");
+/* we want to fit tw_globals inside L1 cache */
+_Static_assert(sizeof(struct tw_globals) <= 32 * 1024, "tw_globals is too big");
 #endif
 
 void
-wl_globals_init(struct wl_globals *globals, struct wl_display *display)
+tw_globals_init(struct tw_globals *globals, struct wl_display *display)
 {
 	//do this first, so all the pointers are null
-	*globals = (struct wl_globals){0};
+	*globals = (struct tw_globals){0};
 	globals->display = display;
 	globals->buffer_format = 0xFFFFFFFF;
 	tw_event_queue_init(&globals->event_queue);
@@ -472,7 +473,7 @@ wl_globals_init(struct wl_globals *globals, struct wl_display *display)
 }
 
 void
-wl_globals_release(struct wl_globals *globals)
+tw_globals_release(struct tw_globals *globals)
 {
 	wl_data_device_release(globals->inputs.wl_data_device);
 	seat_destroy(globals->inputs.wl_seat, globals);
@@ -482,40 +483,63 @@ wl_globals_release(struct wl_globals *globals)
 }
 
 //we need to have a global remove function here
-//if we have our own configurator, the wl_globals can be really useful.
+//if we have our own configurator, the tw_globals can be really useful.
 int
-wl_globals_announce(struct wl_globals *globals,
+tw_globals_announce(struct tw_globals *globals,
 		    struct wl_registry *wl_registry,
 		    uint32_t name,
 		    const char *interface,
 		    uint32_t version)
 {
 	if (strcmp(interface, wl_seat_interface.name) == 0) {
-		globals->inputs.wl_seat = wl_registry_bind(wl_registry, name, &wl_seat_interface, version);
-		wl_seat_add_listener(globals->inputs.wl_seat, &seat_listener, globals);
+		globals->inputs.wl_seat =
+			wl_registry_bind(wl_registry, name,
+			                 &wl_seat_interface, version);
+		wl_seat_add_listener(globals->inputs.wl_seat,
+		                     &seat_listener, globals);
 		if (globals->wl_data_device_manager) {
 			globals->inputs.wl_data_device =
-				wl_data_device_manager_get_data_device(globals->wl_data_device_manager,
-								       globals->inputs.wl_seat);
-			wl_data_device_add_listener(globals->inputs.wl_data_device, &data_device_listener,
-						    globals);
+				wl_data_device_manager_get_data_device(
+					globals->wl_data_device_manager,
+					globals->inputs.wl_seat);
+			wl_data_device_add_listener(
+				globals->inputs.wl_data_device,
+				&data_device_listener,
+				globals);
 		}
+
 	} else if (strcmp(interface, wl_compositor_interface.name) == 0) {
-		globals->compositor = wl_registry_bind(wl_registry, name, &wl_compositor_interface, version);
+		globals->compositor =
+			wl_registry_bind(wl_registry,
+			                 name,
+			                 &wl_compositor_interface,
+			                 version);
+
 	} else if (strcmp(interface, wl_shm_interface.name) == 0)  {
-		globals->shm = wl_registry_bind(wl_registry, name, &wl_shm_interface, version);
+		globals->shm =
+			wl_registry_bind(wl_registry,
+			                 name,
+			                 &wl_shm_interface,
+			                 version);
 		wl_shm_add_listener(globals->shm, &shm_listener, globals);
+
 	} else if (strcmp(interface, wl_data_device_manager_interface.name) == 0) {
-		globals->wl_data_device_manager = wl_registry_bind(wl_registry, name,
-								   &wl_data_device_manager_interface,
-								   version);
+		globals->wl_data_device_manager =
+			wl_registry_bind(wl_registry,
+			                 name,
+			                 &wl_data_device_manager_interface,
+			                 version);
 		if (globals->inputs.wl_seat) {
 			globals->inputs.wl_data_device =
-				wl_data_device_manager_get_data_device(globals->wl_data_device_manager,
-								       globals->inputs.wl_seat);
-			wl_data_device_add_listener(globals->inputs.wl_data_device, &data_device_listener,
-						    globals);
+				wl_data_device_manager_get_data_device(
+					globals->wl_data_device_manager,
+					globals->inputs.wl_seat);
+			wl_data_device_add_listener(
+				globals->inputs.wl_data_device,
+				&data_device_listener,
+				globals);
 		}
+
 	} else {
 		fprintf(stderr, "announcing global %s\n", interface);
 		return 0;

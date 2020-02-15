@@ -35,7 +35,7 @@
 #include <ui.h>
 #include <client.h>
 
-extern void _app_surface_run_frame(struct app_surface *surf, const struct app_event *e);
+extern void _tw_appsurf_run_frame(struct tw_appsurf *surf, const struct tw_app_event *e);
 
 static inline uint32_t
 tw_mod_mask_from_xkb_state(struct xkb_state *state)
@@ -62,8 +62,8 @@ kc_linux2xkb(uint32_t kc_linux)
 static int
 handle_key_repeat(struct tw_event *e, int fd)
 {
-	struct app_surface *surf = e->data;
-	struct wl_globals *globals = surf->wl_globals;
+	struct tw_appsurf *surf = e->data;
+	struct tw_globals *globals = surf->tw_globals;
 
 	if (globals && surf->do_frame &&
 	    globals->inputs.key_pressed &&
@@ -75,7 +75,7 @@ handle_key_repeat(struct tw_event *e, int fd)
 
 		//2) consecutively generate on/off. Thanks god the tw_event is
 		//modifable
-		struct app_event ae = {
+		struct tw_app_event ae = {
 			.type = TW_KEY_BTN,
 			.time = globals->inputs.millisec,
 			.key = {
@@ -85,9 +85,9 @@ handle_key_repeat(struct tw_event *e, int fd)
 				.state = false,
 			},
 		};
-		_app_surface_run_frame(surf, &ae);
+		_tw_appsurf_run_frame(surf, &ae);
 		ae.key.state = true;
-		_app_surface_run_frame(surf, &ae);
+		_tw_appsurf_run_frame(surf, &ae);
 		return TW_EVENT_NOOP;
 	} else
 		return TW_EVENT_DEL;
@@ -109,9 +109,9 @@ handle_key(void *data,
 	   uint32_t key,
 	   uint32_t state)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
+	struct tw_globals *globals = (struct tw_globals *)data;
 	struct wl_surface *focused = globals->inputs.keyboard_focused;
-	struct app_surface *appsurf = (focused) ? app_surface_from_wl_surface(focused) : NULL;
+	struct tw_appsurf *appsurf = (focused) ? tw_appsurf_from_wl_surface(focused) : NULL;
 
 	globals->inputs.millisec = time;
 	globals->inputs.keycode = kc_linux2xkb(key);
@@ -121,7 +121,7 @@ handle_key(void *data,
 	if (!appsurf || !appsurf->do_frame)
 		return;
 
-	struct app_event e = {
+	struct tw_app_event e = {
 		.time = time,
 		.type = TW_KEY_BTN,
 		.key = {
@@ -145,7 +145,7 @@ handle_key(void *data,
 					 &globals->inputs.repeat_info,
 					 &repeat_event);
 	}
-	_app_surface_run_frame(appsurf, &e);
+	_tw_appsurf_run_frame(appsurf, &e);
 }
 
 static
@@ -157,7 +157,7 @@ void handle_modifiers(void *data,
 		      uint32_t mods_locked,
 		      uint32_t group)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
+	struct tw_globals *globals = (struct tw_globals *)data;
 	xkb_state_update_mask(globals->inputs.kstate,
 			      mods_depressed, mods_latched, mods_locked, 0, 0, group);
 	globals->inputs.modifiers = tw_mod_mask_from_xkb_state(globals->inputs.kstate);
@@ -169,7 +169,7 @@ handle_keymap(void *data, struct wl_keyboard *wl_keyboard,
 	      int32_t fd,
 	      uint32_t size)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
+	struct tw_globals *globals = (struct tw_globals *)data;
 
 	if (globals->inputs.kcontext)
 		xkb_context_unref(globals->inputs.kcontext);
@@ -191,7 +191,7 @@ handle_repeat_info(void *data,
 		   int32_t rate,
 		   int32_t delay)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
+	struct tw_globals *globals = (struct tw_globals *)data;
 	globals->inputs.repeat_info = (struct itimerspec) {
 		.it_value = {
 			.tv_sec = 0,
@@ -211,11 +211,11 @@ handle_keyboard_enter(void *data,
 		      struct wl_surface *surface,
 		      struct wl_array *keys)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
+	struct tw_globals *globals = (struct tw_globals *)data;
 	globals->inputs.keyboard_focused = surface;
-	struct app_surface *app = app_surface_from_wl_surface(surface);
+	struct tw_appsurf *app = tw_appsurf_from_wl_surface(surface);
 	if (app)
-		app->wl_globals = globals;
+		app->tw_globals = globals;
 	fprintf(stderr, "keyboard has\n");
 }
 
@@ -225,7 +225,7 @@ handle_keyboard_leave(void *data,
 		    uint32_t serial,
 		    struct wl_surface *surface)
 {
-	struct wl_globals *globals = (struct wl_globals *)data;
+	struct tw_globals *globals = (struct tw_globals *)data;
 	globals->inputs.keyboard_focused = NULL;
 	fprintf(stderr, "keyboard lost focus\n");
 }
@@ -242,14 +242,14 @@ struct wl_keyboard_listener keyboard_listener = {
 };
 
 
-void tw_keyboard_init(struct wl_keyboard *keyboard, struct wl_globals *globals)
+void tw_keyboard_init(struct wl_keyboard *keyboard, struct tw_globals *globals)
 {
 	wl_keyboard_add_listener(globals->inputs.wl_keyboard, &keyboard_listener, globals);
 }
 
 void tw_keyboard_destroy(struct wl_keyboard *keyboard)
 {
-	struct wl_globals *globals = wl_keyboard_get_user_data(keyboard);
+	struct tw_globals *globals = wl_keyboard_get_user_data(keyboard);
 	if (globals->inputs.kstate) {
 		xkb_state_unref(globals->inputs.kstate);
 		globals->inputs.kstate = NULL;

@@ -36,7 +36,7 @@ extern "C" {
 
 //So the app surface becomes a event based surface. What we wanted to avoid in
 //the beginning. When the events becames so complex.
-enum app_event_type {
+enum tw_app_event_type {
 	/**
 	 * app_surface would receive of such event and frame call, most of those
 	 * events are interested by application only. We do not make event
@@ -70,8 +70,8 @@ enum app_event_type {
 	TW_PASTE,
 };
 
-struct app_event {
-	enum app_event_type type;
+struct tw_app_event {
+	enum tw_app_event_type type;
 	uint32_t time; //maybe I should process it take timestamp, like milliseconds
 	union {
 		struct {
@@ -118,8 +118,6 @@ struct app_event {
 
 	};
 };
-
-
 
 #ifdef __cplusplus
 }

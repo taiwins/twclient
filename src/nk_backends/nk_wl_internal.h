@@ -101,7 +101,7 @@ struct nk_wl_backend {
 	//look
 	struct {
 		//update to date information
-		struct app_surface *app_surface;
+		struct tw_appsurf *app_surface;
 		nk_wl_drawcall_t frame;
 		nk_wl_postcall_t post_cb;
 		char *internal_clipboard;
@@ -136,10 +136,10 @@ struct nk_wl_backend {
 
 
 static void nk_wl_render(struct nk_wl_backend *bkend);
-static void nk_wl_resize(struct app_surface *app, const struct app_event *e);
+static void nk_wl_resize(struct tw_appsurf *app, const struct tw_app_event *e);
 
 static void
-nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
+nk_wl_new_frame(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	bool handled_input = false;
 	//here is how we manage the buffer
@@ -181,20 +181,20 @@ nk_wl_new_frame(struct app_surface *surf, const struct app_event *e)
 	}
 	if (!handled_input)
 		return;
-	if ((surf->flags & APP_SURFACE_COMPOSITE))
+	if ((surf->flags & TW_APPSURF_COMPOSITE))
 		bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
 	else {
 		switch (surf->type) {
-		case APP_SURFACE_BACKGROUND:
+		case TW_APPSURF_BACKGROUND:
 			break;
-		case APP_SURFACE_PANEL:
-		case APP_SURFACE_LOCKER:
+		case TW_APPSURF_PANEL:
+		case TW_APPSURF_LOCKER:
 			nk_flags = NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR;
 			break;
-		case APP_SURFACE_WIDGET:
+		case TW_APPSURF_WIDGET:
 			nk_flags = NK_WINDOW_BORDER | NK_WINDOW_SCROLL_AUTO_HIDE;
 			break;
-		case APP_SURFACE_APP:
+		case TW_APPSURF_APP:
 			nk_flags = NK_WINDOW_BORDER | NK_WINDOW_CLOSABLE |
 			NK_WINDOW_TITLE | NK_WINDOW_SCROLL_AUTO_HIDE;
 			break;
@@ -246,8 +246,8 @@ nk_wl_maybe_skip(struct nk_wl_backend *bkend)
 
 /********************************* setup *******************************************/
 static void
-nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
-		       nk_wl_drawcall_t draw_cb, const struct bbox box)
+nk_wl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
+		       nk_wl_drawcall_t draw_cb, const struct tw_bbox box)
 {
 	surf->allocation = box;
 	surf->pending_allocation = box;
@@ -265,8 +265,8 @@ nk_wl_impl_app_surface(struct app_surface *surf, struct nk_wl_backend *bkend,
 
 	wl_surface_set_buffer_scale(surf->wl_surface, box.s);
 
-	if (surf->wl_globals)
-		nk_wl_apply_color(bkend, &surf->wl_globals->theme);
+	if (surf->tw_globals)
+		nk_wl_apply_color(bkend, &surf->tw_globals->theme);
 }
 
 static void
@@ -339,7 +339,7 @@ nk_wl_get_curr_style(struct nk_wl_backend *bkend)
 }
 
 NK_API void
-nk_wl_test_draw(struct nk_wl_backend *bkend, struct app_surface *app, nk_wl_drawcall_t draw_call)
+nk_wl_test_draw(struct nk_wl_backend *bkend, struct tw_appsurf *app, nk_wl_drawcall_t draw_call)
 {
 	//here is how we manage the buffer
 	int width = app->allocation.w;
