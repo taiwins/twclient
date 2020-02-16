@@ -139,7 +139,7 @@ make_current(struct nk_egl_backend *bkend, EGLSurface eglSurface)
 	    bkend == CURRENT_CONTEXT)
 		return true;
 	struct tw_egl_env *env = &bkend->env;
-	assert(eglMakeCurrent(env->egl_display,
+	ASSERT(eglMakeCurrent(env->egl_display,
 	                      eglSurface, eglSurface,
 	                      env->egl_context));
 	CURRENT_CONTEXT = bkend;
