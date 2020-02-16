@@ -38,7 +38,7 @@
 #include <cairo/cairo.h>
 #include <client.h>
 #include <egl.h>
-
+#include <helpers.h>
 
 /*
  * ==============================================================
@@ -94,13 +94,13 @@ tw_egl_env_init(struct tw_egl_env *env, const struct wl_display *d)
 	return false;
 #endif
 	env->wl_display = (struct wl_display *)d;
-	EGLint major, minor;
+	EGLint major = 0, minor = 0;
 	EGLint n;
-	EGLConfig egl_cfg;
+	EGLConfig egl_cfg = {0};
 
 	env->egl_display = eglGetDisplay((EGLNativeDisplayType)env->wl_display);
-	assert(env->egl_display);
-	assert(eglInitialize(env->egl_display, &major, &minor) == EGL_TRUE);
+	ASSERT(env->egl_display);
+	ASSERT(eglInitialize(env->egl_display, &major, &minor) == EGL_TRUE);
 
 	const char *egl_extensions = eglQueryString(env->egl_display, EGL_EXTENSIONS);
 	const char *egl_vendor = eglQueryString(env->egl_display, EGL_VENDOR);
@@ -108,7 +108,7 @@ tw_egl_env_init(struct tw_egl_env *env, const struct wl_display *d)
 	fprintf(stderr, "egl_extensions: %s\n", egl_extensions);
 	eglGetConfigs(env->egl_display, NULL, 0, &n);
 	fprintf(stderr, "egl has %d configures\n", n);
-	assert(EGL_TRUE == eglChooseConfig(env->egl_display, egl_config_attribs, &egl_cfg, 1, &n));
+	ASSERT(EGL_TRUE == eglChooseConfig(env->egl_display, egl_config_attribs, &egl_cfg, 1, &n));
 	debug_egl_config_attribs(env->egl_display, egl_cfg);
 	eglBindAPI(EGL_OPENGL_API);
 	env->egl_context = eglCreateContext(env->egl_display,
