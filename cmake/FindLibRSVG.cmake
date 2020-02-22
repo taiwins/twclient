@@ -6,7 +6,7 @@
 find_package(PkgConfig)
 pkg_check_modules(LIBRSVG REQUIRED QUIET librsvg-2.0)
 find_library(LIBRSVG_LOCATION NAMES rsvg-2 HINTS ${LIBRSVG_})
-find_package_handle_standard_args(LIBRSVG DEFAULT_MSG LIBRSVG_INCLUDE_DIRS LIBRSVG_LIBRARIES)
+find_package_handle_standard_args(LibRSVG DEFAULT_MSG LIBRSVG_INCLUDE_DIRS LIBRSVG_LIBRARIES)
 mark_as_advanced(LIBRSVG_INCLUDE_DIRS LIBRSVG_LIBRARIES)
 
 if (LIBRSVG_FOUND AND NOT TARGET LibRSVG::LibRSVG)
