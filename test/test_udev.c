@@ -15,7 +15,7 @@ on_device_change(struct tw_event *e, int fd)
 {
 	counter += 1;
 
-	struct udev_device *dev = tw_event_get_udev_device(e);
+	struct udev_device *dev = tw_event_get_udev_device(&queue, fd);
 	const char *name = udev_device_get_sysname(dev);
 
 	if (strstr(name, "BAT")) {
