@@ -35,9 +35,9 @@
 #include <os/file.h>
 #include <client.h>
 
-/*************************************************************
- *              event queue implementation                   *
- *************************************************************/
+/*******************************************************************************
+ * event queue implemnetaiton
+ ******************************************************************************/
 struct tw_event_source {
 	struct wl_list link;
 	struct epoll_event poll_event;
@@ -60,7 +60,6 @@ static void close_fd(struct tw_event_source *s)
 	close(s->fd);
 }
 
-
 static struct tw_event_source*
 alloc_event_source(struct tw_event *e, uint32_t mask, int fd)
 {
@@ -82,6 +81,17 @@ destroy_event_source(struct tw_event_source *s)
 	if (s->close)
 		s->close(s);
 	free(s);
+}
+
+static inline struct tw_event_source*
+event_source_from_fd(struct tw_event_queue *queue, int fd)
+{
+	struct tw_event_source *pos, *tmp;
+	wl_list_for_each_safe(pos, tmp, &queue->head, link) {
+		if (pos->fd == fd)
+			return pos;
+	}
+	return NULL;
 }
 
 void
@@ -156,14 +166,17 @@ tw_event_queue_init(struct tw_event_queue *queue)
 	return true;
 }
 
-
-//////////////////////// INOTIFY //////////////////////////////
+/*******************************************************************************
+ * inotify
+ ******************************************************************************/
 
 static void
 read_inotify(struct tw_event_source *s)
 {
+	ssize_t r; (void)r;
 	struct inotify_event events[100];
-	read(s->fd, events, sizeof(events));
+
+	r = read(s->fd, events, sizeof(events));
 }
 
 static void
@@ -173,26 +186,14 @@ close_inotify_watch(struct tw_event_source *s)
 	close(s->fd);
 }
 
-void
-tw_event_queue_remove_source(struct tw_event_queue *queue, struct tw_event *e)
-{
-	struct tw_event_source *pos, *tmp;
-	wl_list_for_each_safe(pos, tmp, &queue->head, link) {
-		if (pos->event.data == e->data) {
-			epoll_ctl(queue->pollfd, EPOLL_CTL_DEL, pos->fd, NULL);
-			destroy_event_source(pos);
-		}
-	}
-}
-
-bool
+int
 tw_event_queue_add_file(struct tw_event_queue *queue, const char *path,
 			struct tw_event *e, uint32_t mask)
 {
 	if (!mask)
 		mask = IN_MODIFY | IN_DELETE;
 	if (!is_file_exist(path))
-		return false;
+		return -1;
 	int fd = inotify_init1(IN_CLOEXEC);
 	struct tw_event_source *s = alloc_event_source(e, EPOLLIN | EPOLLET, fd);
 	wl_list_insert(&queue->head, &s->link);
@@ -201,13 +202,15 @@ tw_event_queue_add_file(struct tw_event_queue *queue, const char *path,
 
 	if (epoll_ctl(queue->pollfd, EPOLL_CTL_ADD, fd, &s->poll_event)) {
 		destroy_event_source(s);
-		return false;
+		return -1;
 	}
 	s->wd = inotify_add_watch(fd, path, mask);
-	return true;
+	return fd;
 }
 
-//////////////////////////// UDEV //////////////////////////////
+/*******************************************************************************
+ * udev
+ ******************************************************************************/
 
 static void
 close_udev_monitor(struct tw_event_source *src)
@@ -217,22 +220,25 @@ close_udev_monitor(struct tw_event_source *src)
 }
 
 struct udev_device *
-tw_event_get_udev_device(const struct tw_event *e)
+tw_event_get_udev_device(struct tw_event_queue *queue, int fd)
 {
+	//this is actually really risky, passing a pointer
+	struct udev_device *dev;
 	const struct tw_event_source *source =
-		container_of(e, const struct tw_event_source, event);
-	struct udev_device *dev =
-		udev_monitor_receive_device(source->mon);
+		event_source_from_fd(queue, fd);
+	if (!source)
+		return NULL;
+	dev = udev_monitor_receive_device(source->mon);
 	return dev;
 	//user has the responsibility to unref it
 }
 
-bool
+int
 tw_event_queue_add_device(struct tw_event_queue *queue, const char *subsystem,
 			  const char *devname, struct tw_event *e)
 {
 	if (!subsystem)
-		return false;
+		return -1;
 	if (!UDEV)
 		UDEV = udev_new();
 
@@ -248,40 +254,84 @@ tw_event_queue_add_device(struct tw_event_queue *queue, const char *subsystem,
 
 	if (epoll_ctl(queue->pollfd, EPOLL_CTL_ADD, fd, &s->poll_event)) {
 		destroy_event_source(s);
-		return false;
+		return -1;
 	}
-	return true;
+	return fd;
 }
 
-//////////////////// GENERAL SOURCE ////////////////////////////
+/*******************************************************************************
+ * general source
+ ******************************************************************************/
 
-bool
+int
 tw_event_queue_add_source(struct tw_event_queue *queue, int fd,
 			  struct tw_event *e, uint32_t mask)
 {
+	struct tw_event_source *s;
+
 	if (!mask)
 		mask = EPOLLIN | EPOLLET;
-	struct tw_event_source *s = alloc_event_source(e, mask, fd);
+	s = event_source_from_fd(queue, fd);
+	if (s) //already added
+		return fd;
+
+	s = alloc_event_source(e, mask, fd);
 	wl_list_insert(&queue->head, &s->link);
-	/* s->pre_hook = read_inotify; */
 
 	if (epoll_ctl(queue->pollfd, EPOLL_CTL_ADD, fd, &s->poll_event)) {
 		destroy_event_source(s);
-		return false;
+		return -1;
 	}
-	return true;
+	return fd;
 }
 
-/////////////////////////// TIMER //////////////////////////////
+bool
+tw_event_queue_remove_source(struct tw_event_queue *queue, int fd)
+{
+	struct tw_event_source *source =
+		event_source_from_fd(queue, fd);
+
+	if (!source)
+		return false;
+	else {
+		epoll_ctl(queue->pollfd, EPOLL_CTL_DEL, source->fd, NULL);
+		destroy_event_source(source);
+		return true;
+	}
+}
+
+bool
+tw_event_queue_modify_source(struct tw_event_queue *queue, int fd,
+                             struct tw_event *e, uint32_t mask)
+{
+	struct tw_event_source *source =
+		event_source_from_fd(queue, fd);
+
+	if (!source)
+		return false;
+	else {
+		source->event = *e;
+		epoll_ctl(queue->pollfd, EPOLL_CTL_MOD, fd, &source->poll_event);
+		return true;
+	}
+}
+
+/*******************************************************************************
+ * timer
+ ******************************************************************************/
 
 static void
 read_timer(struct tw_event_source *s)
 {
+	ssize_t r;
 	uint64_t nhit;
-	read(s->fd, &nhit, 8);
+
+	(void)r;
+	(void)nhit;
+	r = read(s->fd, &nhit, 8);
 }
 
-bool
+int
 tw_event_queue_add_timer(struct tw_event_queue *queue,
 			 const struct itimerspec *spec, struct tw_event *e)
 {
@@ -298,17 +348,19 @@ tw_event_queue_add_timer(struct tw_event_queue *queue,
 	if (epoll_ctl(queue->pollfd, EPOLL_CTL_ADD, fd, &s->poll_event))
 		goto err_add;
 
-	return true;
+	return fd;
 
 err_add:
 	destroy_event_source(s);
 err_settime:
 	close(fd);
 err:
-	return false;
+	return -1;
 }
 
-//////////////////////// WL_DISPLAY ////////////////////////////
+/*******************************************************************************
+ * wayland display
+ ******************************************************************************/
 
 static int
 dispatch_wl_display(struct tw_event *e, int fd)
@@ -328,7 +380,7 @@ dispatch_wl_display(struct tw_event *e, int fd)
 	return TW_EVENT_NOOP;
 }
 
-bool
+int
 tw_event_queue_add_wl_display(struct tw_event_queue *queue, struct wl_display *display)
 {
 	int fd = wl_display_get_fd(display);
@@ -344,14 +396,14 @@ tw_event_queue_add_wl_display(struct tw_event_queue *queue, struct wl_display *d
 
 	if (epoll_ctl(queue->pollfd, EPOLL_CTL_ADD, fd, &s->poll_event)) {
 		destroy_event_source(s);
-		return false;
+		return -1;
 	}
-	return true;
+	return fd;
 }
 
 
 /**
- * /brief add the idle task to the queue.
+ * @brief add the idle task to the queue.
  *
  * You could have a lot of allocation under one frame. So use this feature
  * carefully. For example, use a cached state to check whether it is necessary
