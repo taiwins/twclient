@@ -37,16 +37,16 @@ extern "C" {
 	struct tw_option_ ## name { bool valid; type name; }
 #endif
 
-typedef uint32_t taiwins_flags;
+typedef uint32_t tw_flags;
 
-typedef struct {float x,y;} taiwins_vec2_t;
+typedef struct {float x,y;} tw_vec2_t;
 
 typedef union {
 	uint32_t code;
 	struct {
 		uint8_t r,g,b,a;
 	};
-} taiwins_rgba_t;
+} tw_rgba_t;
 
 /*
  * to be fair. It should be a path, but if that is the case. Why don't we just
@@ -54,97 +54,97 @@ typedef union {
  */
 typedef struct {
 	uint32_t handle;
-} taiwins_image_t;
+} tw_image_t;
 
-enum taiwins_style_type {
+enum tw_style_type {
 	TAIWINS_STYLE_COLOR = 0,
 	TAIWINS_STYLE_IMAGE = 1,
 };
 
-enum taiwins_text_alignment {
+enum tw_text_alignment {
 	TAIWINS_TEXT_LEFT = 0,
 	TAIWINS_TEXT_RIGHT = 1,
 	TAIWINS_TEXT_CENTER = 2,
 };
 
-union taiwins_style_data {
-	taiwins_rgba_t color;
-	taiwins_image_t image;
+union tw_style_data {
+	tw_rgba_t color;
+	tw_image_t image;
 };
 
-struct taiwins_style_item {
-	enum taiwins_style_type type;
-	union taiwins_style_data data;
+struct tw_style_item {
+	enum tw_style_type type;
+	union tw_style_data data;
 };
 
-typedef OPTION(taiwins_rgba_t, rgba) theme_option_rgba;
+typedef OPTION(tw_rgba_t, rgba) theme_option_rgba;
 typedef OPTION(const uint32_t, handle) theme_option_handle;
-typedef OPTION(struct taiwins_style_item, style) theme_option_style;
+typedef OPTION(struct tw_style_item, style) theme_option_style;
 typedef OPTION(uint32_t, font_size) theme_option_font_size;
 
-struct taiwins_style_text {
-	taiwins_rgba_t color;
-	taiwins_vec2_t padding;
+struct tw_style_text {
+	tw_rgba_t color;
+	tw_vec2_t padding;
 };
 
-struct taiwins_style_button {
+struct tw_style_button {
 	/* background */
 	theme_option_style normal;
 	theme_option_style hover;
 	theme_option_style active;
-	taiwins_rgba_t border_color;
+	tw_rgba_t border_color;
 
 	/* text */
-	taiwins_rgba_t text_background;
-	taiwins_rgba_t text_normal;
-	taiwins_rgba_t text_hover;
-	taiwins_rgba_t text_active;
-	taiwins_flags text_alignment;
+	tw_rgba_t text_background;
+	tw_rgba_t text_normal;
+	tw_rgba_t text_hover;
+	tw_rgba_t text_active;
+	tw_flags text_alignment;
 
 	/* properties */
 	float border;
 	float rounding;
-	taiwins_vec2_t padding;
-	taiwins_vec2_t image_padding;
-	taiwins_vec2_t touch_padding;
+	tw_vec2_t padding;
+	tw_vec2_t image_padding;
+	tw_vec2_t touch_padding;
 
 	/* optional user callbacks */
-	/* taiwins_handle userdata; */
-	/* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle userdata); */
-	/* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle userdata); */
+	/* tw_handle userdata; */
+	/* void(*draw_begin)(struct tw_command_buffer*, tw_handle userdata); */
+	/* void(*draw_end)(struct tw_command_buffer*, tw_handle userdata); */
 };
 
-struct taiwins_style_toggle {
+struct tw_style_toggle {
 	/* background */
 	theme_option_style normal;
 	theme_option_style hover;
 	theme_option_style active;
-	taiwins_rgba_t border_color;
+	tw_rgba_t border_color;
 
 	/* cursor */
 	theme_option_style cursor_normal;
 	theme_option_style cursor_hover;
 
 	/* text */
-	taiwins_rgba_t text_normal;
-	taiwins_rgba_t text_hover;
-	taiwins_rgba_t text_active;
-	taiwins_rgba_t text_background;
-	taiwins_flags text_alignment;
+	tw_rgba_t text_normal;
+	tw_rgba_t text_hover;
+	tw_rgba_t text_active;
+	tw_rgba_t text_background;
+	tw_flags text_alignment;
 
 	/* properties */
-	taiwins_vec2_t padding;
-	taiwins_vec2_t touch_padding;
+	tw_vec2_t padding;
+	tw_vec2_t touch_padding;
 	float spacing;
 	float border;
 
 	/* optional user callbacks */
-	/* taiwins_handle userdata; */
-	/* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
-	/* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* tw_handle userdata; */
+	/* void(*draw_begin)(struct tw_command_buffer*, tw_handle); */
+	/* void(*draw_end)(struct tw_command_buffer*, tw_handle); */
 };
 
-struct taiwins_style_selectable {
+struct tw_style_selectable {
 	/* background (inactive) */
 	theme_option_style normal;
 	theme_option_style hover;
@@ -156,41 +156,41 @@ struct taiwins_style_selectable {
 	theme_option_style pressed_active;
 
 	/* text color (inactive) */
-	taiwins_rgba_t text_normal;
-	taiwins_rgba_t text_hover;
-	taiwins_rgba_t text_pressed;
+	tw_rgba_t text_normal;
+	tw_rgba_t text_hover;
+	tw_rgba_t text_pressed;
 
 	/* text color (active) */
-	taiwins_rgba_t text_normal_active;
-	taiwins_rgba_t text_hover_active;
-	taiwins_rgba_t text_pressed_active;
-	taiwins_rgba_t text_background;
-	taiwins_flags text_alignment;
+	tw_rgba_t text_normal_active;
+	tw_rgba_t text_hover_active;
+	tw_rgba_t text_pressed_active;
+	tw_rgba_t text_background;
+	tw_flags text_alignment;
 
 	/* properties */
 	float rounding;
-	taiwins_vec2_t padding;
-	taiwins_vec2_t touch_padding;
-	taiwins_vec2_t image_padding;
+	tw_vec2_t padding;
+	tw_vec2_t touch_padding;
+	tw_vec2_t image_padding;
 
 	/* optional user callbacks */
-	/* taiwins_handle userdata; */
-	/* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
-	/* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* tw_handle userdata; */
+	/* void(*draw_begin)(struct tw_command_buffer*, tw_handle); */
+	/* void(*draw_end)(struct tw_command_buffer*, tw_handle); */
 };
 
-struct taiwins_style_slider {
+struct tw_style_slider {
 	/* background */
 	theme_option_style normal;
 	theme_option_style hover;
 	theme_option_style active;
-	taiwins_rgba_t border_color;
+	tw_rgba_t border_color;
 
 	/* background bar */
-	taiwins_rgba_t bar_normal;
-	taiwins_rgba_t bar_hover;
-	taiwins_rgba_t bar_active;
-	taiwins_rgba_t bar_filled;
+	tw_rgba_t bar_normal;
+	tw_rgba_t bar_hover;
+	tw_rgba_t bar_active;
+	tw_rgba_t bar_filled;
 
 	/* cursor */
 	theme_option_style cursor_normal;
@@ -201,254 +201,254 @@ struct taiwins_style_slider {
 	float border;
 	float rounding;
 	float bar_height;
-	taiwins_vec2_t padding;
-	taiwins_vec2_t spacing;
-	taiwins_vec2_t cursor_size;
+	tw_vec2_t padding;
+	tw_vec2_t spacing;
+	tw_vec2_t cursor_size;
 
 	/* optional buttons */
 	int show_buttons;
-	struct taiwins_style_button inc_button;
-	struct taiwins_style_button dec_button;
-	/* enum taiwins_symbol_type inc_symbol; */
-	/* enum taiwins_symbol_type dec_symbol; */
+	struct tw_style_button inc_button;
+	struct tw_style_button dec_button;
+	/* enum tw_symbol_type inc_symbol; */
+	/* enum tw_symbol_type dec_symbol; */
 
 	/* optional user callbacks */
-	/* taiwins_handle userdata; */
-	/* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
-	/* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* tw_handle userdata; */
+	/* void(*draw_begin)(struct tw_command_buffer*, tw_handle); */
+	/* void(*draw_end)(struct tw_command_buffer*, tw_handle); */
 };
 
-struct taiwins_style_progress {
+struct tw_style_progress {
 	/* background */
 	theme_option_style normal;
 	theme_option_style hover;
 	theme_option_style active;
-	taiwins_rgba_t border_color;
+	tw_rgba_t border_color;
 
 	/* cursor */
 	theme_option_style cursor_normal;
 	theme_option_style cursor_hover;
 	theme_option_style cursor_active;
-	taiwins_rgba_t cursor_border_color;
+	tw_rgba_t cursor_border_color;
 
 	/* properties */
 	float rounding;
 	float border;
 	float cursor_border;
 	float cursor_rounding;
-	taiwins_vec2_t padding;
+	tw_vec2_t padding;
 
 	/* optional user callbacks */
-	/* taiwins_handle userdata; */
-	/* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
-	/* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* tw_handle userdata; */
+	/* void(*draw_begin)(struct tw_command_buffer*, tw_handle); */
+	/* void(*draw_end)(struct tw_command_buffer*, tw_handle); */
 };
 
-struct taiwins_style_scrollbar {
+struct tw_style_scrollbar {
 	/* background */
 	theme_option_style normal;
 	theme_option_style hover;
 	theme_option_style active;
-	taiwins_rgba_t border_color;
+	tw_rgba_t border_color;
 
 	/* cursor */
 	theme_option_style cursor_normal;
 	theme_option_style cursor_hover;
 	theme_option_style cursor_active;
-	taiwins_rgba_t cursor_border_color;
+	tw_rgba_t cursor_border_color;
 
 	/* properties */
 	float border;
 	float rounding;
 	float border_cursor;
 	float rounding_cursor;
-	taiwins_vec2_t padding;
+	tw_vec2_t padding;
 
 	/* optional buttons */
 	int show_buttons;
-	struct taiwins_style_button inc_button;
-	struct taiwins_style_button dec_button;
-	/* enum taiwins_symbol_type inc_symbol; */
-	/* enum taiwins_symbol_type dec_symbol; */
+	struct tw_style_button inc_button;
+	struct tw_style_button dec_button;
+	/* enum tw_symbol_type inc_symbol; */
+	/* enum tw_symbol_type dec_symbol; */
 
 	/* optional user callbacks */
-	/* taiwins_handle userdata; */
-	/* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
-	/* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* tw_handle userdata; */
+	/* void(*draw_begin)(struct tw_command_buffer*, tw_handle); */
+	/* void(*draw_end)(struct tw_command_buffer*, tw_handle); */
 };
 
-struct taiwins_style_edit {
+struct tw_style_edit {
 	/* background */
 	theme_option_style normal;
 	theme_option_style hover;
 	theme_option_style active;
-	taiwins_rgba_t border_color;
-	struct taiwins_style_scrollbar scrollbar;
+	tw_rgba_t border_color;
+	struct tw_style_scrollbar scrollbar;
 
 	/* cursor  */
-	taiwins_rgba_t cursor_normal;
-	taiwins_rgba_t cursor_hover;
-	taiwins_rgba_t cursor_text_normal;
-	taiwins_rgba_t cursor_text_hover;
+	tw_rgba_t cursor_normal;
+	tw_rgba_t cursor_hover;
+	tw_rgba_t cursor_text_normal;
+	tw_rgba_t cursor_text_hover;
 
 	/* text (unselected) */
-	taiwins_rgba_t text_normal;
-	taiwins_rgba_t text_hover;
-	taiwins_rgba_t text_active;
+	tw_rgba_t text_normal;
+	tw_rgba_t text_hover;
+	tw_rgba_t text_active;
 
 	/* text (selected) */
-	taiwins_rgba_t selected_normal;
-	taiwins_rgba_t selected_hover;
-	taiwins_rgba_t selected_text_normal;
-	taiwins_rgba_t selected_text_hover;
+	tw_rgba_t selected_normal;
+	tw_rgba_t selected_hover;
+	tw_rgba_t selected_text_normal;
+	tw_rgba_t selected_text_hover;
 
 	/* properties */
 	float border;
 	float rounding;
 	float cursor_size;
-	taiwins_vec2_t scrollbar_size;
-	taiwins_vec2_t padding;
+	tw_vec2_t scrollbar_size;
+	tw_vec2_t padding;
 	float row_padding;
 };
 
-struct taiwins_style_property {
+struct tw_style_property {
 	/* background */
 	theme_option_style normal;
 	theme_option_style hover;
 	theme_option_style active;
-	taiwins_rgba_t border_color;
+	tw_rgba_t border_color;
 
 	/* text */
-	taiwins_rgba_t label_normal;
-	taiwins_rgba_t label_hover;
-	taiwins_rgba_t label_active;
+	tw_rgba_t label_normal;
+	tw_rgba_t label_hover;
+	tw_rgba_t label_active;
 
 	/* symbols */
-	/* enum taiwins_symbol_type sym_left; */
-	/* enum taiwins_symbol_type sym_right; */
+	/* enum tw_symbol_type sym_left; */
+	/* enum tw_symbol_type sym_right; */
 
 	/* properties */
 	float border;
 	float rounding;
-	taiwins_vec2_t padding;
+	tw_vec2_t padding;
 
-	struct taiwins_style_edit edit;
-	struct taiwins_style_button inc_button;
-	struct taiwins_style_button dec_button;
+	struct tw_style_edit edit;
+	struct tw_style_button inc_button;
+	struct tw_style_button dec_button;
 
 	/* optional user callbacks */
-	/* taiwins_handle userdata; */
-	/* void(*draw_begin)(struct taiwins_command_buffer*, taiwins_handle); */
-	/* void(*draw_end)(struct taiwins_command_buffer*, taiwins_handle); */
+	/* tw_handle userdata; */
+	/* void(*draw_begin)(struct tw_command_buffer*, tw_handle); */
+	/* void(*draw_end)(struct tw_command_buffer*, tw_handle); */
 };
 
-struct taiwins_style_chart {
+struct tw_style_chart {
 	/* colors */
 	theme_option_style background;
-	taiwins_rgba_t border_color;
-	taiwins_rgba_t selected_color;
-	taiwins_rgba_t color;
+	tw_rgba_t border_color;
+	tw_rgba_t selected_color;
+	tw_rgba_t color;
 
 	/* properties */
 	float border;
 	float rounding;
-	taiwins_vec2_t padding;
+	tw_vec2_t padding;
 };
 
-struct taiwins_style_combo {
+struct tw_style_combo {
 	/* background */
 	theme_option_style normal;
 	theme_option_style hover;
 	theme_option_style active;
-	taiwins_rgba_t border_color;
+	tw_rgba_t border_color;
 
 	/* label */
-	taiwins_rgba_t label_normal;
-	taiwins_rgba_t label_hover;
-	taiwins_rgba_t label_active;
+	tw_rgba_t label_normal;
+	tw_rgba_t label_hover;
+	tw_rgba_t label_active;
 
 	/* symbol */
-	taiwins_rgba_t symbol_normal;
-	taiwins_rgba_t symbol_hover;
-	taiwins_rgba_t symbol_active;
+	tw_rgba_t symbol_normal;
+	tw_rgba_t symbol_hover;
+	tw_rgba_t symbol_active;
 
 	/* button */
-	struct taiwins_style_button button;
-	/* enum taiwins_symbol_type sym_normal; */
-	/* enum taiwins_symbol_type sym_hover; */
-	/* enum taiwins_symbol_type sym_active; */
+	struct tw_style_button button;
+	/* enum tw_symbol_type sym_normal; */
+	/* enum tw_symbol_type sym_hover; */
+	/* enum tw_symbol_type sym_active; */
 
 	/* properties */
 	float border;
 	float rounding;
-	taiwins_vec2_t content_padding;
-	taiwins_vec2_t button_padding;
-	taiwins_vec2_t spacing;
+	tw_vec2_t content_padding;
+	tw_vec2_t button_padding;
+	tw_vec2_t spacing;
 };
 
-struct taiwins_style_tab {
+struct tw_style_tab {
 	/* background */
 	theme_option_style background;
-	taiwins_rgba_t border_color;
-	taiwins_rgba_t text;
+	tw_rgba_t border_color;
+	tw_rgba_t text;
 
 	/* button */
-	struct taiwins_style_button tab_maximize_button;
-	struct taiwins_style_button tab_minimize_button;
-	struct taiwins_style_button node_maximize_button;
-	struct taiwins_style_button node_minimize_button;
-	/* enum taiwins_symbol_type sym_minimize; */
-	/* enum taiwins_symbol_type sym_maximize; */
+	struct tw_style_button tab_maximize_button;
+	struct tw_style_button tab_minimize_button;
+	struct tw_style_button node_maximize_button;
+	struct tw_style_button node_minimize_button;
+	/* enum tw_symbol_type sym_minimize; */
+	/* enum tw_symbol_type sym_maximize; */
 
 	/* properties */
 	float border;
 	float rounding;
 	float indent;
-	taiwins_vec2_t padding;
-	taiwins_vec2_t spacing;
+	tw_vec2_t padding;
+	tw_vec2_t spacing;
 };
 
-enum taiwins_style_header_align {
+enum tw_style_header_align {
 	TAIWINS_HEADER_LEFT,
 	TAIWINS_HEADER_RIGHT
 };
-struct taiwins_style_window_header {
+struct tw_style_window_header {
 	/* background */
 	theme_option_style normal;
 	theme_option_style hover;
 	theme_option_style active;
 
 	/* button */
-	struct taiwins_style_button close_button;
-	struct taiwins_style_button minimize_button;
-	/* enum taiwins_symbol_type close_symbol; */
-	/* enum taiwins_symbol_type minimize_symbol; */
-	/* enum taiwins_symbol_type maximize_symbol; */
+	struct tw_style_button close_button;
+	struct tw_style_button minimize_button;
+	/* enum tw_symbol_type close_symbol; */
+	/* enum tw_symbol_type minimize_symbol; */
+	/* enum tw_symbol_type maximize_symbol; */
 
 	/* title */
-	taiwins_rgba_t label_normal;
-	taiwins_rgba_t label_hover;
-	taiwins_rgba_t label_active;
+	tw_rgba_t label_normal;
+	tw_rgba_t label_hover;
+	tw_rgba_t label_active;
 
 	/* properties */
-	enum taiwins_style_header_align align;
-	taiwins_vec2_t padding;
-	taiwins_vec2_t label_padding;
-	taiwins_vec2_t spacing;
+	enum tw_style_header_align align;
+	tw_vec2_t padding;
+	tw_vec2_t label_padding;
+	tw_vec2_t spacing;
 };
 
-struct taiwins_style_window {
-	struct taiwins_style_window_header header;
+struct tw_style_window {
+	struct tw_style_window_header header;
 	theme_option_style fixed_background;
-	taiwins_rgba_t background;
+	tw_rgba_t background;
 
-	taiwins_rgba_t border_color;
-	taiwins_rgba_t popup_border_color;
-	taiwins_rgba_t combo_border_color;
-	taiwins_rgba_t contextual_border_color;
-	taiwins_rgba_t menu_border_color;
-	taiwins_rgba_t group_border_color;
-	taiwins_rgba_t tooltip_border_color;
+	tw_rgba_t border_color;
+	tw_rgba_t popup_border_color;
+	tw_rgba_t combo_border_color;
+	tw_rgba_t contextual_border_color;
+	tw_rgba_t menu_border_color;
+	tw_rgba_t group_border_color;
+	tw_rgba_t tooltip_border_color;
 	theme_option_style scaler;
 
 	float border;
@@ -461,41 +461,41 @@ struct taiwins_style_window {
 	float min_row_height_padding;
 
 	float rounding;
-	taiwins_vec2_t spacing;
-	taiwins_vec2_t scrollbar_size;
-	taiwins_vec2_t min_size;
+	tw_vec2_t spacing;
+	tw_vec2_t scrollbar_size;
+	tw_vec2_t min_size;
 
-	taiwins_vec2_t padding;
-	taiwins_vec2_t group_padding;
-	taiwins_vec2_t popup_padding;
-	taiwins_vec2_t combo_padding;
-	taiwins_vec2_t contextual_padding;
-	taiwins_vec2_t menu_padding;
-	taiwins_vec2_t tooltip_padding;
+	tw_vec2_t padding;
+	tw_vec2_t group_padding;
+	tw_vec2_t popup_padding;
+	tw_vec2_t combo_padding;
+	tw_vec2_t contextual_padding;
+	tw_vec2_t menu_padding;
+	tw_vec2_t tooltip_padding;
 };
 
 /* we don't need to follow exactly what nuklear does, many of the elements are
  * redundent, we can certainly clean it up later
  */
-struct taiwins_theme {
+struct tw_theme {
 	theme_option_font_size pending_font_size;
-	struct taiwins_style_text text;
-	struct taiwins_style_button button;
-	struct taiwins_style_button contextual_button;
-	struct taiwins_style_button menu_button;
-	struct taiwins_style_toggle option;
-	struct taiwins_style_toggle checkbox;
-	struct taiwins_style_selectable selectable;
-	struct taiwins_style_slider slider;
-	struct taiwins_style_progress progress;
-	struct taiwins_style_property property;
-	struct taiwins_style_edit edit;
-	struct taiwins_style_chart chart;
-	struct taiwins_style_scrollbar scrollh;
-	struct taiwins_style_scrollbar scrollv;
-	struct taiwins_style_tab tab;
-	struct taiwins_style_combo combo;
-	struct taiwins_style_window window;
+	struct tw_style_text text;
+	struct tw_style_button button;
+	struct tw_style_button contextual_button;
+	struct tw_style_button menu_button;
+	struct tw_style_toggle option;
+	struct tw_style_toggle checkbox;
+	struct tw_style_selectable selectable;
+	struct tw_style_slider slider;
+	struct tw_style_progress progress;
+	struct tw_style_property property;
+	struct tw_style_edit edit;
+	struct tw_style_chart chart;
+	struct tw_style_scrollbar scrollh;
+	struct tw_style_scrollbar scrollv;
+	struct tw_style_tab tab;
+	struct tw_style_combo combo;
+	struct tw_style_window window;
 	/* handles for images, which will be mark as start point in the string
 	   pool, it works as a sparse string */
 	struct wl_array handle_pool;
@@ -504,31 +504,34 @@ struct taiwins_theme {
 };
 
 struct widget_colors {
-	taiwins_rgba_t normal;
-	taiwins_rgba_t hover;
-	taiwins_rgba_t active;
+	tw_rgba_t normal;
+	tw_rgba_t hover;
+	tw_rgba_t active;
 };
 
-struct taiwins_theme_color {
+struct tw_theme_color {
 	uint32_t row_size; //this defines the text size as well
-	taiwins_rgba_t window_color;
-	taiwins_rgba_t border_color;
+	tw_rgba_t window_color;
+	tw_rgba_t border_color;
 	//text colors
-	taiwins_rgba_t text_color; //text_edit_cursor as well
-	taiwins_rgba_t text_active_color;
+	tw_rgba_t text_color; //text_edit_cursor as well
+	tw_rgba_t text_active_color;
 	//widget color
 	struct widget_colors button;
 	struct widget_colors toggle;
 	struct widget_colors select;
-	taiwins_rgba_t slider_bg_color;
+	tw_rgba_t slider_bg_color;
 	struct widget_colors slider;
 	struct widget_colors chart;
-	taiwins_rgba_t combo_color;
+	tw_rgba_t combo_color;
 	//we can contain a font name here. eventually the icon font is done by
 	//searching all the svg in the widgets
 	char font[64];
 };
 
+void tw_theme_init_from_fd(struct tw_theme *theme, int fd, size_t size);
+
+void tw_theme_to_fd(struct tw_theme *theme);
 
 #ifdef __cplusplus
 }

@@ -27,18 +27,18 @@
 #include <theme.h>
 
 void
-taiwins_theme_init_from_fd(struct taiwins_theme *theme, int fd, size_t size)
+tw_theme_init_from_fd(struct tw_theme *theme, int fd, size_t size)
 {
 	void *addr = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
-	memcpy(theme, addr, sizeof(struct taiwins_theme));
+	memcpy(theme, addr, sizeof(struct tw_theme));
 	if (theme->handle_pool.size == 0)
 		return;
 	//initialize
 	size_t handles_size = theme->handle_pool.size;
 	size_t strings_size = theme->string_pool.size;
-	assert(handles_size + strings_size + sizeof(struct taiwins_theme) == size);
+	assert(handles_size + strings_size + sizeof(struct tw_theme) == size);
 
-	const void *handle_addr = (const char *)addr + sizeof(struct taiwins_theme);
+	const void *handle_addr = (const char *)addr + sizeof(struct tw_theme);
 	const void *strings_addr = (const char *)handle_addr +
 		handles_size;
 
@@ -53,20 +53,20 @@ taiwins_theme_init_from_fd(struct taiwins_theme *theme, int fd, size_t size)
 
 /* this function should be in the server */
 void
-taiwins_theme_to_fd(struct taiwins_theme *theme)
+tw_theme_to_fd(struct tw_theme *theme)
 {
 	struct anonymous_buff_t buff;
 	void *mapped;
-	size_t mapsize = sizeof(struct taiwins_theme) + theme->handle_pool.size +
+	size_t mapsize = sizeof(struct tw_theme) + theme->handle_pool.size +
 		theme->string_pool.size;
 	int fd = anonymous_buff_new(&buff, mapsize, PROT_READ | PROT_WRITE, MAP_SHARED);
 	if (fd < 0)
-		return -1;
+		return;
 	mapped = buff.addr;
-	memcpy(mapped, theme, sizeof(struct taiwins_theme));
-	((struct taiwins_theme *)mapped)->handle_pool.data = NULL;
-	((struct taiwins_theme *)mapped)->string_pool.data = NULL;
-	mapped = (char *)mapped + sizeof(struct taiwins_theme);
+	memcpy(mapped, theme, sizeof(struct tw_theme));
+	((struct tw_theme *)mapped)->handle_pool.data = NULL;
+	((struct tw_theme *)mapped)->string_pool.data = NULL;
+	mapped = (char *)mapped + sizeof(struct tw_theme);
 	memcpy(mapped, theme->handle_pool.data, theme->handle_pool.size);
 	mapped = (char *)mapped + theme->handle_pool.size;
 	memcpy(mapped, theme->string_pool.data, theme->string_pool.size);

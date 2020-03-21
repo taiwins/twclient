@@ -39,7 +39,7 @@ extern "C" {
 
 ////////////////////////// inlines ////////////////////////////////
 static inline struct nk_color
-nk_color_from_tw(const taiwins_rgba_t *tc)
+nk_color_from_tw(const tw_rgba_t *tc)
 {
 	struct nk_color nc;
 	nc.r = tc->r; nc.g = tc->g;
@@ -48,7 +48,7 @@ nk_color_from_tw(const taiwins_rgba_t *tc)
 }
 
 static inline struct nk_vec2
-nk_vec2_from_tw(const taiwins_vec2_t *vec)
+nk_vec2_from_tw(const tw_vec2_t *vec)
 {
 	struct nk_vec2 v;
 	v.x = vec->x;
@@ -57,7 +57,7 @@ nk_vec2_from_tw(const taiwins_vec2_t *vec)
 }
 
 static inline struct nk_style_item
-nk_style_item_from_tw(const struct taiwins_style_item *item,
+nk_style_item_from_tw(const struct tw_style_item *item,
 		      const struct nk_image *image_pool)
 {
     struct nk_style_item i;
@@ -70,7 +70,7 @@ nk_style_item_from_tw(const struct taiwins_style_item *item,
 }
 
 static inline nk_flags
-nk_alignment_from_tw(const enum taiwins_text_alignment alignment)
+nk_alignment_from_tw(const enum tw_text_alignment alignment)
 {
 	return (alignment == TAIWINS_TEXT_LEFT) ? NK_TEXT_LEFT :
 		(alignment == TAIWINS_TEXT_CENTER) ? NK_TEXT_CENTERED :
@@ -79,7 +79,7 @@ nk_alignment_from_tw(const enum taiwins_text_alignment alignment)
 
 
 struct image_cache
-nk_wl_build_theme_images(struct taiwins_theme *theme)
+nk_wl_build_theme_images(struct tw_theme *theme)
 {
 	return image_cache_from_arrays(&theme->handle_pool,
 	                               &theme->string_pool, NULL);
@@ -89,7 +89,7 @@ nk_wl_build_theme_images(struct taiwins_theme *theme)
 
 static void
 nk_button_style_from_tw(struct nk_style_button *button,
-			const struct taiwins_style_button *src_button,
+			const struct tw_style_button *src_button,
 			const struct nk_image *images)
 {
 	memset(button, 0, sizeof(*button));
@@ -130,7 +130,7 @@ nk_button_style_from_tw(struct nk_style_button *button,
 
 static void
 nk_toggle_style_from_tw(struct nk_style_toggle *toggle,
-			const struct taiwins_style_toggle *src_toggle,
+			const struct tw_style_toggle *src_toggle,
 			const struct nk_image *images)
 {
 	memset(toggle, 0, sizeof(*toggle));
@@ -170,7 +170,7 @@ nk_toggle_style_from_tw(struct nk_style_toggle *toggle,
 
 static void
 nk_selectable_style_from_tw(struct nk_style_selectable *select,
-			    const struct taiwins_style_selectable *src_select,
+			    const struct tw_style_selectable *src_select,
 			    const struct nk_image *images)
 {
 	memset(select, 0, sizeof(*select));
@@ -223,7 +223,7 @@ nk_selectable_style_from_tw(struct nk_style_selectable *select,
 
 static void
 nk_slider_style_from_tw(struct nk_style_slider *slider,
-			const struct taiwins_style_slider *src_slider,
+			const struct tw_style_slider *src_slider,
 			const struct nk_image *images)
 {
 	memset(slider, 0, sizeof(*slider));
@@ -274,7 +274,7 @@ nk_slider_style_from_tw(struct nk_style_slider *slider,
 
 static void
 nk_progress_style_from_tw(struct nk_style_progress *style,
-			  const struct taiwins_style_progress *src_style,
+			  const struct tw_style_progress *src_style,
 			  const struct nk_image *images)
 {
 	memset(style, 0, sizeof(*style));
@@ -309,7 +309,7 @@ nk_progress_style_from_tw(struct nk_style_progress *style,
 
 static void
 nk_scrollbar_style_from_tw(struct nk_style_scrollbar *style,
-			   const struct taiwins_style_scrollbar *src_style,
+			   const struct tw_style_scrollbar *src_style,
 			   const struct nk_image *images)
 {
 	memset(style, 0, sizeof(*style));
@@ -352,7 +352,7 @@ nk_scrollbar_style_from_tw(struct nk_style_scrollbar *style,
 
 static void
 nk_edit_style_from_tw(struct nk_style_edit *style,
-		      const struct taiwins_style_edit *src_style,
+		      const struct tw_style_edit *src_style,
 		      const struct nk_image *images)
 {
 	memset(style, 0, sizeof(*style));
@@ -403,7 +403,7 @@ nk_edit_style_from_tw(struct nk_style_edit *style,
 
 static void
 nk_property_style_from_tw(struct nk_style_property *style,
-			  const struct taiwins_style_property *src_style,
+			  const struct tw_style_property *src_style,
 			  const struct nk_image *images)
 {
 	memset(style, 0, sizeof(*style));
@@ -442,7 +442,7 @@ nk_property_style_from_tw(struct nk_style_property *style,
 
 static void
 nk_chart_style_from_tw(struct nk_style_chart *style,
-		       const struct taiwins_style_chart *src_style,
+		       const struct tw_style_chart *src_style,
 		       const struct nk_image *images)
 {
 	memset(style, 0, sizeof(*style));
@@ -462,7 +462,7 @@ nk_chart_style_from_tw(struct nk_style_chart *style,
 
 static void
 nk_combo_style_from_tw(struct nk_style_combo *style,
-		       const struct taiwins_style_combo *src_style,
+		       const struct tw_style_combo *src_style,
 		       const struct nk_image *images)
 {
 	//background
@@ -506,7 +506,7 @@ nk_combo_style_from_tw(struct nk_style_combo *style,
 
 static void
 nk_tab_style_from_tw(struct nk_style_tab *style,
-		     const struct taiwins_style_tab *src_style,
+		     const struct tw_style_tab *src_style,
 		     const struct nk_image *images)
 {
 	memset(style, 0, sizeof(*style));
@@ -533,7 +533,7 @@ nk_tab_style_from_tw(struct nk_style_tab *style,
 
 static void
 nk_window_header_style_from_tw(struct nk_style_window_header *style,
-			       const struct taiwins_style_window_header *src_style,
+			       const struct tw_style_window_header *src_style,
 			       const struct nk_image *images)
 {
 	style->align = NK_HEADER_RIGHT;
@@ -567,7 +567,7 @@ nk_window_header_style_from_tw(struct nk_style_window_header *style,
 
 static void
 nk_window_style_from_tw(struct nk_style_window *style,
-			const struct taiwins_style_window *src_style,
+			const struct tw_style_window *src_style,
 			const struct nk_image *images)
 {
 	style->background =
@@ -616,7 +616,7 @@ nk_window_style_from_tw(struct nk_style_window *style,
 
 static void
 nk_style_init_from_tw(struct nk_style *style,
-		      const struct taiwins_theme *theme,
+		      const struct tw_theme *theme,
 		      const struct nk_image *images)
 {
 	struct nk_style_text *text;
@@ -703,14 +703,14 @@ nk_style_init_from_tw(struct nk_style *style,
 }
 
 static inline nk_hash
-nk_wl_hash_theme(const struct taiwins_theme_color* theme)
+nk_wl_hash_theme(const struct tw_theme_color* theme)
 {
-	return nk_murmur_hash(theme, sizeof(struct taiwins_theme_color), NK_FLAG(7));
+	return nk_murmur_hash(theme, sizeof(struct tw_theme_color), NK_FLAG(7));
 }
 
 static void
 nk_wl_apply_color(struct nk_wl_backend *bkend,
-		  const struct taiwins_theme_color *theme)
+		  const struct tw_theme_color *theme)
 {
 	nk_hash thash = nk_wl_hash_theme(theme);
 	if (theme->row_size == 0 || thash == bkend->theme_hash)

@@ -113,7 +113,7 @@ struct tw_globals {
 	} inputs;
 
 	//application theme settings
-	struct taiwins_theme_color theme;
+	struct tw_theme_color theme;
 	struct tw_event_queue event_queue;
 };
 
