@@ -48,7 +48,7 @@ extern "C" {
 /////////////////////////////////Application style definition/////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 struct tw_shm_pool;
-extern const struct taiwins_theme_color taiwins_dark_theme;
+extern const struct tw_theme_color taiwins_dark_theme;
 
 static inline int
 tw_font_pt2px(int pt_size, int ppi)

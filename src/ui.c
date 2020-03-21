@@ -80,7 +80,7 @@ stride_of_wl_shm_format(enum wl_shm_format format)
 //the slider, cursor they are all different.
 //quite unpossible to have them be the same
 
-const struct taiwins_theme_color taiwins_dark_theme = {
+const struct tw_theme_color taiwins_dark_theme = {
 	.row_size = 16,
 	.text_color = {
 		.r = 210, .g = 210, .b = 210, .a = 255,
