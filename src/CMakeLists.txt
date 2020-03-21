@@ -55,6 +55,18 @@ target_link_libraries(twclient-icons
   )
 add_library(twclient::icons ALIAS twclient-icons)
 
+add_library(twclient-theme
+  theme.c)
+
+target_include_directories(twclient-theme PUBLIC
+  "${TWCLIENT_INCLUDE_DIR}")
+
+target_link_libraries(twclient-theme
+  ctypes)
+
+add_library(twclient::theme ALIAS twclient-theme)
+
+
 add_subdirectory(nk_backends)
 
 ################################################################################
