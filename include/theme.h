@@ -57,14 +57,16 @@ typedef struct {
 } tw_image_t;
 
 enum tw_style_type {
-	TAIWINS_STYLE_COLOR = 0,
-	TAIWINS_STYLE_IMAGE = 1,
+	TAIWINS_STYLE_INVALID = 0,
+	TAIWINS_STYLE_COLOR = 1,
+	TAIWINS_STYLE_IMAGE = 2,
 };
 
 enum tw_text_alignment {
-	TAIWINS_TEXT_LEFT = 0,
-	TAIWINS_TEXT_RIGHT = 1,
-	TAIWINS_TEXT_CENTER = 2,
+	TAIWINS_TEXT_INVALID = 0,
+	TAIWINS_TEXT_LEFT = 1,
+	TAIWINS_TEXT_RIGHT = 2,
+	TAIWINS_TEXT_CENTER = 3,
 };
 
 union tw_style_data {
@@ -529,9 +531,11 @@ struct tw_theme_color {
 	char font[64];
 };
 
+void tw_theme_init_default(struct tw_theme *theme);
+
 void tw_theme_init_from_fd(struct tw_theme *theme, int fd, size_t size);
 
-void tw_theme_to_fd(struct tw_theme *theme);
+int tw_theme_to_fd(struct tw_theme *theme);
 
 #ifdef __cplusplus
 }
