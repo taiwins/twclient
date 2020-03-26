@@ -19,9 +19,12 @@
  *
  */
 
+
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/mman.h>
+#include <os/os-compatibility.h>
 #include <os/buffer.h>
 
 #include <theme.h>
@@ -52,17 +55,21 @@ tw_theme_init_from_fd(struct tw_theme *theme, int fd, size_t size)
 }
 
 /* this function should be in the server */
-void
+int
 tw_theme_to_fd(struct tw_theme *theme)
 {
-	struct anonymous_buff_t buff;
-	void *mapped;
+	void *mapped, *ummaped;
 	size_t mapsize = sizeof(struct tw_theme) + theme->handle_pool.size +
 		theme->string_pool.size;
-	int fd = anonymous_buff_new(&buff, mapsize, PROT_READ | PROT_WRITE, MAP_SHARED);
+	int fd = os_create_anonymous_file(mapsize);
 	if (fd < 0)
-		return;
-	mapped = buff.addr;
+		return -1;
+	mapped = mmap(NULL, mapsize, PROT_WRITE, MAP_SHARED, fd, 0);
+	if (!mapped) {
+		close(fd);
+		return -1;
+	}
+	ummaped = mapped;
 	memcpy(mapped, theme, sizeof(struct tw_theme));
 	((struct tw_theme *)mapped)->handle_pool.data = NULL;
 	((struct tw_theme *)mapped)->string_pool.data = NULL;
@@ -70,5 +77,17 @@ tw_theme_to_fd(struct tw_theme *theme)
 	memcpy(mapped, theme->handle_pool.data, theme->handle_pool.size);
 	mapped = (char *)mapped + theme->handle_pool.size;
 	memcpy(mapped, theme->string_pool.data, theme->string_pool.size);
-	anonymous_buff_close_file(&buff);
+
+	munmap(ummaped, mapsize);
+	return fd;
+}
+
+
+/* init a grey inis theme */
+void
+tw_theme_init_default(struct tw_theme *theme)
+{
+	memset(theme, 0, sizeof(struct tw_theme));
+	wl_array_init(&theme->handle_pool);
+	wl_array_init(&theme->string_pool);
 }

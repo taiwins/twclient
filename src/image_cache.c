@@ -193,14 +193,12 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 			path = objname;
 		}
 		//otherwise, copy the image path directly
-		char *tocpy = wl_array_add(&cache.strings, sizeof(path)+1);
+		char *tocpy = wl_array_add(&cache.strings, strlen(path)+1);
 		*(off_t *)wl_array_add(&cache.handles, sizeof(off_t)) =
 			(tocpy - (char *)cache.strings.data);
 		*(struct tw_bbox *)wl_array_add(&cache.image_boxes,
 		                            sizeof(struct tw_bbox)) =
 			tw_make_bbox(rects[i].x, rects[i].y, w, h, 1);
-
-
 	}
 	cairo_destroy(cr);
 	cairo_surface_destroy(atlas_surface);

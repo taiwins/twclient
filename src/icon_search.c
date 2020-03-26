@@ -187,7 +187,7 @@ search_icon_subdir(const char *dir_path,
 			continue;
 		strcpy(filepath, dir_path);
 		path_concat(filepath, 1024, 1, entry->d_name);
-		char *tocpy = wl_array_add(string_pool, sizeof(filepath)+1);
+		char *tocpy = wl_array_add(string_pool, strlen(filepath)+1);
 		*(off_t *)wl_array_add(handle_pool, sizeof(off_t)) =
 			(tocpy - (char *)string_pool->data);
 		strcpy(tocpy, filepath);
