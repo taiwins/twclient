@@ -525,10 +525,10 @@ nk_tab_style_from_tw(struct nk_style_tab *style,
 	style->sym_minimize       = NK_SYMBOL_TRIANGLE_RIGHT;
 	style->sym_maximize       = NK_SYMBOL_TRIANGLE_DOWN;
 	//buttons
-	nk_button_style_from_tw(&style->tab_maximize_button, &src_style->tab_maximize_button, images);
-	nk_button_style_from_tw(&style->tab_minimize_button, &src_style->tab_minimize_button, images);
-	nk_button_style_from_tw(&style->node_maximize_button, &src_style->node_maximize_button, images);
-	nk_button_style_from_tw(&style->node_minimize_button, &src_style->node_minimize_button, images);
+	nk_button_style_from_tw(&style->tab_maximize_button, &src_style->tab_button, images);
+	nk_button_style_from_tw(&style->tab_minimize_button, &src_style->tab_button, images);
+	nk_button_style_from_tw(&style->node_maximize_button, &src_style->node_button, images);
+	nk_button_style_from_tw(&style->node_minimize_button, &src_style->node_button, images);
 }
 
 static void
@@ -561,8 +561,8 @@ nk_window_header_style_from_tw(struct nk_style_window_header *style,
 	style->spacing = nk_vec2_from_tw(&src_style->spacing);
 
 	//sub buttons
-	nk_button_style_from_tw(&style->close_button, &src_style->close_button, images);
-	nk_button_style_from_tw(&style->minimize_button, &src_style->minimize_button, images);
+	nk_button_style_from_tw(&style->close_button, &src_style->button, images);
+	nk_button_style_from_tw(&style->minimize_button, &src_style->button, images);
 }
 
 static void
@@ -571,9 +571,9 @@ nk_window_style_from_tw(struct nk_style_window *style,
 			const struct nk_image *images)
 {
 	style->background =
-		nk_color_from_tw(&src_style->background);
+		nk_color_from_tw(&src_style->background.style.data.color);
 	style->fixed_background =
-		nk_style_item_from_tw(&src_style->fixed_background.style, images);
+		nk_style_item_from_tw(&src_style->background.style, images);
 
 	style->border_color =
 		nk_color_from_tw(&src_style->border_color);
