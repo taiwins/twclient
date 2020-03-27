@@ -272,11 +272,6 @@ struct tw_style_scrollbar {
 	struct tw_style_button dec_button;
 	/* enum tw_symbol_type inc_symbol; */
 	/* enum tw_symbol_type dec_symbol; */
-
-	/* optional user callbacks */
-	/* tw_handle userdata; */
-	/* void(*draw_begin)(struct tw_command_buffer*, tw_handle); */
-	/* void(*draw_end)(struct tw_command_buffer*, tw_handle); */
 };
 
 struct tw_style_edit {
@@ -395,10 +390,8 @@ struct tw_style_tab {
 	tw_rgba_t text;
 
 	/* button */
-	struct tw_style_button tab_maximize_button;
-	struct tw_style_button tab_minimize_button;
-	struct tw_style_button node_maximize_button;
-	struct tw_style_button node_minimize_button;
+	struct tw_style_button tab_button; /**> non highlighted tree tab */
+	struct tw_style_button node_button; /**> highlighted tree tab */
 	/* enum tw_symbol_type sym_minimize; */
 	/* enum tw_symbol_type sym_maximize; */
 
@@ -421,8 +414,7 @@ struct tw_style_window_header {
 	theme_option_style active;
 
 	/* button */
-	struct tw_style_button close_button;
-	struct tw_style_button minimize_button;
+	struct tw_style_button button;
 	/* enum tw_symbol_type close_symbol; */
 	/* enum tw_symbol_type minimize_symbol; */
 	/* enum tw_symbol_type maximize_symbol; */
@@ -441,8 +433,7 @@ struct tw_style_window_header {
 
 struct tw_style_window {
 	struct tw_style_window_header header;
-	theme_option_style fixed_background;
-	tw_rgba_t background;
+	theme_option_style background;
 
 	tw_rgba_t border_color;
 	tw_rgba_t popup_border_color;
