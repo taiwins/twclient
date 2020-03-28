@@ -80,13 +80,16 @@ struct tw_style_item {
 };
 
 typedef OPTION(tw_rgba_t, rgba) theme_option_rgba;
-typedef OPTION(const uint32_t, handle) theme_option_handle;
+typedef OPTION(uint32_t, handle) theme_option_handle;
 typedef OPTION(struct tw_style_item, style) theme_option_style;
 typedef OPTION(uint32_t, font_size) theme_option_font_size;
 
+
+/** generate basic types **/
 struct tw_style_text {
 	tw_rgba_t color;
 	tw_vec2_t padding;
+	theme_option_handle default_font;
 };
 
 struct tw_style_button {
@@ -507,16 +510,17 @@ struct tw_theme_color {
 	tw_rgba_t window_color;
 	tw_rgba_t border_color;
 	//text colors
-	tw_rgba_t text_color; //text_edit_cursor as well
-	tw_rgba_t text_active_color;
+	tw_rgba_t text_color;
+	tw_rgba_t edit_color;
 	//widget color
 	struct widget_colors button;
 	struct widget_colors toggle;
 	struct widget_colors select;
-	tw_rgba_t slider_bg_color;
-	struct widget_colors slider;
 	struct widget_colors chart;
+	struct widget_colors slider;
+	//spectials
 	tw_rgba_t combo_color;
+	tw_rgba_t slider_bg_color;
 	//we can contain a font name here. eventually the icon font is done by
 	//searching all the svg in the widgets
 	char font[64];
