@@ -616,8 +616,7 @@ nk_window_style_from_tw(struct nk_style_window *style,
 
 static void
 nk_style_init_from_tw(struct nk_style *style,
-		      const struct tw_theme *theme,
-		      const struct nk_image *images)
+		      const struct tw_theme *theme)
 {
 	struct nk_style_text *text;
 	struct nk_style_button *button;
@@ -632,9 +631,21 @@ nk_style_init_from_tw(struct nk_style *style,
 	struct nk_style_chart *chart;
 	struct nk_style_tab *tab;
 	struct nk_style_window *win;
+	struct nk_image *images;
+	struct image_cache cache;
 
-	assert(style);
+
 	if (!style) return;
+
+	/* init images */
+	//TODO:
+	// 1: converting image_cache.image_pool into nk_images.
+	// 2: convert cache.altas into a nk_image handle.
+
+	cache = image_cache_from_arrays(&theme->handle_pool,
+	                                &theme->string_pool, NULL);
+	if (!cache.atlas || !cache.dimension.w || !cache.dimension.h)
+		return;
 
 	/* default text */
 	text = &style->text;
@@ -764,7 +775,7 @@ nk_wl_apply_color(struct nk_wl_backend *bkend,
 	table[NK_COLOR_PROPERTY] = table[NK_COLOR_SLIDER];
 	//edit
 	table[NK_COLOR_EDIT] =
-		nk_color_from_tw(&theme->text_active_color);
+		nk_color_from_tw(&theme->edit_color);
 	table[NK_COLOR_EDIT_CURSOR] =
 		nk_color_from_tw(&theme->text_color);
 	//combo

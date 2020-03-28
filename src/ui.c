@@ -85,7 +85,7 @@ const struct tw_theme_color taiwins_dark_theme = {
 	.text_color = {
 		.r = 210, .g = 210, .b = 210, .a = 255,
 	},
-	.text_active_color = {
+	.edit_color = {
 		.r = 40, .g = 58, .b = 61, .a=255,
 	},
 	.window_color = {
