@@ -48,7 +48,9 @@
 #include "nk_wl_internal.h"
 #include <shmpool.h>
 
-//////////////////////////////////// NK_CAIRO FONTS /////////////////////////////////////
+/*******************************************************************************
+ * NK_CAIRO_FONT
+ ******************************************************************************/
 
 //not thread safe
 struct nk_wl_ftlib {
@@ -202,7 +204,21 @@ nk_wl_destroy_font(struct nk_user_font *font)
 	free(cairo_font);
 }
 
-/////////////////////////////////// NK_CAIRO backend /////////////////////////////////////
+/*******************************************************************************
+ * NK_CAIRO_IMAGE
+ ******************************************************************************/
+static struct nk_image
+nk_image_from_buffer(const unsigned char *pixels, struct nk_wl_backend *b,
+                     unsigned int height, unsigned int width,
+                     unsigned int stride)
+{
+	return nk_image_ptr((void *)pixels);
+}
+
+
+/*******************************************************************************
+ * NK_CAIRO_BACKEND
+ ******************************************************************************/
 
 struct nk_cairo_backend {
 	struct nk_wl_backend base;
@@ -704,7 +720,6 @@ nk_cairo_destroy_app_surface(struct tw_appsurf *app)
 	shm_buffer_destroy_app_surface(app);
 }
 
-
 void
 nk_cairo_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 			  nk_wl_drawcall_t draw_cb, struct tw_bbox geo)
@@ -720,7 +735,6 @@ nk_cairo_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 	user_font->size = (int)bkend->row_size;
 }
 
-
 struct nk_wl_backend *
 nk_cairo_create_bkend(void)
 {
@@ -733,7 +747,6 @@ nk_cairo_create_bkend(void)
 	nk_init_default(&b->base.ctx, b->default_font);
 	return &b->base;
 }
-
 
 void
 nk_cairo_destroy_bkend(struct nk_wl_backend *bkend)

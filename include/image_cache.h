@@ -37,9 +37,12 @@ extern "C" {
 
 struct image_cache {
 	struct tw_bbox dimension;
-	//an array of images
+	/**> an array of tw_box **/
 	struct wl_array image_boxes;
+	/**> rgb pixels **/
 	unsigned char *atlas;
+
+	/**> storage for query image by name */
 	struct wl_array handles;
 	struct wl_array strings;
 };
@@ -63,8 +66,18 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 			const struct wl_array *str_array,
 			void (*convert)(char output[256], const char *input));
 
+/**
+ * @brief file IO reading
+ *
+ * very slow, could be on another thread
+ */
 struct image_cache image_cache_from_fd(int fd);
 
+/**
+ * @brief file IO writing
+ *
+ * very slow, could be on another thread
+ */
 void image_cache_to_fd(const struct image_cache *cache, int fd);
 
 void image_cache_release(struct image_cache *cache);
@@ -85,6 +98,10 @@ void image_info(const char *path, int *w, int *h, int *nchannels);
 //image allocated by malloc, use free to release the memory
 unsigned char *
 image_load(const char *path, int *w, int *h, int *nchannels);
+
+bool
+image_load_for_buffer(const char *path, enum wl_shm_format format,
+                      int width, int height, unsigned char *mem);
 
 
 #ifdef __cplusplus

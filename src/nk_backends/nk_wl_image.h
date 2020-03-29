@@ -22,10 +22,13 @@
 #ifndef NK_WL_IMAGE_H
 #define NK_WL_IMAGE_H
 
+#include <stdlib.h>
 #include <wayland-client.h>
 #include <cairo/cairo.h>
 #include <image_cache.h>
+#include <wayland-util.h>
 #include "nk_wl_internal.h"
+#include "ui.h"
 //hack for now
 /* #include <stb/stb_image.h> */
 
@@ -41,89 +44,70 @@ struct nk_wl_image {
 #if defined (NK_EGL_BACKEND)
 
 static struct nk_image
-nk_wl_to_gpu_image(const struct nk_image *cpu_image, struct nk_wl_backend *b);
+nk_wl_to_gpu_image(const struct nk_image *, struct nk_wl_backend *);
 
 static void
-nk_wl_free_gpu_image(const struct nk_image *gpu_image);
+nk_wl_free_gpu_image(const struct nk_image *);
 
 #endif
 
+/**
+ * @brief create an image from pixels. pixels may need to stay valid
+ *
+ */
+static struct nk_image
+nk_image_from_buffer(const unsigned char *pixels, struct nk_wl_backend *b,
+                     unsigned int height, unsigned int width,
+                     unsigned int stride);
+
+static inline struct nk_rect
+nk_rect_from_bbox(const struct tw_bbox *box)
+{
+	return nk_rect(box->x , box->y,
+	               box->w * box->s,
+	               box->h * box->s);
+}
 
 /******************************************************************************
  * image loaders
  *****************************************************************************/
 
-NK_API bool
-nk_wl_load_image_for_buffer(const char *path, enum wl_shm_format format,
-			    int width, int height, unsigned char *mem)
+NK_API struct nk_image *
+nk_wl_add_image(struct nk_image img, struct nk_wl_backend *b)
 {
-	int w, h, channels;
-	cairo_surface_t *src_surf, *image_surf;
-	cairo_t *cr;
-	cairo_format_t cairo_format = translate_wl_shm_format(format);
-	if (cairo_format != CAIRO_FORMAT_ARGB32)
-		goto err_format;
+	struct nk_wl_image *image =
+		calloc(1, sizeof(struct nk_wl_image));
 
-	//you have no choice but to load rgba, cairo deal with 32 bits only
-	uint32_t *pixels = (uint32_t *)image_load(path, &w, &h, &channels);
-	if (w == 0 || h == 0 || channels == 0 || pixels == NULL)
-		goto err_load;
+	if (!image)
+		return NULL;
 
-	src_surf = cairo_image_surface_create_for_data(
-		(unsigned char *)pixels, CAIRO_FORMAT_ARGB32,
-		w, h,
-		cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, w));
-	image_surf = cairo_image_surface_create_for_data(
-		(unsigned char *)mem, CAIRO_FORMAT_ARGB32,
-		width, height,
-		cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width));
+	wl_list_init(&image->link);
+	image->image = img;
 
-	cr = cairo_create(image_surf);
-	cairo_scale(cr, (double)width / w, (double)height / h);
-	cairo_set_source_surface(cr, src_surf, 0, 0);
-	cairo_paint(cr);
-
-	free(pixels);
-	cairo_destroy(cr);
-	cairo_surface_destroy(image_surf);
-	cairo_surface_destroy(src_surf);
-
-	return true;
-err_format:
-err_load:
-	return false;
-
+	wl_list_insert(&b->images, &image->link);
+	return &image->image;
 }
+
 
 NK_API struct nk_image*
 nk_wl_load_image(const char *path, enum wl_shm_format format,
                  struct nk_wl_backend *b)
 {
-	struct nk_wl_image *image = calloc(1, sizeof(struct nk_wl_image));
-	wl_list_init(&image->link);
 	cairo_format_t cairo_format = translate_wl_shm_format(format);
 	if (cairo_format != CAIRO_FORMAT_ARGB32)
-		goto err_format;
+		return NULL;
 	int width, height, nchannels;
 	image_info(path, &width, &height, &nchannels);
 	if (!width || !height || !nchannels)
-		goto err_format;
+		return NULL;
 
 	unsigned char *mem = image_load(path, &width, &height, &nchannels);
-	image->image = nk_subimage_ptr(mem, width, height,
-				nk_rect(0,0, width, height));
 
-#if defined (NK_EGL_BACKEND)
-	image->image = nk_wl_to_gpu_image(&image->image, b);
-#endif
-	wl_list_insert(&b->images, &image->link);
-	return &image->image;
-
-err_format:
-	free(image);
-	return NULL;
+	return nk_wl_add_image(nk_image_from_buffer(mem, b,
+	                                            height, width,
+	                                            width * 4),
+	                       b);
 }
-
 
 NK_API void
 nk_wl_free_image(struct nk_image *im)
