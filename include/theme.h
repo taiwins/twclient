@@ -528,6 +528,8 @@ struct tw_theme_color {
 
 void tw_theme_init_default(struct tw_theme *theme);
 
+void tw_theme_fini(struct tw_theme *theme);
+
 void tw_theme_init_from_fd(struct tw_theme *theme, int fd, size_t size);
 
 int tw_theme_to_fd(struct tw_theme *theme);

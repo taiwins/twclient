@@ -115,12 +115,12 @@ struct nk_wl_backend {
 	};
 };
 
-/***************************** nuklear colors *********************************/
-#include "nk_wl_theme.h"
-
 /******************************** image ***************************************/
 
 #include "nk_wl_image.h"
+
+/***************************** nuklear colors *********************************/
+#include "nk_wl_theme.h"
 
 /******************************** input ***************************************/
 
@@ -267,8 +267,26 @@ nk_wl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 
 	wl_surface_set_buffer_scale(surf->wl_surface, box.s);
 
-	if (surf->tw_globals)
-		nk_wl_apply_color(bkend, &surf->tw_globals->theme);
+	//using hash for applying themes
+	if (surf->tw_globals) {
+		nk_hash new_hash = 0;
+		struct tw_globals *globals = surf->tw_globals;
+
+		if (globals->theme)
+			new_hash = nk_wl_hash_theme(globals->theme);
+		else if (globals->theme_color)
+			new_hash = nk_wl_hash_colors(globals->theme_color);
+
+		if (new_hash == bkend->theme_hash)
+			return;
+		else if (globals->theme) {
+			nk_wl_apply_theme(bkend, globals->theme);
+			bkend->theme_hash = new_hash;
+		} else if (globals->theme_color) {
+			nk_wl_apply_color(bkend, globals->theme_color);
+			bkend->theme_hash = new_hash;
+		}
+	}
 }
 
 static void

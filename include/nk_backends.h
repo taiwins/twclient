@@ -119,11 +119,11 @@ NK_API struct nk_image *
 nk_wl_load_image(const char *path, enum wl_shm_format format,
                  struct nk_wl_backend *b);
 
-NK_API bool
-nk_wl_load_image_for_buffer(const char *path, enum wl_shm_format format,
-			    int width, int height, unsigned char *mem);
+NK_API struct nk_image *
+nk_wl_add_image(struct nk_image img, struct nk_wl_backend *b);
 
-NK_API void nk_wl_free_image(struct nk_image *img);
+NK_API void
+nk_wl_free_image(struct nk_image *img);
 
 
 /*******************************************************************************

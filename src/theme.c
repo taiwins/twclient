@@ -28,6 +28,7 @@
 #include <os/buffer.h>
 
 #include <theme.h>
+#include <wayland-util.h>
 
 void
 tw_theme_init_from_fd(struct tw_theme *theme, int fd, size_t size)
@@ -90,4 +91,16 @@ tw_theme_init_default(struct tw_theme *theme)
 	memset(theme, 0, sizeof(struct tw_theme));
 	wl_array_init(&theme->handle_pool);
 	wl_array_init(&theme->string_pool);
+
+	//applying default content
+}
+
+void
+tw_theme_fini(struct tw_theme *theme)
+{
+	if (theme->handle_pool.data)
+		wl_array_release(&theme->handle_pool);
+	if (theme->string_pool.data)
+		wl_array_release(&theme->string_pool);
+	memset(theme, 0, sizeof(struct tw_theme));
 }

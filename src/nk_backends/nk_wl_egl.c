@@ -118,9 +118,9 @@ struct nk_egl_backend {
 static const struct nk_egl_backend *CURRENT_CONTEXT = NULL;
 static EGLSurface CURRENT_SURFACE = NULL;
 
-///////////////////////////////////////////////////////////////////
-///////////////////////////// egl /////////////////////////////////
-///////////////////////////////////////////////////////////////////
+/*******************************************************************************
+ * EGL
+ ******************************************************************************/
 
 static inline bool
 is_surfless_supported(struct nk_egl_backend *bkend)
@@ -267,9 +267,9 @@ release_backend(struct nk_egl_backend *bkend)
 	}
 }
 
-///////////////////////////////////////////////////////////////////
-/////////////////////////// IMAGE /////////////////////////////////
-///////////////////////////////////////////////////////////////////
+/*******************************************************************************
+ * NK_EGL_IMAGE
+ ******************************************************************************/
 
 static struct nk_image
 nk_wl_to_gpu_image(const struct nk_image *cpu_image, struct nk_wl_backend *b)
@@ -301,9 +301,23 @@ nk_wl_free_gpu_image(const struct nk_image *gpu_image)
 	glDeleteTextures(1, &handle);
 }
 
-///////////////////////////////////////////////////////////////////
-//////////////////////////// FONT /////////////////////////////////
-///////////////////////////////////////////////////////////////////
+static struct nk_image
+nk_image_from_buffer(const unsigned char *pixels, struct nk_wl_backend *b,
+                     unsigned int height, unsigned int width,
+                     unsigned int stride)
+{
+	struct nk_image img = nk_image_ptr((void *)pixels);
+
+	img.w = width;
+	img.h = height;
+
+	return nk_wl_to_gpu_image(&img, b);
+}
+
+
+/*******************************************************************************
+ * NK_EGL_IMAGE
+ ******************************************************************************/
 
 struct nk_wl_egl_font {
 	struct nk_wl_user_font wl_font;
@@ -443,9 +457,9 @@ nk_wl_destroy_font(struct nk_user_font *font)
 	free(user_font);
 }
 
-///////////////////////////////////////////////////////////////////
-/////////////////////////// render ////////////////////////////////
-///////////////////////////////////////////////////////////////////
+/*******************************************************************************
+ * NK_EGL_RENDER
+ ******************************************************************************/
 
 static void
 _nk_egl_draw_begin(struct nk_egl_backend *bkend,
