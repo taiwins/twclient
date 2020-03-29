@@ -113,7 +113,8 @@ struct tw_globals {
 	} inputs;
 
 	//application theme settings
-	struct tw_theme_color theme;
+	const struct tw_theme *theme;
+	const struct tw_theme_color *theme_color;
 	struct tw_event_queue event_queue;
 };
 

@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
         if (!wl_display)
 		fprintf(stderr, "okay, I don't even have wayland display\n");
 	tw_globals_init(&App.global, wl_display);
-	App.global.theme = taiwins_dark_theme;
+	App.global.theme_color = &taiwins_dark_theme;
 
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);

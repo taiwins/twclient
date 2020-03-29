@@ -29,10 +29,15 @@
 
 #include <image_cache.h>
 #include <os/file.h>
+#include <wayland-client-protocol.h>
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include <stb/stb_rect_pack.h>
+
+/*******************************************************************************
+ * image operations
+ ******************************************************************************/
 
 static void
 copy_subimage(unsigned char *dst, const unsigned char *src,
@@ -123,6 +128,56 @@ image_load(const char *path, int *w, int *h, int *nchannels)
 	return imgdata;
 }
 
+
+bool
+image_load_for_buffer(const char *path, enum wl_shm_format format,
+                      int width, int height, unsigned char *mem)
+{
+	int w, h, channels;
+	cairo_surface_t *src_surf, *image_surf;
+	cairo_t *cr;
+	cairo_format_t cairo_format = CAIRO_FORMAT_INVALID;
+
+	//TODO: currently we only support argb888, which is a big waste, it
+	//would be preferable to load them into 565.
+	if (format != WL_SHM_FORMAT_ARGB8888)
+		goto err_format;
+	cairo_format = CAIRO_FORMAT_ARGB32;
+
+	//you have no choice but to load rgba, cairo deal with 32 bits only
+	uint32_t *pixels = (uint32_t *)image_load(path, &w, &h, &channels);
+	if (w == 0 || h == 0 || channels == 0 || pixels == NULL)
+		goto err_load;
+
+	src_surf = cairo_image_surface_create_for_data(
+		(unsigned char *)pixels, cairo_format,
+		w, h,
+		cairo_format_stride_for_width(cairo_format, w));
+	image_surf = cairo_image_surface_create_for_data(
+		(unsigned char *)mem, cairo_format,
+		width, height,
+		cairo_format_stride_for_width(cairo_format, width));
+
+	cr = cairo_create(image_surf);
+	cairo_scale(cr, (double)width / w, (double)height / h);
+	cairo_set_source_surface(cr, src_surf, 0, 0);
+	cairo_paint(cr);
+
+	free(pixels);
+	cairo_destroy(cr);
+	cairo_surface_destroy(image_surf);
+	cairo_surface_destroy(src_surf);
+
+	return true;
+err_format:
+err_load:
+	return false;
+}
+
+
+/*******************************************************************************
+ * image_cache
+ ******************************************************************************/
 
 struct image_cache
 image_cache_from_arrays(const struct wl_array *handle_array,

@@ -62,10 +62,10 @@ nk_style_item_from_tw(const struct tw_style_item *item,
 {
     struct nk_style_item i;
     i.type = item->type == TAIWINS_STYLE_COLOR ? NK_STYLE_ITEM_COLOR : NK_STYLE_ITEM_IMAGE;
-    if (item->type == TAIWINS_STYLE_COLOR)
-	    i.data.color = nk_color_from_tw(&item->data.color);
-    else
+    if (item->type == TAIWINS_STYLE_IMAGE)
 	    i.data.image = image_pool[item->data.image.handle];
+    else
+	    i.data.color = nk_color_from_tw(&item->data.color);
     return i;
 }
 
@@ -614,9 +614,38 @@ nk_window_style_from_tw(struct nk_style_window *style,
 	style->min_size = nk_vec2_from_tw(&src_style->min_size);
 }
 
+static struct nk_image *
+nk_images_from_cache(struct image_cache *cache, struct nk_wl_backend *b)
+{
+	struct tw_bbox *box;
+	struct nk_image *images;
+	struct nk_image gpu_image;
+	size_t n_images, i;
+	nk_handle handle;
+
+	gpu_image = nk_image_from_buffer(cache->atlas, b, cache->dimension.h,
+	                                 cache->dimension.w,
+	                                 cache->dimension.w * 4);
+	handle = gpu_image.handle;
+	n_images = cache->image_boxes.size / sizeof(struct tw_bbox);
+	nk_wl_add_image(gpu_image, b);
+
+	images = malloc(sizeof(struct nk_image) * n_images);
+	if (!images)
+		return NULL;
+
+	i = 0;
+	wl_array_for_each(box, &cache->image_boxes)
+		images[i++] = nk_subimage_handle(handle, cache->dimension.w,
+		                                 cache->dimension.h,
+		                                 nk_rect_from_bbox(box));
+
+	return images;
+}
+
 static void
-nk_style_init_from_tw(struct nk_style *style,
-		      const struct tw_theme *theme)
+nk_wl_apply_theme(struct nk_wl_backend *b,
+                  const struct tw_theme *theme)
 {
 	struct nk_style_text *text;
 	struct nk_style_button *button;
@@ -631,21 +660,17 @@ nk_style_init_from_tw(struct nk_style *style,
 	struct nk_style_chart *chart;
 	struct nk_style_tab *tab;
 	struct nk_style_window *win;
-	struct nk_image *images;
 	struct image_cache cache;
+	struct nk_image *images;
+	struct nk_style *style;
 
-
-	if (!style) return;
-
-	/* init images */
-	//TODO:
-	// 1: converting image_cache.image_pool into nk_images.
-	// 2: convert cache.altas into a nk_image handle.
-
+	style = &b->ctx.style;
 	cache = image_cache_from_arrays(&theme->handle_pool,
 	                                &theme->string_pool, NULL);
 	if (!cache.atlas || !cache.dimension.w || !cache.dimension.h)
-		return;
+		images = NULL;
+	else
+		images = nk_images_from_cache(&cache, b);
 
 	/* default text */
 	text = &style->text;
@@ -713,23 +738,16 @@ nk_style_init_from_tw(struct nk_style *style,
 	nk_window_style_from_tw(win, &theme->window, images);
 }
 
-static inline nk_hash
-nk_wl_hash_theme(const struct tw_theme_color* theme)
-{
-	return nk_murmur_hash(theme, sizeof(struct tw_theme_color), NK_FLAG(7));
-}
-
 static void
 nk_wl_apply_color(struct nk_wl_backend *bkend,
 		  const struct tw_theme_color *theme)
 {
-	nk_hash thash = nk_wl_hash_theme(theme);
-	if (theme->row_size == 0 || thash == bkend->theme_hash)
+	if (theme->row_size == 0)
 		return;
-	bkend->theme_hash = thash;
 	bkend->row_size = theme->row_size;
-	//TODO this is a shitty hack, somehow the first draw call did not work, we
-	//have to hack it in the background color
+
+	//TODO this is a shitty hack, somehow the first draw call did not work,
+	//we have to hack it in the background color
 	bkend->main_color = nk_color_from_tw(&theme->window_color);
 	struct nk_color table[NK_COLOR_COUNT];
 
@@ -796,6 +814,19 @@ nk_wl_apply_color(struct nk_wl_backend *bkend,
 	table[NK_COLOR_TAB_HEADER] = table[NK_COLOR_WINDOW];
 	nk_style_from_table(&bkend->ctx, table);
 }
+
+static inline nk_hash
+nk_wl_hash_colors(const struct tw_theme_color* theme)
+{
+	return nk_murmur_hash(theme, sizeof(struct tw_theme_color), NK_FLAG(7));
+}
+
+static inline nk_hash
+nk_wl_hash_theme(const struct tw_theme *theme)
+{
+	return nk_murmur_hash(theme, sizeof(struct tw_theme), NK_FLAG(7));
+}
+
 
 
 #ifdef __cplusplus
