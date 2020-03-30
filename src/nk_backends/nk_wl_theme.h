@@ -61,11 +61,15 @@ nk_style_item_from_tw(const struct tw_style_item *item,
 		      const struct nk_image *image_pool)
 {
     struct nk_style_item i;
-    i.type = item->type == TAIWINS_STYLE_COLOR ? NK_STYLE_ITEM_COLOR : NK_STYLE_ITEM_IMAGE;
-    if (item->type == TAIWINS_STYLE_IMAGE)
+
+    if (item->type == TAIWINS_STYLE_IMAGE) {
 	    i.data.image = image_pool[item->data.image.handle];
-    else
+	    i.type = NK_STYLE_ITEM_IMAGE;
+    }
+    else {
 	    i.data.color = nk_color_from_tw(&item->data.color);
+	    i.type = NK_STYLE_ITEM_COLOR;
+    }
     return i;
 }
 
