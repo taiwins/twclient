@@ -22,6 +22,13 @@
 #ifndef NK_WL_INTERNAL_H
 #define NK_WL_INTERNAL_H
 
+#define NK_IMPLEMENTATION
+#define NK_ZERO_COMMAND_MEMORY
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_DEFAULT_FONT
+
 /* this file should have contained a an template struct which supposed to be
  * accessible all nuklear_backends here.
  *
@@ -56,10 +63,7 @@ extern "C" {
 #pragma clang diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
-//this will make our struct various size, so lets put the buffer in the end
-#define NK_MAX_CTX_MEM 64 * 1024
 #include <nk_backends.h>
-
 
 #ifndef NK_MAX_CMD_SIZE
 #define NK_MAX_CMD_SIZE (sizeof (union {	\
@@ -86,16 +90,13 @@ typedef unsigned char nk_max_cmd_t[NK_MAX_CMD_SIZE];
 #endif /* NK_MAX_CMD_SIZE */
 
 struct nk_wl_backend {
-	//I will need to make this ctx a pointer to have nk_wl_backend a
-	//consistant size
 	struct nk_context ctx;
-	struct nk_buffer cmds;
+	vector_t prev_cmds;
 	//theme size
 	struct nk_color main_color;
 	//we now use this to determine if we are using the same theme
 	nk_hash theme_hash;
-	nk_rune *unicode_range;
-	uint32_t row_size; //current row size for the backend
+
 	//resources
 	struct wl_list images;
 	struct wl_list fonts;
@@ -136,6 +137,12 @@ struct nk_wl_backend {
 
 /****************************** render ****************************************/
 
+
+int NK_WL_DEBUG_CMDS(struct nk_context *ctx, const struct nk_command *c) {
+	for ((c) = nk__begin(ctx); (c) != 0; (c) = nk__next(ctx, c))
+		fprintf(stderr, "cmd: type: %d, next: %ld\n", c->type, c->next);
+	return 0;
+}
 
 static void nk_wl_render(struct nk_wl_backend *bkend);
 static void nk_wl_resize(struct tw_appsurf *app, const struct tw_app_event *e);
@@ -219,14 +226,33 @@ nk_wl_new_frame(struct tw_appsurf *surf, const struct tw_app_event *e)
 	bkend->cbtn = -1;
 }
 
-static inline bool
+static bool
 nk_wl_need_redraw(struct nk_wl_backend *bkend)
 {
-	static nk_max_cmd_t nk_last_draw[100] = {0};
-	void *cmds = nk_buffer_memory(&bkend->ctx.memory);
-	bool need_redraw = memcmp(cmds, nk_last_draw, bkend->ctx.memory.allocated);
+	struct nk_buffer *cmds;
+	bool need_redraw = true;
+	bool need_resize = false;
+	unsigned size = (unsigned)bkend->prev_cmds.len;
+
+	cmds = &bkend->ctx.memory;
+
+	need_resize = (size == 0) ? true : need_resize;
+	size = (size == 0) ? cmds->allocated : size;
+
+	while (cmds->allocated > size) {
+		need_resize = true;
+		size *= 2;
+	}
+	if (need_resize)
+		vector_resize(&bkend->prev_cmds, size);
+
+	need_redraw = memcmp(nk_buffer_memory(cmds),
+	                     bkend->prev_cmds.elems,
+	                     cmds->allocated);
 	if (need_redraw)
-		memcpy(nk_last_draw, cmds, bkend->ctx.memory.allocated);
+		memcpy(bkend->prev_cmds.elems,
+		       nk_buffer_memory(cmds),
+		       cmds->allocated);
 	return need_redraw;
 }
 
@@ -234,12 +260,13 @@ nk_wl_need_redraw(struct nk_wl_backend *bkend)
 static inline bool
 nk_wl_maybe_skip(struct nk_wl_backend *bkend)
 {
+	const struct nk_command *cmd;
 	bool need_redraw = nk_wl_need_redraw(bkend);
-	bool need_commit = need_redraw || bkend->app_surface->need_animation;
-	if (!need_commit)
-		return true;
 	if (!need_redraw) {
-		wl_surface_commit(bkend->app_surface->wl_surface);
+		//TODO there is something going
+		//on with nk_foreach, it seems you
+		//have to call it.
+		nk_foreach(cmd, &bkend->ctx);
 		return true;
 	}
 	return false;
@@ -274,16 +301,11 @@ nk_wl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 
 		if (globals->theme)
 			new_hash = nk_wl_hash_theme(globals->theme);
-		else if (globals->theme_color)
-			new_hash = nk_wl_hash_colors(globals->theme_color);
 
 		if (new_hash == bkend->theme_hash)
 			return;
 		else if (globals->theme) {
 			nk_wl_apply_theme(bkend, globals->theme);
-			bkend->theme_hash = new_hash;
-		} else if (globals->theme_color) {
-			nk_wl_apply_color(bkend, globals->theme_color);
 			bkend->theme_hash = new_hash;
 		}
 	}
@@ -313,20 +335,33 @@ nk_wl_release_resources(struct nk_wl_backend *bkend)
 		nk_wl_destroy_font(&font->user_font);
 }
 
+static void
+nk_wl_backend_init(struct nk_wl_backend *bkend)
+{
+	memset(bkend, 0, sizeof(struct nk_wl_backend));
+	wl_list_init(&bkend->images);
+	wl_list_init(&bkend->fonts);
+
+	bkend->theme_hash = 0;
+	bkend->cbtn = -1;
+	//we are not including font here, need to be setup from implementation
+	nk_init_default(&bkend->ctx, NULL);
+	vector_init_zero(&bkend->prev_cmds, 1, NULL);
+
+}
+
 static inline void
 nk_wl_backend_cleanup(struct nk_wl_backend *bkend)
 {
 	nk_wl_release_resources(bkend);
-	nk_buffer_free(&bkend->cmds);
+	vector_destroy(&bkend->prev_cmds);
 	nk_free(&bkend->ctx);
 }
 
 
-/********************************* shared_api *******************************************/
-/* NK_API struct nk_image nk_wl_load_image(const char *path); */
-
-/* NK_API void nk_wl_free_image(struct nk_image *img); */
-
+/*******************************************************************************
+ * shared API
+ ******************************************************************************/
 
 NK_API xkb_keysym_t
 nk_wl_get_keyinput(struct nk_context *ctx)
