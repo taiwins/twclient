@@ -51,6 +51,8 @@
 extern "C" {
 #endif
 
+struct tw_theme;
+
 /**
  * global context for one application (can be shared with multiple surface)
  *
@@ -114,7 +116,6 @@ struct tw_globals {
 
 	//application theme settings
 	const struct tw_theme *theme;
-	const struct tw_theme_color *theme_color;
 	struct tw_event_queue event_queue;
 };
 

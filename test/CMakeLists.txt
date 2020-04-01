@@ -16,6 +16,7 @@ add_executable(test_nk_cairo
 target_link_libraries(test_nk_cairo
   twclient
   twclient-nkcairo
+  twclient-theme
   )
 
 add_executable(test_nk_egl
@@ -24,6 +25,7 @@ add_executable(test_nk_egl
 target_link_libraries(test_nk_egl
   twclient
   twclient-nkegl
+  twclient-theme
   )
 
 add_executable(test_queue
