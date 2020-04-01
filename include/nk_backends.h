@@ -42,7 +42,9 @@ struct nk_style;
 struct xdg_toplevel;
 struct xdg_surface;
 
-typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct tw_appsurf *app);
+typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx,
+                                 float width, float height,
+                                 struct tw_appsurf *app);
 typedef void (*nk_wl_postcall_t)(struct tw_appsurf *app);
 
 /*******************************************************************************
@@ -62,10 +64,10 @@ nk_wl_impl_wl_shell_surface(struct tw_appsurf *app,
 
 /* cairo_backend */
 struct nk_wl_backend *
-nk_cairo_create_bkend(void);
+nk_cairo_create_backend(void);
 
 void
-nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
+nk_cairo_destroy_backend(struct nk_wl_backend *bkend);
 
 void
 nk_cairo_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,

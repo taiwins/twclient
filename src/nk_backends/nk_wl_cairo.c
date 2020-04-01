@@ -734,7 +734,7 @@ nk_cairo_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 }
 
 struct nk_wl_backend *
-nk_cairo_create_bkend(void)
+nk_cairo_create_backend(void)
 {
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
 	struct nk_user_font *default_font;
@@ -747,12 +747,7 @@ nk_cairo_create_bkend(void)
 }
 
 void
-nk_cairo_destroy_bkend(struct nk_wl_backend *bkend)
+nk_cairo_destroy_backend(struct nk_wl_backend *bkend)
 {
 	nk_wl_backend_cleanup(bkend);
-	//we make it here to
-	//float unused_val = nk_sin(1.0);
-	//unused_val = nk_cos(unused_val);
-	//unused_val = nk_sqrt(unused_val);
-	//(void)unused_val;
 }
