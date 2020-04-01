@@ -1,17 +1,16 @@
 #include <client.h>
 #include <ui.h>
 #include <nk_backends.h>
-
-
+#include <theme.h>
 
 struct nk_wl_bkend;
 struct nk_context;
 struct nk_wl_backend * nk_cairo_create_bkend(void);
 void nk_cairo_destroy_bkend(struct nk_wl_backend *bkend);
 
-
-typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx, float width, float height, struct tw_appsurf *app);
-
+typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx,
+                                 float width, float height,
+                                 struct tw_appsurf *app);
 
 static struct application {
 	struct wl_shell *shell;
@@ -22,10 +21,8 @@ static struct application {
 	bool done;
 	struct nk_image image;
 	struct nk_user_font *user_font;
+	struct tw_theme theme;
 } App;
-
-
-
 
 static void
 global_registry_handler(void *data,
@@ -170,7 +167,8 @@ int main(int argc, char *argv[])
 	if (!wl_display)
 		fprintf(stderr, "okay, I don't even have wayland display\n");
 	tw_globals_init(&App.global, wl_display);
-	App.global.theme_color = &taiwins_dark_theme;
+	tw_theme_init_default(&App.theme);
+	App.global.theme = &App.theme;
 
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);
@@ -205,7 +203,6 @@ int main(int argc, char *argv[])
 	tw_globals_release(&App.global);
 	wl_registry_destroy(registry);
 	wl_display_disconnect(wl_display);
-	/* nk_wl_free_image(&App.image); */
 
 	return 0;
 }

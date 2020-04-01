@@ -122,8 +122,7 @@ nk_button_style_from_tw(struct nk_style_button *button,
 		nk_vec2_from_tw(&src_button->padding);
 	button->image_padding =
 		nk_vec2_from_tw(&src_button->image_padding);
-	button->touch_padding =
-		nk_vec2_from_tw(&src_button->touch_padding);
+	button->touch_padding = nk_vec2(0.0, 0.0);
 	button->text_alignment =
 		nk_alignment_from_tw(src_button->text_alignment);
 
@@ -163,8 +162,7 @@ nk_toggle_style_from_tw(struct nk_style_toggle *toggle,
 	//properties
 	toggle->padding =
 		nk_vec2_from_tw(&src_toggle->padding);
-	toggle->touch_padding =
-		nk_vec2_from_tw(&src_toggle->touch_padding);
+	toggle->touch_padding = nk_vec2(0.0, 0.0);
 	toggle->border_color =
 		nk_color_from_tw(&src_toggle->border_color);
 	toggle->border = src_toggle->border;
@@ -215,8 +213,7 @@ nk_selectable_style_from_tw(struct nk_style_selectable *select,
 	//properties
 	select->padding =
 		nk_vec2_from_tw(&src_select->padding);
-	select->touch_padding =
-		nk_vec2_from_tw(&src_select->touch_padding);
+	select->touch_padding = nk_vec2(0.0, 0.0);
 	select->image_padding =
 		nk_vec2_from_tw(&src_select->image_padding);
 
@@ -603,16 +600,16 @@ nk_window_style_from_tw(struct nk_style_window *style,
 	style->menu_padding = nk_vec2_from_tw(&src_style->menu_padding);
 	style->tooltip_padding = nk_vec2_from_tw(&src_style->tooltip_padding);
 	//border
-	style->border = style->border;
-	style->combo_border = style->combo_border;
-	style->contextual_border = style->contextual_border;
-	style->menu_border = style->menu_border;
-	style->group_border = style->group_border;
-	style->tooltip_border = style->tooltip_border;
-	style->popup_border = style->popup_border;
-	style->min_row_height_padding = style->min_row_height_padding;
+	style->border = src_style->border;
+	style->combo_border = src_style->combo_border;
+	style->contextual_border = src_style->contextual_border;
+	style->menu_border = src_style->menu_border;
+	style->group_border = src_style->group_border;
+	style->tooltip_border = src_style->tooltip_border;
+	style->popup_border = src_style->popup_border;
+	style->min_row_height_padding = src_style->min_row_height_padding;
 	//properties
-	style->rounding = style->rounding;
+	style->rounding = src_style->rounding;
 	style->spacing = nk_vec2_from_tw(&src_style->spacing);
 	style->scrollbar_size = nk_vec2_from_tw(&src_style->scrollbar_size);
 	style->min_size = nk_vec2_from_tw(&src_style->min_size);
@@ -629,7 +626,9 @@ nk_images_from_cache(struct image_cache *cache, struct nk_wl_backend *b)
 
 	gpu_image = nk_image_from_buffer(cache->atlas, b, cache->dimension.h,
 	                                 cache->dimension.w,
-	                                 cache->dimension.w * 4);
+	                                 cache->dimension.w * 4, true);
+	// now we steal the pixels from atlas
+	cache->atlas = NULL;
 	handle = gpu_image.handle;
 	n_images = cache->image_boxes.size / sizeof(struct tw_bbox);
 	nk_wl_add_image(gpu_image, b);
@@ -675,6 +674,8 @@ nk_wl_apply_theme(struct nk_wl_backend *b,
 		images = NULL;
 	else
 		images = nk_images_from_cache(&cache, b);
+
+	image_cache_release(&cache);
 
 	/* default text */
 	text = &style->text;
@@ -740,89 +741,9 @@ nk_wl_apply_theme(struct nk_wl_backend *b,
 	win = &style->window;
 	nk_window_header_style_from_tw(&win->header, &theme->window.header, images);
 	nk_window_style_from_tw(win, &theme->window, images);
-}
 
-static void
-nk_wl_apply_color(struct nk_wl_backend *bkend,
-		  const struct tw_theme_color *theme)
-{
-	if (theme->row_size == 0)
-		return;
-	bkend->row_size = theme->row_size;
-
-	//TODO this is a shitty hack, somehow the first draw call did not work,
-	//we have to hack it in the background color
-	bkend->main_color = nk_color_from_tw(&theme->window_color);
-	struct nk_color table[NK_COLOR_COUNT];
-
-	table[NK_COLOR_TEXT] =
-		nk_color_from_tw(&theme->text_color);
-	table[NK_COLOR_WINDOW] =
-		nk_color_from_tw(&theme->window_color);
-	//header
-	table[NK_COLOR_HEADER] =
-		nk_color_from_tw(&theme->window_color);
-	table[NK_COLOR_BORDER] =
-		nk_color_from_tw(&theme->border_color);
-	//button
-
-	table[NK_COLOR_BUTTON] =
-		nk_color_from_tw(&theme->button.normal);
-	table[NK_COLOR_BUTTON_HOVER] =
-		nk_color_from_tw(&theme->button.hover);
-	table[NK_COLOR_BUTTON_ACTIVE] =
-		nk_color_from_tw(&theme->button.active);
-	//toggle
-	table[NK_COLOR_TOGGLE] =
-		nk_color_from_tw(&theme->toggle.normal);
-	table[NK_COLOR_TOGGLE_HOVER] =
-		nk_color_from_tw(&theme->toggle.hover);
-	table[NK_COLOR_TOGGLE_CURSOR] =
-		nk_color_from_tw(&theme->toggle.active);
-	//select
-	table[NK_COLOR_SELECT] =
-		nk_color_from_tw(&theme->select.normal);
-	table[NK_COLOR_SELECT_ACTIVE] =
-		nk_color_from_tw(&theme->select.active);
-	//slider
-	table[NK_COLOR_SLIDER] =
-		nk_color_from_tw(&theme->slider_bg_color);
-	table[NK_COLOR_SLIDER_CURSOR] =
-		nk_color_from_tw(&theme->slider.normal);
-	table[NK_COLOR_SLIDER_CURSOR_HOVER] =
-		nk_color_from_tw(&theme->slider.hover);
-	table[NK_COLOR_SLIDER_CURSOR_ACTIVE] =
-		nk_color_from_tw(&theme->slider.active);
-	//property
-	table[NK_COLOR_PROPERTY] = table[NK_COLOR_SLIDER];
-	//edit
-	table[NK_COLOR_EDIT] =
-		nk_color_from_tw(&theme->edit_color);
-	table[NK_COLOR_EDIT_CURSOR] =
-		nk_color_from_tw(&theme->text_color);
-	//combo
-	table[NK_COLOR_COMBO] =
-		nk_color_from_tw(&theme->combo_color);
-	//chart
-	table[NK_COLOR_CHART] =
-		nk_color_from_tw(&theme->chart.normal);
-	table[NK_COLOR_CHART_COLOR] =
-		nk_color_from_tw(&theme->chart.active);
-	table[NK_COLOR_CHART_COLOR_HIGHLIGHT] =
-		nk_color_from_tw(&theme->chart.hover);
-	//scrollbar
-	table[NK_COLOR_SCROLLBAR] = table[NK_COLOR_WINDOW];
-	table[NK_COLOR_SCROLLBAR_CURSOR] = table[NK_COLOR_WINDOW];
-	table[NK_COLOR_SCROLLBAR_CURSOR_ACTIVE] = table[NK_COLOR_WINDOW];
-	table[NK_COLOR_SCROLLBAR_CURSOR_HOVER] = table[NK_COLOR_WINDOW];
-	table[NK_COLOR_TAB_HEADER] = table[NK_COLOR_WINDOW];
-	nk_style_from_table(&bkend->ctx, table);
-}
-
-static inline nk_hash
-nk_wl_hash_colors(const struct tw_theme_color* theme)
-{
-	return nk_murmur_hash(theme, sizeof(struct tw_theme_color), NK_FLAG(7));
+	if (images)
+		free(images);
 }
 
 static inline nk_hash

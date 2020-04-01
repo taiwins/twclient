@@ -185,7 +185,7 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 			void (*convert)(char output[256], const char *input))
 {
 	char objname[256];
-	struct image_cache cache;
+	struct image_cache cache = {0};
 	size_t nimages = handle_array->size / (sizeof(off_t));
 	size_t context_height, context_width = 1000;
 	int row_x = 0, row_y = 0;
@@ -215,6 +215,9 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 		row_y = (row_x + w > (signed)context_width) ?
 			row_y + h : MAX(row_y, h);
 	}
+	if (row_x == 0 || row_y == 0)
+		goto out;
+
 	context_height = row_y;
 	stbrp_init_target(&context, context_width, context_height, nodes,
 			  context_width+10);
@@ -258,6 +261,7 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 	cairo_destroy(cr);
 	cairo_surface_destroy(atlas_surface);
 
+out:
 	free(nodes);
 	free(rects);
 
@@ -267,10 +271,14 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 void
 image_cache_release(struct image_cache *cache)
 {
-	wl_array_release(&cache->image_boxes);
-	wl_array_release(&cache->handles);
-	wl_array_release(&cache->strings);
-	free(cache->atlas);
+	if (cache->image_boxes.data)
+		wl_array_release(&cache->image_boxes);
+	if (cache->handles.data)
+		wl_array_release(&cache->handles);
+	if (cache->strings.data)
+		wl_array_release(&cache->strings);
+	if (cache->atlas)
+		free(cache->atlas);
 }
 
 static cairo_status_t
