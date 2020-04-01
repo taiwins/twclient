@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 	wl_shell_surface_set_toplevel(shell_surface);
 	App.shell_surface = shell_surface;
 	App.surface.known_mimes[TW_MIME_TYPE_TEXT] = "text/";
-	App.bkend = nk_cairo_create_bkend();
+	App.bkend = nk_cairo_create_backend();
 	App.user_font = nk_wl_new_font(config, App.bkend);
 
 	nk_cairo_impl_app_surface(&App.surface, App.bkend, sample_widget,
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 	tw_globals_dispatch_event_queue(&App.global);
 	wl_shell_surface_destroy(shell_surface);
 	tw_appsurf_release(&App.surface);
-	nk_cairo_destroy_bkend(App.bkend);
+	nk_cairo_destroy_backend(App.bkend);
 
 	tw_globals_release(&App.global);
 	wl_registry_destroy(registry);
