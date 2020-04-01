@@ -33,15 +33,15 @@
 #include <wayland-egl.h>
 #include <wayland-client.h>
 
-#define NK_IMPLEMENTATION
 #define NK_EGL_BACKEND
-#define NK_INCLUDE_STANDARD_IO
+
+#define NK_ZERO_COMMAND_MEMORY
 #define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
 #define NK_INCLUDE_FONT_BAKING
+
 #define NK_EGL_CMD_SIZE 4096
 #define MAX_VERTEX_BUFFER 512 * 128
 #define MAX_ELEMENT_BUFFER 128 * 128
-
 #define NK_SHADER_VERSION "#version 330 core\n"
 
 #include <egl.h>
@@ -111,8 +111,6 @@ struct nk_egl_backend {
 	//nuklear resources
 	struct nk_buffer cmds;	//cmd to opengl vertices
 	struct nk_draw_null_texture *null;
-
-	unsigned char cmd_buffer[NK_EGL_CMD_SIZE];
 };
 
 static const struct nk_egl_backend *CURRENT_CONTEXT = NULL;
@@ -302,16 +300,20 @@ nk_wl_free_gpu_image(const struct nk_image *gpu_image)
 }
 
 static struct nk_image
-nk_image_from_buffer(const unsigned char *pixels, struct nk_wl_backend *b,
+nk_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
                      unsigned int height, unsigned int width,
-                     unsigned int stride)
+                     unsigned int stride, bool take)
 {
 	struct nk_image img = nk_image_ptr((void *)pixels);
+	struct nk_image gpu_img;
 
 	img.w = width;
 	img.h = height;
 
-	return nk_wl_to_gpu_image(&img, b);
+	gpu_img = nk_wl_to_gpu_image(&img, b);
+	if (take)
+		free(pixels);
+	return gpu_img;
 }
 
 
@@ -548,7 +550,7 @@ _nk_egl_draw_end(struct nk_egl_backend *bkend)
 	glDisable(GL_BLEND);
 	glDisable(GL_SCISSOR_TEST);
 	//do I need this?
-	nk_buffer_clear(&bkend->cmds);
+	//nk_buffer_clear(&bkend->cmds);
 }
 
 static int
@@ -673,24 +675,17 @@ nk_egl_create_backend(const struct wl_display *display)
 	struct nk_egl_backend *bkend = calloc(1, sizeof(*bkend));
 	struct nk_user_font *default_font = NULL;
 
-	wl_list_init(&bkend->base.fonts);
-	wl_list_init(&bkend->base.images);
-
+	nk_wl_backend_init(&bkend->base);
 	tw_egl_env_init(&bkend->env, display);
-	//let us assign a default row size
-	bkend->base.row_size = 16;
 	bkend->compiled = false;
-	//default font
+	//compile bkends if supported
 	if (is_surfless_supported(bkend)) {
 		bkend->compiled = compile_backend(bkend, EGL_NO_SURFACE);
 		default_font =
 			nk_wl_new_font(default_config, &bkend->base);
+		nk_style_set_font(&bkend->base.ctx, default_font);
 	}
-
-	nk_init_default(&bkend->base.ctx, default_font);
-	nk_buffer_init_fixed(&bkend->cmds, bkend->cmd_buffer,
-	                     sizeof(bkend->cmd_buffer));
-	nk_buffer_clear(&bkend->cmds);
+	nk_buffer_init_default(&bkend->cmds);
 
 	return &bkend->base;
 }
@@ -702,6 +697,7 @@ nk_egl_destroy_backend(struct nk_wl_backend *b)
 		container_of(b, struct nk_egl_backend, base);
 	release_backend(bkend);
 	nk_wl_backend_cleanup(b);
+	nk_buffer_free(&bkend->cmds);
 	tw_egl_env_end(&bkend->env);
 	free(bkend);
 }

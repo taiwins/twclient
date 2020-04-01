@@ -22,6 +22,7 @@
 #ifndef NK_WL_IMAGE_H
 #define NK_WL_IMAGE_H
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <wayland-client.h>
 #include <cairo/cairo.h>
@@ -52,13 +53,14 @@ nk_wl_free_gpu_image(const struct nk_image *);
 #endif
 
 /**
- * @brief create an image from pixels. pixels may need to stay valid
+ * @brief create an image from malloced pixels (if asked)
  *
+ * The pixels need to be This function takes away the pixel content you have.
  */
 static struct nk_image
-nk_image_from_buffer(const unsigned char *pixels, struct nk_wl_backend *b,
+nk_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
                      unsigned int height, unsigned int width,
-                     unsigned int stride);
+                     unsigned int stride, bool take);
 
 static inline struct nk_rect
 nk_rect_from_bbox(const struct tw_bbox *box)
@@ -105,7 +107,7 @@ nk_wl_load_image(const char *path, enum wl_shm_format format,
 
 	return nk_wl_add_image(nk_image_from_buffer(mem, b,
 	                                            height, width,
-	                                            width * 4),
+	                                            width * 4, true),
 	                       b);
 }
 

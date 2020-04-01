@@ -32,18 +32,10 @@
 #include <cairo/cairo.h>
 //this will pull the freetype headers
 #include <freetype2/ft2build.h>
+#include <wayland-util.h>
 #include FT_FREETYPE_H
 
-#define NK_IMPLEMENTATION
 #define NK_CAIRO_BACKEND
-
-#define MAX_CMD_SIZE = 64 * 1024
-
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_DEFAULT_FONT
-#define NK_ZERO_COMMAND_MEMORY
 
 #include "nk_wl_internal.h"
 #include <shmpool.h>
@@ -160,7 +152,7 @@ nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 	font_path = nk_wl_find_font(&config);
 	if (!font_path)
 		return NULL;
-	//else, we try to creat
+
 	struct nk_wl_cairo_font *user_font =
 		malloc(sizeof(struct nk_wl_cairo_font));
 	wl_list_init(&user_font->wl_font.link);
@@ -173,12 +165,14 @@ nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 	error = FT_New_Face(*user_font->ft_lib, font_path, 0, &user_font->face);
 	if (error)
 		goto err_face;
-	user_font->cairo_face = cairo_ft_font_face_create_for_ft_face(user_font->face, 0);
+	user_font->cairo_face =
+		cairo_ft_font_face_create_for_ft_face(user_font->face, 0);
 	if (!user_font->cairo_face)
 		goto err_crface;
 	user_font->wl_font.user_font.height = config.pix_size;
 	user_font->wl_font.user_font.userdata.ptr = user_font;
 	user_font->wl_font.user_font.width = nk_wl_text_width;
+	wl_list_insert(&b->fonts, &user_font->wl_font.link);
 	free(font_path);
 	return &user_font->wl_font.user_font;
 
@@ -208,11 +202,19 @@ nk_wl_destroy_font(struct nk_user_font *font)
  * NK_CAIRO_IMAGE
  ******************************************************************************/
 static struct nk_image
-nk_image_from_buffer(const unsigned char *pixels, struct nk_wl_backend *b,
+nk_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
                      unsigned int height, unsigned int width,
-                     unsigned int stride)
+                     unsigned int stride, bool take)
 {
-	return nk_image_ptr((void *)pixels);
+	unsigned char *new_pixels = (unsigned char *)pixels;
+	if (!take) {
+		new_pixels = malloc(height * stride);
+		if (!new_pixels)
+			return (struct nk_image){0};
+		memcpy(new_pixels, pixels, height * stride);
+	}
+
+	return nk_image_ptr((void *)new_pixels);
 }
 
 
@@ -710,8 +712,6 @@ nk_wl_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 	shm_buffer_resize(surf, e);
 }
 
-
-
 static void
 nk_cairo_destroy_app_surface(struct tw_appsurf *app)
 {
@@ -724,27 +724,25 @@ void
 nk_cairo_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 			  nk_wl_drawcall_t draw_cb, struct tw_bbox geo)
 {
-	struct nk_cairo_backend *b =
-		container_of(bkend, struct nk_cairo_backend, base);
-	struct nk_wl_cairo_font *user_font = b->default_font->userdata.ptr;
+	/* struct nk_cairo_backend *b = */
+	/*	container_of(bkend, struct nk_cairo_backend, base); */
+	/* struct nk_wl_cairo_font *user_font = b->default_font->userdata.ptr; */
 
 	nk_wl_impl_app_surface(surf, bkend, draw_cb, geo);
 	shm_buffer_reallocate(surf, &geo);
 	surf->destroy = nk_cairo_destroy_app_surface;
-	//change the font size here,
-	user_font->size = (int)bkend->row_size;
 }
 
 struct nk_wl_backend *
 nk_cairo_create_bkend(void)
 {
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
-	wl_list_init(&b->base.images);
-	wl_list_init(&b->base.fonts);
-	b->default_font =
-		nk_wl_new_font(default_config, &b->base);
-	b->base.theme_hash = 0;
-	nk_init_default(&b->base.ctx, b->default_font);
+	struct nk_user_font *default_font;
+
+	nk_wl_backend_init(&b->base);
+	//set font here
+	default_font = nk_wl_new_font(default_config, &b->base);
+	nk_style_set_font(&b->base.ctx, default_font);
 	return &b->base;
 }
 
