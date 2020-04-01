@@ -11,6 +11,7 @@
 #include <egl.h>
 #include <client.h>
 #include <nk_backends.h>
+#include <theme.h>
 /* #define STB_IMAGE_IMPLEMENTATION */
 /* #include "stb_image.h" */
 
@@ -26,6 +27,7 @@ static struct application {
 	bool done;
 	struct nk_image image;
 	struct nk_user_font *user_font;
+	struct tw_theme theme;
 } App;
 
 static void
@@ -93,6 +95,7 @@ sample_widget(struct nk_context *ctx, float width, float height, struct tw_appsu
 	static char text_buffer[256];
 	static struct nk_colorf bg;
 	bool last_frame = inanimation;
+	static int slider = 10;
 
 	if (!init_text_edit) {
 		init_text_edit = true;
@@ -115,7 +118,7 @@ sample_widget(struct nk_context *ctx, float width, float height, struct tw_appsu
 		tw_appsurf_end_frame_request(data);
 
 	/* nk_button_label(ctx, strings); */
-	nk_label(ctx, "another", NK_TEXT_LEFT);
+	nk_slider_int(ctx, 10, &slider, 20, 1);
 	nk_layout_row_dynamic(ctx, 50, 1);
 	bg = nk_color_picker(ctx, bg, NK_RGB);
 	nk_layout_row_dynamic(ctx, 25, 1);
@@ -162,7 +165,8 @@ int main(int argc, char *argv[])
         if (!wl_display)
 		fprintf(stderr, "okay, I don't even have wayland display\n");
 	tw_globals_init(&App.global, wl_display);
-	App.global.theme_color = &taiwins_dark_theme;
+	tw_theme_init_default(&App.theme);
+	App.global.theme = &App.theme;
 
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);

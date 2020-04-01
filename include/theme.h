@@ -111,7 +111,6 @@ struct tw_style_button {
 	float rounding;
 	tw_vec2_t padding;
 	tw_vec2_t image_padding;
-	tw_vec2_t touch_padding;
 
 	/* optional user callbacks */
 	/* tw_handle userdata; */
@@ -139,7 +138,6 @@ struct tw_style_toggle {
 
 	/* properties */
 	tw_vec2_t padding;
-	tw_vec2_t touch_padding;
 	float spacing;
 	float border;
 
@@ -175,7 +173,6 @@ struct tw_style_selectable {
 	/* properties */
 	float rounding;
 	tw_vec2_t padding;
-	tw_vec2_t touch_padding;
 	tw_vec2_t image_padding;
 
 	/* optional user callbacks */
@@ -499,32 +496,6 @@ struct tw_theme {
 	struct wl_array string_pool;
 };
 
-struct widget_colors {
-	tw_rgba_t normal;
-	tw_rgba_t hover;
-	tw_rgba_t active;
-};
-
-struct tw_theme_color {
-	uint32_t row_size; //this defines the text size as well
-	tw_rgba_t window_color;
-	tw_rgba_t border_color;
-	//text colors
-	tw_rgba_t text_color;
-	tw_rgba_t edit_color;
-	//widget color
-	struct widget_colors button;
-	struct widget_colors toggle;
-	struct widget_colors select;
-	struct widget_colors chart;
-	struct widget_colors slider;
-	//spectials
-	tw_rgba_t combo_color;
-	tw_rgba_t slider_bg_color;
-	//we can contain a font name here. eventually the icon font is done by
-	//searching all the svg in the widgets
-	char font[64];
-};
 
 void tw_theme_init_default(struct tw_theme *theme);
 

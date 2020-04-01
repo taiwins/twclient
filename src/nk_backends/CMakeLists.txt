@@ -5,18 +5,20 @@
 add_library(twclient-nkegl STATIC
   nk_wl_egl.c)
 
-target_link_libraries(twclient-nkegl
+target_link_libraries(twclient-nkegl PUBLIC
   twclient
   twclient-icons
+  twclient-theme
   )
 add_library(twclient::nkegl ALIAS twclient-nkegl)
 
 add_library(twclient-nkcairo STATIC
   nk_wl_cairo.c)
 
-target_link_libraries(twclient-nkcairo
+target_link_libraries(twclient-nkcairo PUBLIC
   twclient
   twclient-icons
+  twclient-theme
   )
 add_library(twclient::nkcairo ALIAS twclient-nkcairo)
 

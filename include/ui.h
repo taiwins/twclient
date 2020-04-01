@@ -38,7 +38,6 @@
 #include <wayland-client.h>
 #include <sequential.h>
 #include "ui_event.h"
-#include "theme.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,7 +47,6 @@ extern "C" {
 /////////////////////////////////Application style definition/////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 struct tw_shm_pool;
-extern const struct tw_theme_color taiwins_dark_theme;
 
 static inline int
 tw_font_pt2px(int pt_size, int ppi)
