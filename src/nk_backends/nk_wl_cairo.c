@@ -750,4 +750,5 @@ void
 nk_cairo_destroy_backend(struct nk_wl_backend *bkend)
 {
 	nk_wl_backend_cleanup(bkend);
+	free(bkend);
 }
