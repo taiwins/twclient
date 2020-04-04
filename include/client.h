@@ -53,6 +53,54 @@ extern "C" {
 
 struct tw_theme;
 
+
+/**
+ * @brief classic observer pattern,
+ *
+ * much like wl_signal wl_listener, but not available for wayland clients
+ */
+struct tw_signal {
+	struct wl_list head;
+};
+
+/**
+ * @brief classic observer pattern,
+ *
+ * much like wl_signal wl_listener, but not available for wayland clients
+ */
+struct tw_observer {
+	struct wl_list link;
+	void (*update)(struct tw_observer *listener, void *data);
+};
+
+static inline void
+tw_signal_init(struct tw_signal *signal)
+{
+	wl_list_init(&signal->head);
+}
+
+static inline void
+tw_observer_init(struct tw_observer *observer,
+                 void (*notify)(struct tw_observer *observer, void *data))
+{
+	wl_list_init(&observer->link);
+	observer->update = notify;
+}
+
+static inline void
+tw_observer_add(struct tw_signal *signal, struct tw_observer *observer)
+{
+	wl_list_insert(&signal->head, &observer->link);
+}
+
+static inline void
+tw_signal_emit(struct tw_signal *signal, void *data)
+{
+	struct tw_observer *observer;
+	wl_list_for_each(observer, &signal->head, link)
+		observer->update(observer, data);
+}
+
 /**
  * global context for one application (can be shared with multiple surface)
  *
