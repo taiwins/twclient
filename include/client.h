@@ -27,11 +27,8 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <sys/mman.h>
-#include <pthread.h>
 #include <poll.h>
-#include <GL/gl.h>
-//hopefully this shit is declared
+
 #include <wayland-client.h>
 #include <sys/timerfd.h>
 
@@ -42,7 +39,6 @@
 #include <wayland-util.h>
 #include <wayland-client.h>
 #include <wayland-cursor.h>
-#include <wayland-egl.h>
 
 #include "event_queue.h"
 #include "ui.h"

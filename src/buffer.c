@@ -19,6 +19,8 @@
  *
  */
 
+#include <sys/mman.h>
+
 #include <client.h>
 #include <shmpool.h>
 
