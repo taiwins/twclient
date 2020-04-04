@@ -320,6 +320,7 @@ nk_wl_clean_app_surface(struct nk_wl_backend *bkend)
 	bkend->app_surface->do_frame = NULL;
 	bkend->app_surface->user_data = NULL;
 	bkend->app_surface = NULL;
+	vector_destroy(&bkend->prev_cmds);
 	if (bkend->internal_clipboard)
 		free(bkend->internal_clipboard);
 }
