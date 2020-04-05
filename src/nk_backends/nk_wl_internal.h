@@ -236,19 +236,14 @@ nk_wl_need_redraw(struct nk_wl_backend *bkend)
 
 	cmds = &bkend->ctx.memory;
 
-	need_resize = (size == 0) ? true : need_resize;
-	size = (size == 0) ? cmds->allocated : size;
-
-	while (cmds->allocated > size) {
-		need_resize = true;
-		size *= 2;
-	}
+	need_resize = size < cmds->allocated;
 	if (need_resize)
-		vector_resize(&bkend->prev_cmds, size);
+		vector_resize(&bkend->prev_cmds,
+		              cmds->allocated);
 
-	need_redraw = memcmp(nk_buffer_memory(cmds),
-	                     bkend->prev_cmds.elems,
-	                     cmds->allocated);
+	need_redraw = need_resize ||
+		memcmp(nk_buffer_memory(cmds), bkend->prev_cmds.elems,
+		       cmds->allocated);
 	if (need_redraw)
 		memcpy(bkend->prev_cmds.elems,
 		       nk_buffer_memory(cmds),
@@ -320,7 +315,7 @@ nk_wl_clean_app_surface(struct nk_wl_backend *bkend)
 	bkend->app_surface->do_frame = NULL;
 	bkend->app_surface->user_data = NULL;
 	bkend->app_surface = NULL;
-	vector_destroy(&bkend->prev_cmds);
+	vector_resize(&bkend->prev_cmds, 0);
 	if (bkend->internal_clipboard)
 		free(bkend->internal_clipboard);
 }
