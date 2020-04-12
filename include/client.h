@@ -146,6 +146,7 @@ struct tw_globals {
 			struct wl_buffer *cursor_buffer;
 			struct wl_callback_listener cursor_done_listener;
 			struct wl_surface *pointer_focused; //the surface that cursor is on
+			bool cursor_set;
 			//state
 			uint32_t btn;
 			bool btn_pressed;
@@ -200,7 +201,11 @@ void
 tw_globals_receive_data_offer(struct wl_data_offer *offer,
                               struct wl_surface *surface,
                               bool drag_n_drop);
+void
+tw_globals_change_cursor(struct tw_globals *globals, const char *type);
 
+void
+tw_globals_reload_cursor_theme(struct tw_globals *globals);
 
 
 #ifdef __cplusplus

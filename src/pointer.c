@@ -115,11 +115,12 @@ pointer_enter(void *data,
 		app->tw_globals = globals;
 
 	globals->inputs.pointer_events = POINTER_ENTER;
-	//this works only if you have one surface, we may need to set cursor
-	//every time
-	static bool cursor_set = false;
-	if (!cursor_set)
+
+	//setting cursor at enter maynot be the best time though
+	if (!globals->inputs.cursor_set) {
 		pointer_set_cursor(wl_pointer);
+		globals->inputs.cursor_set = true;
+	}
 }
 
 static void
@@ -381,19 +382,17 @@ tw_globals_change_cursor(struct tw_globals *globals, const char *type)
         pointer_set_cursor(globals->inputs.wl_pointer);
 }
 
-/*******************************************************************************
- * constructor/destructor
- ******************************************************************************/
-
 void
-tw_pointer_init(struct wl_pointer *wl_pointer, struct tw_globals *globals)
+tw_globals_reload_cursor_theme(struct tw_globals *globals)
 {
-	if (!globals)
-		return;
+	//clean up
+	if (globals->inputs.cursor_surface)
+		wl_surface_destroy(globals->inputs.cursor_surface);
+	if (globals->inputs.cursor_theme)
+		wl_cursor_theme_destroy(globals->inputs.cursor_theme);
+	globals->inputs.cursor_set = false;
 
-	default_pointer_grab(&pointer_listener);
-	wl_pointer_add_listener(wl_pointer, &pointer_listener, globals);
-
+	//reload
 	globals->inputs.cursor_theme =
 		wl_cursor_theme_load(globals->inputs.cursor_theme_name,
 		                     globals->inputs.cursor_size,
@@ -417,6 +416,23 @@ tw_pointer_init(struct wl_pointer *wl_pointer, struct tw_globals *globals)
 		wl_compositor_create_surface(globals->compositor);
 	globals->inputs.cursor_buffer =
 		wl_cursor_image_get_buffer(globals->inputs.cursor->images[0]);
+}
+
+/*******************************************************************************
+ * constructor/destructor
+ ******************************************************************************/
+
+void
+tw_pointer_init(struct wl_pointer *wl_pointer, struct tw_globals *globals)
+{
+	if (!globals)
+		return;
+
+	default_pointer_grab(&pointer_listener);
+	wl_pointer_add_listener(wl_pointer, &pointer_listener, globals);
+
+	tw_globals_reload_cursor_theme(globals);
+
 	pointer_event_clean(globals);
 }
 
