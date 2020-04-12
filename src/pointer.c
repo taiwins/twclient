@@ -31,6 +31,7 @@
 #include <xkbcommon/xkbcommon-names.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <wayland-client.h>
+#include <wayland-cursor.h>
 
 #include <ui.h>
 #include <client.h>
@@ -67,33 +68,33 @@ pointer_event_clean(struct tw_globals *globals)
 	globals->inputs.pointer_events = 0;
 }
 
-/* static void */
-/* pointer_cursor_done(void *data, struct wl_callback *callback, uint32_t callback_data) */
-/* { */
-/*	//you do necessary need this */
-/*	/\* fprintf(stderr, "cursor set!\n"); *\/ */
-/*	wl_callback_destroy(callback); */
-/* } */
+static void
+pointer_cursor_done(void *data, struct wl_callback *callback,
+                    uint32_t callback_data)
+{
+	wl_callback_destroy(callback);
+}
 
 
 static void
 pointer_set_cursor(struct wl_pointer *wl_pointer)
 {
 	struct tw_globals *globals = wl_pointer_get_user_data(wl_pointer);
-	/* struct wl_callback *callback = */
-	/*	wl_surface_frame(globals->inputs.cursor_surface); */
-	/* globals->inputs.cursor_done_listener.done = pointer_cursor_done; */
-	/* wl_callback_add_listener(callback, &globals->inputs.cursor_done_listener, NULL); */
+	struct wl_callback *callback =
+		wl_surface_frame(globals->inputs.cursor_surface);
+	globals->inputs.cursor_done_listener.done = pointer_cursor_done;
+	wl_callback_add_listener(callback, &globals->inputs.cursor_done_listener, NULL);
 	//give a role to the the cursor_surface
 	wl_surface_attach(globals->inputs.cursor_surface,
 			  globals->inputs.cursor_buffer, 0, 0);
 	wl_surface_damage(globals->inputs.cursor_surface, 0, 0,
-			  globals->inputs.w, globals->inputs.w);
+			  globals->inputs.cursor_size,
+	                  globals->inputs.cursor_size);
 	wl_surface_commit(globals->inputs.cursor_surface);
 	wl_pointer_set_cursor(wl_pointer,
 			      globals->inputs.enter_serial,
 			      globals->inputs.cursor_surface,
-			      globals->inputs.w/2, globals->inputs.w/2);
+	                      0, 0);
 }
 
 
@@ -114,11 +115,12 @@ pointer_enter(void *data,
 		app->tw_globals = globals;
 
 	globals->inputs.pointer_events = POINTER_ENTER;
-	//this works only if you have one surface, we may need to set cursor
-	//every time
-	static bool cursor_set = false;
-	if (!cursor_set)
+
+	//setting cursor at enter maynot be the best time though
+	if (!globals->inputs.cursor_set) {
 		pointer_set_cursor(wl_pointer);
+		globals->inputs.cursor_set = true;
+	}
 }
 
 static void
@@ -306,9 +308,9 @@ default_pointer_grab(struct wl_pointer_listener *grab)
 	grab->axis_discrete = pointer_axis_discrete;
 }
 
-///////////////////////////////////////////////////////////
-// resize pointer grab
-///////////////////////////////////////////////////////////
+/*******************************************************************************
+ * resize grab
+ ******************************************************************************/
 
 static void
 resize_pointer_button(void *data,
@@ -357,14 +359,68 @@ resize_pointer_grab(struct wl_pointer_listener *grab)
 	grab->frame = resize_pointer_frame;
 }
 
-///////////////////////////////////////////////////////////
-// move pointer grab, this sucks
-///////////////////////////////////////////////////////////
+/*******************************************************************************
+ * cursor theme
+ ******************************************************************************/
+void
+tw_globals_change_cursor(struct tw_globals *globals, const char *type)
+{
+	struct wl_cursor *new_cursor = NULL;
 
+        if (!globals->inputs.cursor_theme ||
+            !globals->inputs.wl_pointer)
+		return;
 
-///////////////////////////////////////////////////////////
-// constructor/destructor
-///////////////////////////////////////////////////////////
+        new_cursor = wl_cursor_theme_get_cursor(globals->inputs.cursor_theme,
+                                                type);
+        if (!new_cursor)
+	        return;
+
+        globals->inputs.cursor = new_cursor;
+        globals->inputs.cursor_buffer =
+	        wl_cursor_image_get_buffer(globals->inputs.cursor->images[0]);
+        pointer_set_cursor(globals->inputs.wl_pointer);
+}
+
+void
+tw_globals_reload_cursor_theme(struct tw_globals *globals)
+{
+	//clean up
+	if (globals->inputs.cursor_surface)
+		wl_surface_destroy(globals->inputs.cursor_surface);
+	if (globals->inputs.cursor_theme)
+		wl_cursor_theme_destroy(globals->inputs.cursor_theme);
+	globals->inputs.cursor_set = false;
+
+	//reload
+	globals->inputs.cursor_theme =
+		wl_cursor_theme_load(globals->inputs.cursor_theme_name,
+		                     globals->inputs.cursor_size,
+		                     globals->shm);
+	globals->inputs.cursor =
+		wl_cursor_theme_get_cursor(globals->inputs.cursor_theme,
+		                           "left_ptr");
+
+	//the theme you asked is not there we will load the default theme then
+	if (!globals->inputs.cursor) {
+		wl_cursor_theme_destroy(globals->inputs.cursor_theme);
+		globals->inputs.cursor_theme =
+			wl_cursor_theme_load(NULL, globals->inputs.cursor_size,
+			                     globals->shm);
+		globals->inputs.cursor =
+			wl_cursor_theme_get_cursor(globals->inputs.cursor_theme,
+			                           "left_ptr");
+	}
+
+	globals->inputs.cursor_surface =
+		wl_compositor_create_surface(globals->compositor);
+	globals->inputs.cursor_buffer =
+		wl_cursor_image_get_buffer(globals->inputs.cursor->images[0]);
+}
+
+/*******************************************************************************
+ * constructor/destructor
+ ******************************************************************************/
 
 void
 tw_pointer_init(struct wl_pointer *wl_pointer, struct tw_globals *globals)
@@ -374,18 +430,11 @@ tw_pointer_init(struct wl_pointer *wl_pointer, struct tw_globals *globals)
 
 	default_pointer_grab(&pointer_listener);
 	wl_pointer_add_listener(wl_pointer, &pointer_listener, globals);
-	//set pointer theme and surface
-	globals->inputs.cursor_theme = wl_cursor_theme_load("whiteglass", 32, globals->shm);
-	globals->inputs.w = 32;
-	globals->inputs.cursor = wl_cursor_theme_get_cursor(
-		globals->inputs.cursor_theme, "plus");
-	globals->inputs.cursor_surface =
-		wl_compositor_create_surface(globals->compositor);
-	globals->inputs.cursor_buffer =
-		wl_cursor_image_get_buffer(globals->inputs.cursor->images[0]);
+
+	tw_globals_reload_cursor_theme(globals);
+
 	pointer_event_clean(globals);
 }
-
 
 void
 tw_pointer_destroy(struct wl_pointer *wl_pointer)
@@ -398,10 +447,9 @@ tw_pointer_destroy(struct wl_pointer *wl_pointer)
 }
 
 
-
-/*************************************************************************/
-/*                    wl_touch_implements as pointer                     */
-/*************************************************************************/
+/*******************************************************************************
+ * touch impl
+ ******************************************************************************/
 
 
 static void
