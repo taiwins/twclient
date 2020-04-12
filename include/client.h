@@ -138,6 +138,7 @@ struct tw_globals {
 		};
 		//pointer, touch use this as well
 		struct {
+			size_t cursor_size;
 			char cursor_theme_name[64];
 			struct wl_cursor *cursor;
 			struct wl_cursor_theme *cursor_theme;
@@ -153,7 +154,6 @@ struct tw_globals {
 			int16_t sx, sy; //screen coordinates
 			int16_t dx, dy; //relative motion
 			uint32_t dx_axis, dy_axis; //axis advance
-			short w;
 		};
 
 	} inputs;
@@ -164,19 +164,25 @@ struct tw_globals {
 };
 
 
-/* here you need a data structure that glues the anonoymous_buff and wl_buffer wl_shm_pool */
-int tw_globals_announce(struct tw_globals *globals,
-			struct wl_registry *wl_registry,
-			uint32_t name,
-			const char *interface,
-			uint32_t version);
+/**
+ * @brief taking care of common wl_globals like wl_shm, wl_seat,
+ *  wl_data_device_manager
+ *
+ * You would call this function in your `wl_registry->globals` callback, you try
+ * to register the specific globals interests you, then call this function for
+ * the rest
+*/
+int
+tw_globals_announce(struct tw_globals *globals,
+                    struct wl_registry *wl_registry,
+                    uint32_t name,
+                    const char *interface,
+                    uint32_t version);
+void
+tw_globals_init(struct tw_globals *globals, struct wl_display *display);
 
-//unless you have better method to setup the theme, I think you can simply set it up my hand
-
-/* Constructor */
-void tw_globals_init(struct tw_globals *globals, struct wl_display *display);
-/* destructor */
-void tw_globals_release(struct tw_globals *globals);
+void
+tw_globals_release(struct tw_globals *globals);
 
 static inline void
 tw_globals_dispatch_event_queue(struct tw_globals *globals)
@@ -184,15 +190,16 @@ tw_globals_dispatch_event_queue(struct tw_globals *globals)
 	tw_event_queue_run(&globals->event_queue);
 }
 
-bool is_shm_format_valid(uint32_t format);
+bool
+is_shm_format_valid(uint32_t format);
 
-//we can have several input code
-void tw_globals_get_input_state(const struct tw_globals *globals);
-//you will have a few functions
+void
+tw_globals_get_input_state(const struct tw_globals *globals);
 
-void tw_globals_receive_data_offer(struct wl_data_offer *offer,
-				   struct wl_surface *surface,
-				   bool drag_n_drop);
+void
+tw_globals_receive_data_offer(struct wl_data_offer *offer,
+                              struct wl_surface *surface,
+                              bool drag_n_drop);
 
 
 
