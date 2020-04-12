@@ -470,6 +470,7 @@ tw_globals_init(struct tw_globals *globals, struct wl_display *display)
 	tw_event_queue_init(&globals->event_queue);
 	globals->event_queue.quit =
 		!tw_event_queue_add_wl_display(&globals->event_queue, display);
+	globals->inputs.cursor_size = 32;
 }
 
 void
