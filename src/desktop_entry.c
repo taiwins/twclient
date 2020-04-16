@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 
+#include <string.h>
 #include <strops.h>
 #include <helpers.h>
 #include <os/file.h>
@@ -68,9 +69,19 @@ xdg_app_entry_empty(const struct xdg_app_entry *entry)
 		strlen(entry->exec) == 0;
 }
 
+static inline bool
+xdg_app_entry_exists(const vector_t *v, const struct xdg_app_entry *app)
+{
+	const struct xdg_app_entry *entry;
+	vector_for_each(entry, v) {
+		if (strncmp(entry->name, app->name, NUMOF(app->name)) == 0)
+			return true;
+	}
+	return false;
+}
+
 bool
 xdg_app_entry_from_file(const char *path, struct xdg_app_entry *entry)
-
 {
 	FILE *file = NULL;
 	ssize_t len = 0;
@@ -142,7 +153,6 @@ xdg_app_entry_from_file(const char *path, struct xdg_app_entry *entry)
 	return !xdg_app_entry_empty(entry);
 }
 
-
 vector_t
 xdg_apps_gather(void)
 {
@@ -162,7 +172,8 @@ xdg_apps_gather(void)
 		path_concat(total_path, 999, 1, entry->d_name);
 		if (strstr(entry->d_name, ".desktop") + surfix_len ==
 		    entry->d_name + strlen(entry->d_name) &&
-		    xdg_app_entry_from_file(total_path, &app_entry))
+		    xdg_app_entry_from_file(total_path, &app_entry) &&
+			!xdg_app_entry_exists(&apps, &app_entry))
 			vector_append(&apps, &app_entry);
 	}
 
