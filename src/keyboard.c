@@ -1,7 +1,7 @@
 /*
  * keyboard.c - taiwins client keyboard handling functions
  *
- * Copyright (c) 2019 Xichen Zhou
+ * Copyright (c) 2019-2020 Xichen Zhou
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -101,6 +101,24 @@ is_repeat_info_valid(const struct itimerspec ri)
 		(ri.it_interval.tv_sec || ri.it_interval.tv_nsec);
 }
 
+static inline bool
+is_modifier_key(const xkb_keysym_t sym)
+{
+	xkb_keysym_t modifiers[] = {
+		XKB_KEY_Shift_L, XKB_KEY_Shift_R,
+		XKB_KEY_Control_L, XKB_KEY_Control_R,
+		XKB_KEY_Caps_Lock, XKB_KEY_Shift_Lock,
+		XKB_KEY_Meta_L,XKB_KEY_Meta_R,
+		XKB_KEY_Alt_L, XKB_KEY_Alt_R,
+		XKB_KEY_Super_L, XKB_KEY_Super_R,
+		XKB_KEY_Hyper_L, XKB_KEY_Hyper_R,
+	};
+	for (unsigned i = 0; i < NUMOF(modifiers); i++)
+		if (sym == modifiers[i])
+			return true;
+	return false;
+}
+
 static void
 handle_key(void *data,
 	   struct wl_keyboard *wl_keyboard,
@@ -111,15 +129,21 @@ handle_key(void *data,
 {
 	struct tw_globals *globals = (struct tw_globals *)data;
 	struct wl_surface *focused = globals->inputs.keyboard_focused;
-	struct tw_appsurf *appsurf = (focused) ? tw_appsurf_from_wl_surface(focused) : NULL;
+	struct tw_appsurf *appsurf = (focused) ?
+		tw_appsurf_from_wl_surface(focused) : NULL;
+	uint32_t millisec = time;
+	xkb_keycode_t keycode = kc_linux2xkb(key);
+	xkb_keysym_t keysym = xkb_state_key_get_one_sym(globals->inputs.kstate,
+	                                                keycode);
+	bool pressed = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
 
-	globals->inputs.millisec = time;
-	globals->inputs.keycode = kc_linux2xkb(key);
-	globals->inputs.keysym  = xkb_state_key_get_one_sym(globals->inputs.kstate,
-							    globals->inputs.keycode);
-	globals->inputs.key_pressed = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
-	if (!appsurf || !appsurf->do_frame)
+	if (is_modifier_key(keysym) || !appsurf || !appsurf->do_frame)
 		return;
+
+	globals->inputs.millisec = millisec;
+	globals->inputs.keycode = keycode;
+	globals->inputs.keysym  = keysym;
+	globals->inputs.key_pressed = pressed;
 
 	struct tw_app_event e = {
 		.time = time,
@@ -199,7 +223,7 @@ handle_repeat_info(void *data,
 		},
 		.it_interval = {
 			.tv_sec = 0,
-			.tv_nsec = rate * 1000000,
+			.tv_nsec = 1000000000 / rate,
 		},
 	};
 }
