@@ -38,7 +38,7 @@ extern "C" {
  * intput state
  */
 static inline void
-nk_input_reset(struct nk_context *ctx)
+nk_wl_input_reset(struct nk_context *ctx)
 {
 	nk_input_begin(ctx);
 	nk_input_end(ctx);
@@ -107,7 +107,7 @@ nk_keycb(struct tw_appsurf *surf, const struct tw_app_event *e)
 		nk_input_key(&bkend->ctx, NK_KEY_LEFT, (keysym == XKB_KEY_b) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_RIGHT, (keysym == XKB_KEY_f) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_TEXT_UNDO, (keysym == XKB_KEY_slash) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_CUT, (keysym == XKB_KEY_z) && state);
+		nk_input_key(&bkend->ctx, NK_KEY_CUT, (keysym == XKB_KEY_x) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_COPY, (keysym == XKB_KEY_c) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_PASTE, (keysym == XKB_KEY_v) && state);
 		//we should also support the clipboard later

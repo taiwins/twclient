@@ -286,6 +286,7 @@ nk_wl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 	bkend->ctx.clip.copy = nk_wl_clipboard_copy;
 	bkend->ctx.clip.paste = nk_wl_clipboard_paste;
 	bkend->ctx.clip.userdata = nk_handle_ptr(surf);
+	nk_wl_input_reset(&bkend->ctx);
 
 	wl_surface_set_buffer_scale(surf->wl_surface, box.s);
 
@@ -316,6 +317,9 @@ nk_wl_clean_app_surface(struct nk_wl_backend *bkend)
 	bkend->app_surface->user_data = NULL;
 	bkend->app_surface = NULL;
 	vector_resize(&bkend->prev_cmds, 0);
+	//re initialize the backend inputs
+	nk_wl_input_reset(&bkend->ctx);
+
 	if (bkend->internal_clipboard)
 		free(bkend->internal_clipboard);
 }
