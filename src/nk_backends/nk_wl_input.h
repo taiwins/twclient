@@ -1,7 +1,7 @@
 /*
  * nk_wl_input.h - taiwins client nuklear input handling functions
  *
- * Copyright (c) 2019 Xichen Zhou
+ * Copyright (c) 2019-2020 Xichen Zhou
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 #define NK_WL_INPUT_H
 
 #include <linux/input.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 #include "nk_wl_internal.h"
 
@@ -125,14 +126,14 @@ nk_keycb(struct tw_appsurf *surf, const struct tw_app_event *e)
 		nk_input_key(&bkend->ctx, NK_KEY_TEXT_INSERT_MODE, (keysym == XKB_KEY_Insert) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_TAB, keysym == XKB_KEY_Tab && state);
 		nk_input_key(&bkend->ctx, NK_KEY_BACKSPACE, (keysym == XKB_KEY_BackSpace) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_UP, (keysym == XKB_KEY_UP) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_DOWN, (keysym == XKB_KEY_DOWN) && state);
+		nk_input_key(&bkend->ctx, NK_KEY_UP, (keysym == XKB_KEY_Up) && state);
+		nk_input_key(&bkend->ctx, NK_KEY_DOWN, (keysym == XKB_KEY_Down) && state);
+		nk_input_key(&bkend->ctx, NK_KEY_LEFT, (keysym == XKB_KEY_Left) && state);
+		nk_input_key(&bkend->ctx, NK_KEY_RIGHT, (keysym == XKB_KEY_Right) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_SHIFT, (keysym == XKB_KEY_Shift_L ||
 							 keysym == XKB_KEY_Shift_R) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_TEXT_LINE_START, (keysym == XKB_KEY_Home) && state);
 		nk_input_key(&bkend->ctx, NK_KEY_TEXT_LINE_END, (keysym == XKB_KEY_End) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_LEFT, (keysym == XKB_KEY_Left) && state);
-		nk_input_key(&bkend->ctx, NK_KEY_RIGHT, (keysym == XKB_KEY_Right) && state);
 	}
 	if (state)
 		bkend->ckey = keysym;

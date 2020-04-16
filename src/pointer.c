@@ -1,7 +1,7 @@
 /*
  * pointer.c - taiwins client pointer handling functions
  *
- * Copyright (c) 2019 Xichen Zhou
+ * Copyright (c) 2019-2020 Xichen Zhou
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -133,6 +133,7 @@ pointer_leave(void *data,
 	globals->inputs.serial = serial;
 	globals->inputs.pointer_focused = NULL;
 	globals->inputs.pointer_events = POINTER_LEAVE;
+	globals->inputs.cursor_set = false;
 }
 
 static void
