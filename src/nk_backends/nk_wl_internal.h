@@ -208,7 +208,10 @@ nk_wl_new_frame(struct tw_appsurf *surf, const struct tw_app_event *e)
 			NK_WINDOW_TITLE | NK_WINDOW_SCROLL_AUTO_HIDE;
 			break;
 		}
-		if (nk_begin(&bkend->ctx, "nuklear_app", nk_rect(0, 0, width, height),
+		if (surf->flags & TW_APPSURF_NOINPUT)
+			nk_flags = nk_flags | NK_WINDOW_NO_INPUT;
+		if (nk_begin(&bkend->ctx, "nuklear_app",
+		             nk_rect(0, 0, width, height),
 			     nk_flags)) {
 			bkend->frame(&bkend->ctx, width, height, bkend->app_surface);
 		} nk_end(&bkend->ctx);
