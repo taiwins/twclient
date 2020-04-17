@@ -45,7 +45,6 @@ struct xdg_surface;
 typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx,
                                  float width, float height,
                                  struct tw_appsurf *app);
-typedef void (*nk_wl_postcall_t)(struct tw_appsurf *app);
 
 /*******************************************************************************
  * shell implementation
@@ -93,16 +92,6 @@ nk_egl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 /* void */
 /* nk_vulkan_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend, */
 /*			   nk_wl_drawcall_t draw_cb, const struct tw_bbox geo); */
-
-
-NK_API xkb_keysym_t
-nk_wl_get_keyinput(struct nk_context *ctx);
-
-NK_API bool
-nk_wl_get_btn(struct nk_context *ctx, uint32_t *button, uint32_t *sx, uint32_t *sy);
-
-NK_API void
-nk_wl_add_idle(struct nk_context *ctx, nk_wl_postcall_t task);
 
 
 NK_API const struct nk_style *
