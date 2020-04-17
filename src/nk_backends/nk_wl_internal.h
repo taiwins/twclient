@@ -106,7 +106,6 @@ struct nk_wl_backend {
 		//update to date information
 		struct tw_appsurf *app_surface;
 		nk_wl_drawcall_t frame;
-		nk_wl_postcall_t post_cb;
 		char *internal_clipboard;
 
 		xkb_keysym_t ckey; //cleaned up every frame
@@ -220,10 +219,6 @@ nk_wl_new_frame(struct tw_appsurf *surf, const struct tw_app_event *e)
 	nk_wl_render(bkend);
 	nk_clear(&bkend->ctx);
 
-	if (bkend->post_cb) {
-		bkend->post_cb(bkend->app_surface);
-		bkend->post_cb = NULL;
-	}
 	//we will need to remove this
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->cbtn = -1;
@@ -285,7 +280,6 @@ nk_wl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 	bkend->cbtn = -1;
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->app_surface = surf;
-	bkend->post_cb = NULL;
 	bkend->ctx.clip.copy = nk_wl_clipboard_copy;
 	bkend->ctx.clip.paste = nk_wl_clipboard_paste;
 	bkend->ctx.clip.userdata = nk_handle_ptr(surf);
@@ -366,30 +360,6 @@ nk_wl_backend_cleanup(struct nk_wl_backend *bkend)
  * shared API
  ******************************************************************************/
 
-NK_API xkb_keysym_t
-nk_wl_get_keyinput(struct nk_context *ctx)
-{
-	struct nk_wl_backend *bkend = container_of(ctx, struct nk_wl_backend, ctx);
-	return bkend->ckey;
-}
-
-NK_API bool
-nk_wl_get_btn(struct nk_context *ctx, uint32_t *button, uint32_t *sx, uint32_t *sy)
-{
-	struct nk_wl_backend *bkend = container_of(ctx, struct nk_wl_backend, ctx);
-	*button = (bkend->cbtn >= 0) ? bkend->cbtn : NK_BUTTON_MAX;
-	*sx = bkend->sx;
-	*sy = bkend->sy;
-	return (bkend->cbtn) >= 0;
-}
-
-NK_API void
-nk_wl_add_idle(struct nk_context *ctx, nk_wl_postcall_t task)
-{
-	struct nk_wl_backend *bkend = container_of(ctx, struct nk_wl_backend, ctx);
-	bkend->post_cb = task;
-}
-
 NK_API const struct nk_style *
 nk_wl_get_curr_style(struct nk_wl_backend *bkend)
 {
@@ -409,7 +379,6 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct tw_appsurf *app, nk_wl_drawc
 	} nk_end(&bkend->ctx);
 
 	nk_clear(&bkend->ctx);
-	bkend->post_cb = NULL;
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->cbtn = -1;
 }
