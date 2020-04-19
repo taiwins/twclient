@@ -558,21 +558,41 @@ nk_cairo_image(cairo_t *cr, const struct nk_command *cmd)
 {
 	const struct nk_command_image *im =
 		(const struct nk_command_image *)cmd;
-	cairo_surface_t *img_surf = im->img.handle.ptr;
-	if (!img_surf ||
-	    cairo_image_surface_get_format(img_surf) == CAIRO_FORMAT_INVALID)
+	cairo_surface_t *img_surf;
+	double sw = (double)im->w / (double)im->img.region[2];
+	double sh = (double)im->h / (double)im->img.region[3];
+	cairo_format_t format = CAIRO_FORMAT_ARGB32;
+	int stride = cairo_format_stride_for_width(format, im->img.w);
+
+	if (!im->img.handle.ptr)
 		return;
+	img_surf = cairo_image_surface_create_for_data(im->img.handle.ptr,
+	                                               format,
+	                                               im->img.w, im->img.h,
+	                                               stride);
+	if (!img_surf)
+		return;
+	cairo_save(cr);
 
-	double w = cairo_image_surface_get_width(img_surf);
-	double h = cairo_image_surface_get_height(img_surf);
-	cairo_pattern_t *pat = cairo_pattern_create_for_surface(img_surf);
-
-	/* cairo_paint(cr); */
 	cairo_rectangle(cr, im->x, im->y, im->w, im->h);
-	cairo_scale(cr, im->w / w, im->h / h);
-	cairo_set_source(cr, pat);
+	//scale here, if after source set, the scale would not apply to source
+	//surface
+	cairo_scale(cr, sw, sh);
+	// the coordinates system in cairo is not intuitive, scale, translate,
+	// are applied to source. Refer to
+	// "https://www.cairographics.org/FAQ/#paint_from_a_surface" for details
+
+	// if you set source_origin to (0,0), it would be like source origin
+	// aligned to dest origin, then if you draw a rectangle on (x, y, w, h).
+	// it would clip out the (x, y, w, h) of the source on you dest as well.
+
+	cairo_set_source_surface(cr, img_surf,
+	                         im->x/sw - im->img.region[0],
+	                         im->y/sh - im->img.region[1]);
+
 	cairo_fill(cr);
-	cairo_pattern_destroy(pat);
+	cairo_restore(cr);
+	cairo_surface_destroy(img_surf);
 }
 
 static void
