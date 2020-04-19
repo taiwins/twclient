@@ -43,7 +43,6 @@ find_package(NVEGL)
 find_package(Fontconfig REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(UDEV REQUIRED)
-find_package(Vulkan REQUIRED)
 find_package(LibRSVG REQUIRED)
 
 ################################################################################
