@@ -166,8 +166,8 @@ obj_exists(const char *filename,
 
 static int
 search_icon_subdir(const char *dir_path,
-		struct wl_array *handle_pool,
-		struct wl_array *string_pool)
+                   struct wl_array *handle_pool,
+                   struct wl_array *string_pool)
 {
 	int count = 0;
 	char filepath[1024];
@@ -209,11 +209,16 @@ search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
 	if (strlen(themepath) + MAX_DIR_LEN + 2 >= 1024)
 		return;
 
-	vector_for_each(icons, icondir) {
-		strcpy(absdir, themepath);
-		path_concat(absdir, sizeof(absdir), 1, icons->dir);
-		count += search_icon_subdir(absdir, handles, strings);
-	}
+	//use only the themepath(like /usr/share/pixmaps), we take it as a
+	//subdir
+	if (!icondir)
+		count += search_icon_subdir(themepath, handles, strings);
+	else
+		vector_for_each(icons, icondir) {
+			strcpy(absdir, themepath);
+			path_concat(absdir, sizeof(absdir), 1, icons->dir);
+			count += search_icon_subdir(absdir, handles, strings);
+		}
 }
 
 void
