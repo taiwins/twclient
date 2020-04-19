@@ -214,11 +214,11 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 			w : row_x + w;
 		row_y = (row_x + w > (signed)context_width) ?
 			row_y + h : MAX(row_y, h);
+		context_height = row_y + h;
 	}
 	if (row_x == 0 || row_y == 0)
 		goto out;
 
-	context_height = row_y;
 	stbrp_init_target(&context, context_width, context_height, nodes,
 			  context_width+10);
 	stbrp_setup_allow_out_of_mem(&context, 0);
@@ -252,6 +252,7 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 		}
 		//otherwise, copy the image path directly
 		char *tocpy = wl_array_add(&cache.strings, strlen(path)+1);
+		strcpy(tocpy, path);
 		*(off_t *)wl_array_add(&cache.handles, sizeof(off_t)) =
 			(tocpy - (char *)cache.strings.data);
 		*(struct tw_bbox *)wl_array_add(&cache.image_boxes,
