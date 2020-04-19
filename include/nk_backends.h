@@ -84,16 +84,6 @@ void
 nk_egl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
                         nk_wl_drawcall_t draw_cb, const struct tw_bbox geo);
 
-
-/* vulkan_backend */
-/* struct nk_wl_backend *nk_vulkan_backend_create(void); */
-/* struct nk_wl_backend *nk_vulkan_backend_clone(struct nk_wl_backend *b); */
-/* void nk_vulkan_backend_destroy(struct nk_wl_backend *b); */
-/* void */
-/* nk_vulkan_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend, */
-/*			   nk_wl_drawcall_t draw_cb, const struct tw_bbox geo); */
-
-
 NK_API const struct nk_style *
 nk_wl_get_curr_style(struct nk_wl_backend *bkend);
 
