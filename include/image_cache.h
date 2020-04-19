@@ -71,29 +71,34 @@ image_cache_from_arrays(const struct wl_array *handle_array,
  *
  * very slow, could be on another thread
  */
-struct image_cache image_cache_from_fd(int fd);
+struct image_cache
+image_cache_from_fd(int fd);
 
 /**
  * @brief file IO writing
  *
  * very slow, could be on another thread
  */
-void image_cache_to_fd(const struct image_cache *cache, int fd);
+void
+image_cache_to_fd(const struct image_cache *cache, int fd);
 
-void image_cache_release(struct image_cache *cache);
+void
+image_cache_release(struct image_cache *cache);
 
-void icontheme_dir_init(struct icontheme_dir *theme, const char *path);
+void
+icontheme_dir_init(struct icontheme_dir *theme, const char *path);
 
-void icontheme_dir_release(struct icontheme_dir *theme);
+void
+icontheme_dir_release(struct icontheme_dir *theme);
 
-void search_icon_dirs(struct icontheme_dir *output,
-		      const int min_res, const int max_res);
-
-void search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
-		      const char *themepath, const vector_t *icondir);
-
-//image loaders
-void image_info(const char *path, int *w, int *h, int *nchannels);
+void
+search_icon_dirs(struct icontheme_dir *output,
+                 const int min_res, const int max_res);
+void
+search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
+                 const char *themepath, const vector_t *icondir);
+void
+image_info(const char *path, int *w, int *h, int *nchannels);
 
 //image allocated by malloc, use free to release the memory
 unsigned char *
