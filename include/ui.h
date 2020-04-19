@@ -31,7 +31,6 @@
 #include <wayland-egl.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <vulkan/vulkan.h>
 
 //doesnt support jpeg in this way, but there is a cairo-jpeg project
 #include <cairo/cairo.h>
@@ -220,10 +219,6 @@ struct tw_appsurf {
 		 * parent->frame function to do the work
 		 */
 		struct tw_appsurf *parent;
-		/* if we have an vulkan surface, it would be the same thing */
-		struct {
-			VkSurfaceKHR vksurf;
-		};
 	};
 	struct wl_list filter_head;
 	frame_t do_frame;
