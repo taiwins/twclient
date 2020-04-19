@@ -69,15 +69,26 @@ xdg_app_entry_empty(const struct xdg_app_entry *entry)
 		strlen(entry->exec) == 0;
 }
 
-static inline bool
+static inline struct xdg_app_entry *
 xdg_app_entry_exists(const vector_t *v, const struct xdg_app_entry *app)
 {
-	const struct xdg_app_entry *entry;
+	struct xdg_app_entry *entry;
 	vector_for_each(entry, v) {
 		if (strncmp(entry->name, app->name, NUMOF(app->name)) == 0)
-			return true;
+			return entry;
 	}
-	return false;
+	return NULL;
+}
+
+static void
+xdg_app_entry_complete(struct xdg_app_entry *dst, struct xdg_app_entry *src)
+{
+	if (strlen(dst->exec) == 0)
+		strop_ncpy(dst->exec, src->exec, 128);
+	if (strlen(dst->icon) == 0)
+		strop_ncpy(dst->icon, src->icon, 128);
+	if (strlen(dst->path) == 0)
+		strop_ncpy(dst->path, src->path, 128);
 }
 
 bool
@@ -160,21 +171,23 @@ xdg_apps_gather(void)
 	vector_init(&apps, sizeof(struct xdg_app_entry), NULL);
 
 	const char *desktop_dir = "/usr/share/applications";
-	int surfix_len = strlen(".desktop");
 
 	DIR *dir = opendir(desktop_dir);
 	for (struct dirent *entry = readdir(dir); entry; entry = readdir(dir)) {
 		if (entry->d_type != DT_REG)
 			continue;
 
-		struct xdg_app_entry app_entry = {0};
+		struct xdg_app_entry app_entry = {0}, *query;
 		char total_path[1000] = "/usr/share/applications";
 		path_concat(total_path, 999, 1, entry->d_name);
-		if (strstr(entry->d_name, ".desktop") + surfix_len ==
-		    entry->d_name + strlen(entry->d_name) &&
-		    xdg_app_entry_from_file(total_path, &app_entry) &&
-			!xdg_app_entry_exists(&apps, &app_entry))
-			vector_append(&apps, &app_entry);
+		if (is_file_type(entry->d_name, ".desktop") &&
+		    xdg_app_entry_from_file(total_path, &app_entry)) {
+			if ((query = xdg_app_entry_exists(&apps, &app_entry)))
+				xdg_app_entry_complete(query, &app_entry);
+			else
+				vector_append(&apps, &app_entry);
+
+		}
 	}
 
 	return apps;
