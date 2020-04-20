@@ -95,11 +95,26 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct tw_appsurf *app,
 /*******************************************************************************
  * image loader
  ******************************************************************************/
-
+/**
+ * @brief create an image from malloced pixels (if asked)
+ *
+ * The pixels need to be This function takes away the pixel content you have.
+ * This function does not add to nuklear backend automatically
+ */
+NK_API struct nk_image
+nk_wl_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
+                        unsigned int width, unsigned int height,
+                        unsigned int stride, bool take);
+/**
+ * @brief adding a image from path to nuklear backend
+ */
 NK_API struct nk_image *
 nk_wl_load_image(const char *path, enum wl_shm_format format,
                  struct nk_wl_backend *b);
-
+/**
+ * @brief adding a image to nuklear backend, backend will now take the ownership
+ * of the image
+ */
 NK_API struct nk_image *
 nk_wl_add_image(struct nk_image img, struct nk_wl_backend *b);
 
