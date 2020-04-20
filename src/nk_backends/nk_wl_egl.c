@@ -299,10 +299,10 @@ nk_wl_free_gpu_image(const struct nk_image *gpu_image)
 	glDeleteTextures(1, &handle);
 }
 
-static struct nk_image
-nk_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
-                     unsigned int height, unsigned int width,
-                     unsigned int stride, bool take)
+struct nk_image
+nk_wl_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
+                        unsigned int width, unsigned int height,
+                        unsigned int stride, bool take)
 {
 	struct nk_image img = nk_image_ptr((void *)pixels);
 	struct nk_image gpu_img;
