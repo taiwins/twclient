@@ -61,13 +61,25 @@ struct icontheme_dir {
 	char theme_dir[256];
 };
 
+/**
+ * @brief loading atlas texture from a list of image paths.
+ */
 struct image_cache
 image_cache_from_arrays(const struct wl_array *handle_array,
 			const struct wl_array *str_array,
 			void (*convert)(char output[256], const char *input));
-
 /**
- * @brief file IO reading
+ * @brief loading atlas texture from a list of image paths, with filtering
+ * ability
+ */
+struct image_cache
+image_cache_from_arrays_filtered(const struct wl_array *handle_array,
+                                 const struct wl_array *str_array,
+                                 void (*convert)(char output[256], const char *input),
+                                 bool (*filter)(const char *input, void *data),
+                                 void *user_data);
+/**
+ * @brief image cache file IO reading
  *
  * very slow, could be on another thread
  */
@@ -75,7 +87,7 @@ struct image_cache
 image_cache_from_fd(int fd);
 
 /**
- * @brief file IO writing
+ * @brief image cache file IO writing
  *
  * very slow, could be on another thread
  */
@@ -85,6 +97,7 @@ image_cache_to_fd(const struct image_cache *cache, int fd);
 void
 image_cache_release(struct image_cache *cache);
 
+/* icon cache loading routines */
 void
 icontheme_dir_init(struct icontheme_dir *theme, const char *path);
 
@@ -94,16 +107,24 @@ icontheme_dir_release(struct icontheme_dir *theme);
 void
 search_icon_dirs(struct icontheme_dir *output,
                  const int min_res, const int max_res);
+int
+search_icon_imgs_subdir(struct wl_array *handle_pool,
+                        struct wl_array *string_pool,
+                        const char *dir_path);
 void
 search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
                  const char *themepath, const vector_t *icondir);
+
+/* image loaders */
 void
 image_info(const char *path, int *w, int *h, int *nchannels);
 
-//image allocated by malloc, use free to release the memory
 unsigned char *
 image_load(const char *path, int *w, int *h, int *nchannels);
 
+/**
+ * @brief this function loads the image and resize it to given size
+ */
 bool
 image_load_for_buffer(const char *path, enum wl_shm_format format,
                       int width, int height, unsigned char *mem);
