@@ -624,9 +624,9 @@ nk_images_from_cache(struct image_cache *cache, struct nk_wl_backend *b)
 	size_t n_images, i;
 	nk_handle handle;
 
-	gpu_image = nk_image_from_buffer(cache->atlas, b, cache->dimension.h,
-	                                 cache->dimension.w,
-	                                 cache->dimension.w * 4, true);
+	gpu_image = nk_wl_image_from_buffer(cache->atlas, b, cache->dimension.w,
+	                                    cache->dimension.h,
+	                                    cache->dimension.w * 4, true);
 	// now we steal the pixels from atlas
 	cache->atlas = NULL;
 	handle = gpu_image.handle;

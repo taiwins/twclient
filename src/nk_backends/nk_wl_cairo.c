@@ -201,10 +201,10 @@ nk_wl_destroy_font(struct nk_user_font *font)
 /*******************************************************************************
  * NK_CAIRO_IMAGE
  ******************************************************************************/
-static struct nk_image
-nk_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
-                     unsigned int height, unsigned int width,
-                     unsigned int stride, bool take)
+struct nk_image
+nk_wl_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
+                        unsigned int width, unsigned int height,
+                        unsigned int stride, bool take)
 {
 	unsigned char *new_pixels = (unsigned char *)pixels;
 	if (!take) {
@@ -214,7 +214,8 @@ nk_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
 		memcpy(new_pixels, pixels, height * stride);
 	}
 
-	return nk_image_ptr((void *)new_pixels);
+	return nk_subimage_ptr((void *)new_pixels, width, height,
+	                       nk_rect(0, 0, width, height));
 }
 
 

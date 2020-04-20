@@ -52,15 +52,6 @@ nk_wl_free_gpu_image(const struct nk_image *);
 
 #endif
 
-/**
- * @brief create an image from malloced pixels (if asked)
- *
- * The pixels need to be This function takes away the pixel content you have.
- */
-static struct nk_image
-nk_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
-                     unsigned int height, unsigned int width,
-                     unsigned int stride, bool take);
 
 static inline struct nk_rect
 nk_rect_from_bbox(const struct tw_bbox *box)
@@ -90,6 +81,11 @@ nk_wl_add_image(struct nk_image img, struct nk_wl_backend *b)
 	return &image->image;
 }
 
+NK_API struct nk_image
+nk_wl_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
+                        unsigned int width, unsigned int height,
+                        unsigned int stride, bool take);
+
 
 NK_API struct nk_image*
 nk_wl_load_image(const char *path, enum wl_shm_format format,
@@ -105,9 +101,9 @@ nk_wl_load_image(const char *path, enum wl_shm_format format,
 
 	unsigned char *mem = image_load(path, &width, &height, &nchannels);
 
-	return nk_wl_add_image(nk_image_from_buffer(mem, b,
-	                                            height, width,
-	                                            width * 4, true),
+	return nk_wl_add_image(nk_wl_image_from_buffer(mem, b,
+	                                               width, height,
+	                                               width * 4, true),
 	                       b);
 }
 
