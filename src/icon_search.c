@@ -164,10 +164,10 @@ obj_exists(const char *filename,
 	return false;
 }
 
-static int
-search_icon_subdir(const char *dir_path,
-                   struct wl_array *handle_pool,
-                   struct wl_array *string_pool)
+int
+search_icon_imgs_subdir(struct wl_array *handle_pool,
+                        struct wl_array *string_pool,
+                        const char *dir_path)
 {
 	int count = 0;
 	char filepath[1024];
@@ -209,16 +209,11 @@ search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
 	if (strlen(themepath) + MAX_DIR_LEN + 2 >= 1024)
 		return;
 
-	//use only the themepath(like /usr/share/pixmaps), we take it as a
-	//subdir
-	if (!icondir)
-		count += search_icon_subdir(themepath, handles, strings);
-	else
-		vector_for_each(icons, icondir) {
-			strcpy(absdir, themepath);
-			path_concat(absdir, sizeof(absdir), 1, icons->dir);
-			count += search_icon_subdir(absdir, handles, strings);
-		}
+	vector_for_each(icons, icondir) {
+		strcpy(absdir, themepath);
+		path_concat(absdir, sizeof(absdir), 1, icons->dir);
+		count += search_icon_imgs_subdir(handles, strings, absdir);
+	}
 }
 
 void
@@ -263,8 +258,8 @@ search_icon_dirs(struct icontheme_dir *output,
 		}
 		if (curr_section == SEC_ICON_UNKNOWN)
 			continue;
-		//theme also has the inherits attributes, it complicates the
-		//logics
+		// theme also has the inherits attributes, we do not deal with
+		// that here
 		char *equal = NULL;
 		equal = strstr(line, "=");
 		if (equal)
