@@ -178,11 +178,20 @@ err_load:
 /*******************************************************************************
  * image_cache
  ******************************************************************************/
+static bool
+dummy_filter(const char *input, void *data)
+{
+	(void)input;
+	(void)data;
+	return true;
+}
 
 struct image_cache
-image_cache_from_arrays(const struct wl_array *handle_array,
-			const struct wl_array *str_array,
-			void (*convert)(char output[256], const char *input))
+image_cache_from_arrays_filtered(const struct wl_array *handle_array,
+                                 const struct wl_array *str_array,
+                                 void (*convert)(char output[256], const char *input),
+                                 bool (*filter)(const char *input, void *data),
+                                 void *user_data)
 {
 	char objname[256];
 	struct image_cache cache = {0};
@@ -205,6 +214,8 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 		int w, h, nchannels;
 		off_t handle = *((uint64_t *)handle_array->data + i);
 		const char *path = (char *)str_array->data + handle;
+		if (!filter(path, user_data))
+			continue;
 		image_info(path, &w, &h, &nchannels);
 		rects[i].w = w;
 		rects[i].h = h;
@@ -233,14 +244,16 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 	cache.dimension = tw_make_bbox_origin(context_width, context_height, 1);
 	//pass 2 copy images
 	for (unsigned i = 0; i < nimages; i++) {
-		if (rects[i].was_packed == 0)
-			continue;
 		int w, h, nchannels; // channels
 		off_t handle = *((uint64_t *)handle_array->data + i);
 		const char *path = (const char *)str_array->data + handle;
-		unsigned char *pixels = image_load(path, &w, &h, &nchannels);
+		unsigned char *pixels;
 
-		if (!pixels)
+		if (!filter(path, user_data))
+			continue;
+		if (rects[i].was_packed == 0)
+			continue;
+		if (!(pixels = image_load(path, &w, &h, &nchannels)))
 			continue;
 
 		copy_subimage(cache.atlas, pixels, context_width, &rects[i]);
@@ -267,6 +280,16 @@ out:
 	free(rects);
 
 	return cache;
+
+}
+
+struct image_cache
+image_cache_from_arrays(const struct wl_array *handle_array,
+			const struct wl_array *str_array,
+                        void (*convert)(char output[256], const char *input))
+{
+	return image_cache_from_arrays_filtered(handle_array, str_array,
+	                                        convert, dummy_filter, NULL);
 }
 
 void
