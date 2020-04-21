@@ -32,8 +32,10 @@
 struct nk_wl_backend;
 struct nk_context;
 struct nk_style;
+struct tw_egl_env;
 
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_ZERO_COMMAND_MEMORY
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
 #define NK_INCLUDE_STANDARD_VARARGS
@@ -83,6 +85,9 @@ nk_egl_destroy_backend(struct nk_wl_backend *b);
 void
 nk_egl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
                         nk_wl_drawcall_t draw_cb, const struct tw_bbox geo);
+
+const struct tw_egl_env *
+nk_egl_get_current_env(struct nk_wl_backend *b);
 
 NK_API const struct nk_style *
 nk_wl_get_curr_style(struct nk_wl_backend *bkend);
