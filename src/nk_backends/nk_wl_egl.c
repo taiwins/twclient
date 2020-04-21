@@ -19,6 +19,7 @@
  *
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -42,7 +43,6 @@
 #define NK_EGL_CMD_SIZE 4096
 #define MAX_VERTEX_BUFFER 512 * 128
 #define MAX_ELEMENT_BUFFER 128 * 128
-#define NK_SHADER_VERSION "#version 330 core\n"
 
 #include <egl.h>
 #include "nk_wl_internal.h"
@@ -116,6 +116,62 @@ struct nk_egl_backend {
 static const struct nk_egl_backend *CURRENT_CONTEXT = NULL;
 static EGLSurface CURRENT_SURFACE = NULL;
 
+
+/*******************************************************************************
+ * glsl GLES shader
+ ******************************************************************************/
+#define GL_SHADER_VERSION "#version 330 core\n"
+#define GLES_SHADER_VERSION "#version 100\n"
+
+static const GLchar *glsl_vs =
+	GL_SHADER_VERSION
+	"uniform mat4 ProjMtx;\n"
+	"in vec2 Position;\n"
+	"in vec2 TexCoord;\n"
+	"in vec4 Color;\n"
+	"out vec2 Frag_UV;\n"
+	"out vec4 Frag_Color;\n"
+	"void main() {\n"
+	"   Frag_UV = TexCoord;\n"
+	"   Frag_Color = Color;\n"
+	"   gl_Position = ProjMtx * vec4(Position.xy, 0, 1);\n"
+	"}\n";
+
+static const GLchar *glsl_fs =
+	GL_SHADER_VERSION
+	"precision mediump float;\n"
+	"uniform sampler2D Texture;\n"
+	"in vec2 Frag_UV;\n"
+	"in vec4 Frag_Color;\n"
+	"out vec4 Out_Color;\n"
+	"void main(){\n"
+	"   Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+	"}\n";
+
+static const GLchar *gles_vs =
+	GLES_SHADER_VERSION
+	"uniform mat4 ProjMtx;\n"
+	"attribute vec2 Position;\n"
+	"attribute vec2 TexCoord;\n"
+	"attribute vec4 Color;\n"
+	"varying vec2 Frag_UV;\n"
+	"varying vec4 Frag_Color;\n"
+	"void main() {\n"
+	"   Frag_UV = TexCoord;\n"
+	"   Frag_Color = Color;\n"
+	"   gl_Position = ProjMtx * vec4(Position.xy, 0, 1);\n"
+	"}\n";
+
+static const GLchar *gles_fs =
+	GLES_SHADER_VERSION
+	"precision mediump float;\n"
+	"uniform sampler2D Texture;\n"
+	"varying vec2 Frag_UV;\n"
+	"varying vec4 Frag_Color;\n"
+	"void main(){\n"
+	"   gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);\n"
+	"}\n";
+
 /*******************************************************************************
  * EGL
  ******************************************************************************/
@@ -145,73 +201,78 @@ make_current(struct nk_egl_backend *bkend, EGLSurface eglSurface)
 	return true;
 }
 
+static inline bool
+is_opengl_context(struct tw_egl_env *env)
+{
+	EGLint value;
+	eglQueryContext(env->egl_display, env->egl_context,
+	                EGL_CONTEXT_CLIENT_TYPE, &value);
+	return value == EGL_OPENGL_API;
+}
+
+static inline void
+diagnose_shader(GLuint shader, const char *type)
+{
+	GLint status, loglen;
+
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &loglen);
+
+	if (status != GL_TRUE) {
+		char log_error[loglen+1];
+		glGetShaderInfoLog(shader, loglen+1, &loglen, log_error);
+		fprintf(stderr, "%s shader compiled error: %s\n",
+		        type, log_error);
+	}
+	assert(status == GL_TRUE);
+}
+
 static bool
 compile_backend(struct nk_egl_backend *bkend, EGLSurface eglsurface)
 {
 	if (bkend->compiled)
 		return true;
+	const GLchar *vertex_shader, *fragment_shader;
 
-	GLint status, loglen;
+	GLint status;
 	GLsizei stride;
-	make_current(bkend, eglsurface);
 
-	//////////////////// part 1) OpenGL code
-	static const GLchar *vertex_shader =
-		NK_SHADER_VERSION
-		"uniform mat4 ProjMtx;\n"
-		"in vec2 Position;\n"
-		"in vec2 TexCoord;\n"
-		"in vec4 Color;\n"
-		"out vec2 Frag_UV;\n"
-		"out vec4 Frag_Color;\n"
-		"void main() {\n"
-		"   Frag_UV = TexCoord;\n"
-		"   Frag_Color = Color;\n"
-		"   gl_Position = ProjMtx * vec4(Position.xy, 0, 1);\n"
-		"}\n";
-	static const GLchar *fragment_shader =
-		NK_SHADER_VERSION
-		"precision mediump float;\n"
-		"uniform sampler2D Texture;\n"
-		"in vec2 Frag_UV;\n"
-		"in vec4 Frag_Color;\n"
-		"out vec4 Out_Color;\n"
-		"void main(){\n"
-		"   Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-		"}\n";
+	make_current(bkend, eglsurface);
+	/// part 1) OpenGL code
+	vertex_shader = is_opengl_context(&bkend->env) ? glsl_vs : gles_vs;
+	fragment_shader = is_opengl_context(&bkend->env) ? glsl_fs : gles_fs;
+
 	bkend->glprog = glCreateProgram();
 	bkend->vs = glCreateShader(GL_VERTEX_SHADER);
 	bkend->fs = glCreateShader(GL_FRAGMENT_SHADER);
 	assert(glGetError() == GL_NO_ERROR);
+
 	glShaderSource(bkend->vs, 1, &vertex_shader, 0);
-	glShaderSource(bkend->fs, 1, &fragment_shader, 0);
 	glCompileShader(bkend->vs);
-	glGetShaderiv(bkend->vs, GL_COMPILE_STATUS, &status);
-	glGetShaderiv(bkend->vs, GL_INFO_LOG_LENGTH, &loglen);
-	assert(status == GL_TRUE);
+	diagnose_shader(bkend->vs, "vertex");
+	glShaderSource(bkend->fs, 1, &fragment_shader, 0);
 	glCompileShader(bkend->fs);
-	glGetShaderiv(bkend->fs, GL_COMPILE_STATUS, &status);
-	glGetShaderiv(bkend->fs, GL_INFO_LOG_LENGTH, &loglen);
-	assert(status == GL_TRUE);
+	diagnose_shader(bkend->fs, "fragment");
+
 	glAttachShader(bkend->glprog, bkend->vs);
 	glAttachShader(bkend->glprog, bkend->fs);
 	glLinkProgram(bkend->glprog);
 	glGetProgramiv(bkend->glprog, GL_LINK_STATUS, &status);
 	assert(status == GL_TRUE);
-	//locate the opengl resources
+	/// part 2) uploading resource
 	glUseProgram(bkend->glprog);
 	bkend->uniform_tex = glGetUniformLocation(bkend->glprog, "Texture");
 	bkend->uniform_proj = glGetUniformLocation(bkend->glprog, "ProjMtx");
 	bkend->attrib_pos = glGetAttribLocation(bkend->glprog, "Position");
 	bkend->attrib_uv = glGetAttribLocation(bkend->glprog, "TexCoord");
 	bkend->attrib_col = glGetAttribLocation(bkend->glprog, "Color");
-	//assert
+
 	assert(bkend->uniform_tex >= 0);
 	assert(bkend->uniform_proj >= 0);
 	assert(bkend->attrib_pos >= 0);
 	assert(bkend->attrib_pos >= 0);
 	assert(bkend->attrib_uv  >= 0);
-	//assign the offsets
+	/// part 3) allocating vertex array
 	stride = sizeof(struct nk_egl_vertex);
 	off_t vp = offsetof(struct nk_egl_vertex, position);
 	off_t vt = offsetof(struct nk_egl_vertex, uv);
@@ -695,12 +756,21 @@ nk_egl_destroy_backend(struct nk_wl_backend *b)
 {
 	struct nk_egl_backend *bkend =
 		container_of(b, struct nk_egl_backend, base);
-	release_backend(bkend);
 	nk_wl_backend_cleanup(b);
+	release_backend(bkend);
 	nk_buffer_free(&bkend->cmds);
 	tw_egl_env_end(&bkend->env);
 	free(bkend);
 }
+
+const struct tw_egl_env *
+nk_egl_get_current_env(struct nk_wl_backend *b)
+{
+	struct nk_egl_backend *bkend =
+		container_of(b, struct nk_egl_backend, base);
+	return &bkend->env;
+}
+
 
 #ifdef __DEBUG
 /*
