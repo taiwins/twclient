@@ -300,7 +300,7 @@ data_enter(void *data,
 	offer_data->serial = serial;
 	offer_data->surface = surface;
 	data_offer_match_mimes(id, surface);
-	assert(id == offer);
+	//assert(id == offer);
 	wl_data_offer_set_actions(offer,
 				  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
 				  WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE,
@@ -385,7 +385,7 @@ data_write_finished(struct tw_event *event, int fd)
 	struct tw_appsurf *app =
 		tw_appsurf_from_wl_surface(data->surface);
 
-	assert(data->fd == fd);
+	//assert(data->fd == fd);
 	//write to entire buffer
 	anonymous_buff_new(&buffer, 4096, PROT_READ | PROT_WRITE, MAP_SHARED);
 	while ((size = read(fd, (char *)buffer.addr + offset, 4096)) != 0) {

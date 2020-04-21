@@ -27,7 +27,6 @@ extern "C" {
 #endif
 
 #include <string.h>
-#include <assert.h>
 #include <cairo/cairo.h>
 #include <helpers.h>
 

@@ -179,15 +179,17 @@ tw_theme_init_from_fd(struct tw_theme *theme, int fd, size_t size)
 	//initialize
 	size_t handles_size = theme->handle_pool.size;
 	size_t strings_size = theme->string_pool.size;
-	assert(handles_size + strings_size + sizeof(struct tw_theme) == size);
+	wl_array_init(&theme->handle_pool);
+	wl_array_init(&theme->string_pool);
+
+	if (handles_size + strings_size + sizeof(struct tw_theme) != size)
+		return;
 
 	const void *handle_addr = (const char *)addr + sizeof(struct tw_theme);
 	const void *strings_addr = (const char *)handle_addr +
 		handles_size;
 
-	wl_array_init(&theme->handle_pool);
 	wl_array_add(&theme->handle_pool, handles_size);
-	wl_array_init(&theme->string_pool);
 	wl_array_add(&theme->string_pool, strings_size);
 
 	memcpy(theme->handle_pool.data, handle_addr, handles_size);
