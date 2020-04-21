@@ -38,7 +38,7 @@ tw_appsurf_init_egl(struct tw_appsurf *surf, struct tw_egl_env *env)
 				       env->config,
 				       (EGLNativeWindowType)surf->eglwin,
 				       NULL);
-
+	//this should not happen in action
 	assert(surf->eglsurface);
 	assert(surf->eglwin);
 }
