@@ -20,12 +20,14 @@ endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   add_definitions(-D__DEBUG)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb3 -Wall -fsanitize=address -fno-omit-frame-pointer")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb3 -Wall -Wextra -fsanitize=address")
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Release)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -O2")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -fvisibility=hidden")
 endif()
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-unused-parameter -Wno-pedantic")
 
 ################################################################################
 # find packages

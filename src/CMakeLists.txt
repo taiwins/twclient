@@ -1,8 +1,8 @@
 ################################################################################
-# library
+# twclient
 ################################################################################
 
-add_library(twclient
+add_library(twclient OBJECT
   client.c
   appsurf.c
   ui.c
@@ -15,13 +15,13 @@ add_library(twclient
   #theme
   theme.c
   )
-
+set_target_properties(twclient
+  PROPERTIES POSITION_INDEPENDENT_CODE 1
+  )
 target_include_directories(twclient
   PUBLIC "${TWCLIENT_INCLUDE_DIR}"
   )
-add_library(twclient::twclient ALIAS twclient)
-
-target_link_libraries(twclient
+target_link_libraries(twclient PUBLIC
   m
   ctypes
   XKBCommon::XKBCommon
@@ -34,23 +34,67 @@ target_link_libraries(twclient
   #protocols
   )
 
-add_library(twclient-icons
+add_library(twclient-static STATIC $<TARGET_OBJECTS:twclient>)
+add_library(twclient-shared SHARED $<TARGET_OBJECTS:twclient>)
+add_library(twclient::twclient ALIAS twclient)
+
+target_link_libraries(twclient-static PUBLIC
+  $<TARGET_PROPERTY:twclient,INTERFACE_LINK_LIBRARIES>
+  )
+set_target_properties(twclient-static
+  PROPERTIES OUTPUT_NAME "twclient"
+  )
+
+target_link_libraries(twclient-shared PUBLIC
+  $<TARGET_PROPERTY:twclient,INTERFACE_LINK_LIBRARIES>
+  )
+set_target_properties(twclient-shared
+  PROPERTIES
+  VERSION ${PROJECT_VERSION}
+  OUTPUT_NAME "twclient"
+  )
+
+################################################################################
+# twclient-icons
+################################################################################
+
+add_library(twclient-icons OBJECT
   image_cache.c
   icon_search.c
   desktop_entry.c
   )
-
+set_target_properties(twclient-icons
+  PROPERTIES POSITION_INDEPENDENT_CODE 1
+  )
 target_include_directories(twclient-icons PUBLIC
-  "${TWCLIENT_INCLUDE_DIR}")
-
+  "${TWCLIENT_INCLUDE_DIR}"
+  )
 target_link_libraries(twclient-icons
+  Wayland::Client
   Cairo::Cairo
   LibRSVG::LibRSVG
   stb
   ctypes
   m
   )
-add_library(twclient::icons ALIAS twclient-icons)
+
+add_library(twclient-icons-static STATIC $<TARGET_OBJECTS:twclient-icons>)
+add_library(twclient-icons-shared SHARED $<TARGET_OBJECTS:twclient-icons>)
+add_library(twclient::icons ALIAS twclient-icons-static)
+
+target_link_libraries(twclient-icons-static PUBLIC
+  $<TARGET_PROPERTY:twclient-icons,INTERFACE_LINK_LIBRARIES>
+  )
+set_target_properties(twclient-icons-static
+  PROPERTIES OUTPUT_NAME "twclient-icons"
+  )
+
+target_link_libraries(twclient-icons-shared PUBLIC
+  $<TARGET_PROPERTY:twclient-icons,INTERFACE_LINK_LIBRARIES>
+  )
+set_target_properties(twclient-icons-shared
+  PROPERTIES VERSION ${PROJECT_VERSION} OUTPUT_NAME "twclient-icons"
+  )
 
 add_subdirectory(nk_backends)
 
@@ -58,7 +102,11 @@ add_subdirectory(nk_backends)
 # install
 ################################################################################
 include(GNUInstallDirs)
-install(TARGETS twclient twclient-icons
+
+install(
+  TARGETS
+  twclient-static twclient-shared
+  twclient-icons-static twclient-icons-shared
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
