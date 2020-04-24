@@ -14,16 +14,14 @@ add_executable(test_nk_cairo
   test_nk_cairo.c
   )
 target_link_libraries(test_nk_cairo
-  twclient
-  twclient-nkcairo
+  twclient::nkcairo
   )
 
 add_executable(test_nk_egl
   test_nk_egl.c
   )
 target_link_libraries(test_nk_egl
-  twclient
-  twclient-nkegl
+  twclient::nkegl
   )
 
 add_executable(test_queue
@@ -37,14 +35,14 @@ add_executable(test_inotify
   test_event_queue.c
   )
 target_link_libraries(test_inotify
-  twclient
+  twclient::twclient
   )
 
 add_executable(test_udev
   test_udev.c
   )
 target_link_libraries(test_udev
-  twclient
+  twclient::twclient
   )
 
 add_executable(test_stbimage
@@ -52,14 +50,14 @@ add_executable(test_stbimage
   )
 target_link_libraries(test_stbimage
   Wayland::Client
-  twclient-icons
+  twclient::icons
   )
 
 add_executable(test_desktop_entry
   test_dot_desktop.c
   )
 target_link_libraries(test_desktop_entry
-  twclient-icons
+  twclient::icons
   )
 
 add_executable(test_readtheme
@@ -67,7 +65,7 @@ add_executable(test_readtheme
   )
 target_link_libraries(test_readtheme
   Wayland::Client
-  twclient-icons
+  twclient::icons
   )
 
 add_executable(test_font_config
