@@ -23,8 +23,7 @@
 #define TW_DESK_ENTRY_H
 
 #include <stdbool.h>
-
-#include <sequential.h>
+#include <wayland-util.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,7 +46,7 @@ bool xdg_app_entry_from_file(const char *path, struct xdg_app_entry *entry);
 /**
  * @brief gather all the application info on the system
  */
-vector_t xdg_apps_gather(void);
+struct wl_array xdg_apps_gather(void);
 
 
 #ifdef __cplusplus

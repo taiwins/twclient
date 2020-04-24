@@ -19,7 +19,6 @@
  *
  */
 
-#include "vector.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <dirent.h>
@@ -29,6 +28,8 @@
 #include <helpers.h>
 #include <os/file.h>
 #include <desktop_entry.h>
+#include <wayland-util.h>
+#include <vector.h>
 
 #define MAX_ENTRY_LEN 128
 
@@ -39,6 +40,14 @@ enum xdg_app_section_type {
 	XDG_APP_SEC_UNKNOWN,
 };
 
+static inline void
+vector2array(struct wl_array *arr, vector_t *vec)
+{
+	arr->data = vec->elems;
+	arr->size = vec->elemsize * vec->len;
+	arr->alloc = vec->elemsize * vec->alloc_len;
+	vector_init_zero(vec, vec->elemsize, vec->free);
+}
 
 static inline bool
 is_section_name(const char *line)
@@ -164,9 +173,10 @@ xdg_app_entry_from_file(const char *path, struct xdg_app_entry *entry)
 	return !xdg_app_entry_empty(entry);
 }
 
-vector_t
+struct wl_array
 xdg_apps_gather(void)
 {
+	struct wl_array ret;
 	vector_t apps;
 	vector_init(&apps, sizeof(struct xdg_app_entry), NULL);
 
@@ -189,6 +199,7 @@ xdg_apps_gather(void)
 
 		}
 	}
-
-	return apps;
+	//now we just need to move
+	vector2array(&ret, &apps);
+	return ret;
 }
