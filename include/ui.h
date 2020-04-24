@@ -27,7 +27,6 @@
 #include <xkbcommon/xkbcommon-names.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <EGL/egl.h>
-#include <GL/gl.h>
 #include <wayland-egl.h>
 #include <stdio.h>
 #include <stdbool.h>
