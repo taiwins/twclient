@@ -11,7 +11,10 @@ add_library(twclient
   event_queue.c
   #inputs
   keyboard.c
-  pointer.c)
+  pointer.c
+  #theme
+  theme.c
+  )
 
 target_include_directories(twclient
   PUBLIC "${TWCLIENT_INCLUDE_DIR}"
@@ -21,20 +24,14 @@ add_library(twclient::twclient ALIAS twclient)
 target_link_libraries(twclient
   m
   ctypes
-  Pixman::Pixman
   XKBCommon::XKBCommon
   OpenGL::EGL #for egl_env
-  Cairo::Cairo
-  Fontconfig::Fontconfig
-  LibRSVG::LibRSVG
   UDEV::UDEV
-  Freetype::Freetype
   #wayland
   Wayland::EGL
   Wayland::Client
   Wayland::Cursor
   #protocols
-  twclient-protos
   )
 
 add_library(twclient-icons
@@ -54,18 +51,6 @@ target_link_libraries(twclient-icons
   m
   )
 add_library(twclient::icons ALIAS twclient-icons)
-
-add_library(twclient-theme
-  theme.c)
-
-target_include_directories(twclient-theme PUBLIC
-  "${TWCLIENT_INCLUDE_DIR}")
-
-target_link_libraries(twclient-theme
-  ctypes)
-
-add_library(twclient::theme ALIAS twclient-theme)
-
 
 add_subdirectory(nk_backends)
 
