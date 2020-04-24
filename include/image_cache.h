@@ -25,7 +25,6 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include <sequential.h>
 #include "ui.h"
 
 
@@ -53,11 +52,11 @@ struct image_cache {
  * generate icon file paths for you
  */
 struct icontheme_dir {
-	vector_t apps;
-	vector_t mimes;
-	vector_t places;
-	vector_t status;
-	vector_t devices;
+	struct wl_array apps;
+	struct wl_array mimes;
+	struct wl_array places;
+	struct wl_array status;
+	struct wl_array devices;
 	char theme_dir[256];
 };
 
@@ -113,7 +112,7 @@ search_icon_imgs_subdir(struct wl_array *handle_pool,
                         const char *dir_path);
 void
 search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
-                 const char *themepath, const vector_t *icondir);
+                 const char *themepath, const struct wl_array *icondir);
 
 /* image loaders */
 void

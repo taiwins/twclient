@@ -59,12 +59,13 @@ include(AddProtocols)
 ################################################################################
 add_library(nuklear INTERFACE)
 target_include_directories(nuklear INTERFACE "${TWCLIENT_INCLUDE_DIR}")
+target_compile_options(nuklear INTERFACE "-Wno-type-limits")
 
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${TWCLIENT_INCLUDE_DIR}")
 target_compile_options(stb INTERFACE "-Wno-type-limits")
 
-add_subdirectory(ctypes)
+add_subdirectory(subprojects/ctypes)
 add_subdirectory(src)
 add_subdirectory(test)
 

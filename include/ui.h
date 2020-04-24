@@ -27,7 +27,6 @@
 #include <xkbcommon/xkbcommon-names.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <EGL/egl.h>
-#include <GL/gl.h>
 #include <wayland-egl.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -35,7 +34,6 @@
 //doesnt support jpeg in this way, but there is a cairo-jpeg project
 #include <cairo/cairo.h>
 #include <wayland-client.h>
-#include <sequential.h>
 #include "ui_event.h"
 
 #ifdef __cplusplus
