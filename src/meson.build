@@ -60,9 +60,11 @@ lib_twclient = both_libraries(
   src_twclient,
   c_args : twclient_flags,
   include_directories : inc_twclient,
+  version: meson.project_version(),
   dependencies : twclient_deps,
   install : true,
 )
+
 
 dep_twclient = declare_dependency(
   link_with : lib_twclient,
@@ -101,6 +103,7 @@ lib_twclient_icons = both_libraries(
   'twclient-icons',
   src_twclient_icons,
   c_args : twclient_flags,
+  version: meson.project_version(),
   include_directories : inc_twclient,
   dependencies : twclient_icons_deps,
   install : true,
@@ -169,6 +172,7 @@ lib_nkcairo = both_libraries(
    wayland_xdg_shell_client_protocol_h,
    wayland_xdg_shell_client_protocol_c],
   c_args : twclient_flags,
+  version: meson.project_version(),
   include_directories : inc_twclient,
   dependencies : nkcairo_deps,
   install : true,
@@ -201,6 +205,7 @@ lib_nkegl = both_libraries(
    wayland_xdg_shell_client_protocol_h,
    wayland_xdg_shell_client_protocol_c],
   c_args : twclient_flags,
+  version: meson.project_version(),
   include_directories : inc_twclient,
   dependencies : nkegl_deps,
   install : true,
