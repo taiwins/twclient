@@ -72,7 +72,3 @@ install(DIRECTORY ${TWCLIENT_INCLUDE_DIR}/
 
 install(FILES ${TWCLIENT_INCLUDE_DIR}/nuklear/nuklear.h
   DESTINATION include/taiwins/nuklear)
-
-install(DIRECTORY ${CTYPES_INCLUDE_DIR}/
-  DESTINATION include/taiwins/ctypes
-  FILES_MATCHING PATTERN "*.h")

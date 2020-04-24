@@ -28,24 +28,24 @@ int main(int argc, char *argv[])
 	icontheme_dir_init(&themedir, "/usr/share/icons/hicolor");
 	search_icon_dirs(&themedir, 31, 128);
 	//print
-	vector_for_each(icon, &themedir.apps)
+	wl_array_for_each(icon, &themedir.apps)
 		printf("%s\t", icon->dir);
 	printf("\n");
-	vector_for_each(icon, &themedir.mimes)
+	wl_array_for_each(icon, &themedir.mimes)
 		printf("%s\t", icon->dir);
 	printf("\n");
-	vector_for_each(icon, &themedir.places)
+	wl_array_for_each(icon, &themedir.places)
 		printf("%s\t", icon->dir);
 	printf("\n");
-	vector_for_each(icon, &themedir.devices)
+	wl_array_for_each(icon, &themedir.devices)
 		printf("%s\t", icon->dir);
 	printf("\n");
-	vector_for_each(icon, &themedir.status)
+	wl_array_for_each(icon, &themedir.status)
 		printf("%s\t", icon->dir);
 	printf("\n");
 
 	//doing search on
-	vector_t *to_searches[] = {
+	struct wl_array *to_searches[] = {
 		&themedir.apps, &themedir.mimes, &themedir.devices,
 		&themedir.places, &themedir.status
 	};
