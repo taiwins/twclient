@@ -34,20 +34,3 @@ install_headers(
   'nuklear/nuklear.h',
   subdir: 'taiwins/nuklear'
 )
-
-# this is really not a good idea, we should remove the header includes in
-# twclient
-# install_headers(
-#   [join_paths(dir_ctypes, 'src/hash.h'),
-#    join_paths(dir_ctypes, 'src/helpers.h'),
-#    join_paths(dir_ctypes, 'src/list.h'),
-#    join_paths(dir_ctypes, 'src/queue.h'),
-#    join_paths(dir_ctypes, 'src/sequential.h'),
-#    join_paths(dir_ctypes, 'src/stack.h'),
-#    join_paths(dir_ctypes, 'src/stack.h'),
-#    join_paths(dir_ctypes, 'src/strops.h'),
-#    join_paths(dir_ctypes, 'src/tree.h'),
-#    join_paths(dir_ctypes, 'src/vector.h'),
-#   ],
-#   subdir: 'taiwins/ctypes'
-# )
