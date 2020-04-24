@@ -35,7 +35,6 @@
 //doesnt support jpeg in this way, but there is a cairo-jpeg project
 #include <cairo/cairo.h>
 #include <wayland-client.h>
-#include <sequential.h>
 #include "ui_event.h"
 
 #ifdef __cplusplus

@@ -50,6 +50,7 @@ struct icon_dir {
 	uint32_t size;
 };
 
+#define WL_ARRAY_NMEMB(array, type) (array)->size / sizeof(type)
 
 static inline void
 copy_icon_dir(struct icon_dir *dir, const uint32_t size, const char *path)
@@ -63,21 +64,21 @@ void
 icontheme_dir_init(struct icontheme_dir *theme, const char *path)
 {
 	strcpy(theme->theme_dir, path);
-	vector_init_zero(&theme->apps, sizeof(struct icon_dir), NULL);
-	vector_init_zero(&theme->mimes, sizeof(struct icon_dir), NULL);
-	vector_init_zero(&theme->places, sizeof(struct icon_dir), NULL);
-	vector_init_zero(&theme->status, sizeof(struct icon_dir), NULL);
-	vector_init_zero(&theme->devices, sizeof(struct icon_dir), NULL);
+	wl_array_init(&theme->apps);
+	wl_array_init(&theme->mimes);
+	wl_array_init(&theme->places);
+	wl_array_init(&theme->status);
+	wl_array_init(&theme->devices);
 }
 
 void
 icontheme_dir_release(struct icontheme_dir *theme)
 {
-	vector_destroy(&theme->apps);
-	vector_destroy(&theme->mimes);
-	vector_destroy(&theme->places);
-	vector_destroy(&theme->status);
-	vector_destroy(&theme->devices);
+	wl_array_release(&theme->apps);
+	wl_array_release(&theme->mimes);
+	wl_array_release(&theme->places);
+	wl_array_release(&theme->status);
+	wl_array_release(&theme->devices);
 }
 
 static inline char *
@@ -199,7 +200,7 @@ search_icon_imgs_subdir(struct wl_array *handle_pool,
 
 void
 search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
-		 const char *themepath, const vector_t *icondir)
+		 const char *themepath, const struct wl_array *icondir)
 {
 	//handles needs to be initialized
 	char absdir[1024];
@@ -208,8 +209,7 @@ search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
 
 	if (strlen(themepath) + MAX_DIR_LEN + 2 >= 1024)
 		return;
-
-	vector_for_each(icons, icondir) {
+	wl_array_for_each(icons, icondir) {
 		strcpy(absdir, themepath);
 		path_concat(absdir, sizeof(absdir), 1, icons->dir);
 		count += search_icon_imgs_subdir(handles, strings, absdir);
@@ -283,40 +283,45 @@ search_icon_dirs(struct icontheme_dir *output,
 		}
 		if (curr_section == SEC_ICON_APP &&
 		    is_size_right(min_res, max_res, &state))
-			copy_icon_dir(vector_newelem(&output->apps),
+			copy_icon_dir(wl_array_add(&output->apps,
+			                           sizeof(struct icon_dir)),
 				      state.curr_size, state.currdir);
 
 		else if (curr_section == SEC_ICON_MIMETYPES &&
 		    is_size_right(min_res, max_res, &state))
-			copy_icon_dir(vector_newelem(&output->mimes),
+			copy_icon_dir(wl_array_add(&output->mimes,
+			                           sizeof(struct icon_dir)),
 				      state.curr_size, state.currdir);
 
 		else if (curr_section == SEC_ICON_PLACES &&
 		    is_size_right(min_res, max_res, &state))
-			copy_icon_dir(vector_newelem(&output->places),
+			copy_icon_dir(wl_array_add(&output->places,
+			                           sizeof(struct icon_dir)),
 				      state.curr_size, state.currdir);
 
 		else if (curr_section == SEC_ICON_DEVICES &&
 		    is_size_right(min_res, max_res, &state))
-			copy_icon_dir(vector_newelem(&output->devices),
+			copy_icon_dir(wl_array_add(&output->devices,
+			                           sizeof(struct icon_dir)),
 				      state.curr_size, state.currdir);
 
 		else if (curr_section == SEC_ICON_STATUS &&
 		    is_size_right(min_res, max_res, &state))
-			copy_icon_dir(vector_newelem(&output->status),
+			copy_icon_dir(wl_array_add(&output->status,
+			                           sizeof(struct icon_dir)),
 				      state.curr_size, state.currdir);
 	}
 
-	qsort(output->apps.elems, output->apps.len, output->apps.elemsize,
-	      cmp_icon_dir);
-	qsort(output->mimes.elems, output->mimes.len, output->mimes.elemsize,
-	      cmp_icon_dir);
-	qsort(output->places.elems, output->places.len, output->places.elemsize,
-	      cmp_icon_dir);
-	qsort(output->devices.elems, output->devices.len, output->devices.elemsize,
-	      cmp_icon_dir);
-	qsort(output->status.elems, output->status.len, output->status.elemsize,
-	      cmp_icon_dir);
+	qsort(output->apps.data, WL_ARRAY_NMEMB(&output->apps, struct icon_dir),
+	      sizeof(struct icon_dir), cmp_icon_dir);
+	qsort(output->mimes.data, WL_ARRAY_NMEMB(&output->mimes, struct icon_dir),
+	      sizeof(struct icon_dir), cmp_icon_dir);
+	qsort(output->places.data, WL_ARRAY_NMEMB(&output->places, struct icon_dir),
+	      sizeof(struct icon_dir), cmp_icon_dir);
+	qsort(output->devices.data, WL_ARRAY_NMEMB(&output->devices, struct icon_dir),
+	      sizeof(struct icon_dir), cmp_icon_dir);
+	qsort(output->status.data, WL_ARRAY_NMEMB(&output->status, struct icon_dir),
+	      sizeof(struct icon_dir), cmp_icon_dir);
 
 out:
 	free(rawline);
