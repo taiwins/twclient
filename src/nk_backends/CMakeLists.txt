@@ -8,7 +8,13 @@ add_library(twclient-nkegl STATIC
 target_link_libraries(twclient-nkegl PUBLIC
   twclient
   twclient-icons
-  twclient-theme
+  twclient-protos
+  Wayland::Client
+  Wayland::EGL
+  OpenGL::EGL
+  XKBCommon::XKBCommon
+  Freetype::Freetype
+  Fontconfig::Fontconfig
   )
 add_library(twclient::nkegl ALIAS twclient-nkegl)
 
@@ -18,7 +24,12 @@ add_library(twclient-nkcairo STATIC
 target_link_libraries(twclient-nkcairo PUBLIC
   twclient
   twclient-icons
-  twclient-theme
+  twclient-protos
+  Cairo::Cairo
+  Wayland::Client
+  XKBCommon::XKBCommon
+  Freetype::Freetype
+  Fontconfig::Fontconfig
   )
 add_library(twclient::nkcairo ALIAS twclient-nkcairo)
 
