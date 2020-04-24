@@ -28,22 +28,20 @@
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 
-#include <sequential.h>
-#include <os/buffer.h>
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
+struct anonymous_buff_t;
 /******************************************************************************
  *
  * a wl_buffer managerment solution, using a pool based approach
  *
  *****************************************************************************/
 struct tw_shm_pool {
-	struct anonymous_buff_t file;
+	struct anonymous_buff_t *file;
 	struct wl_shm *shm;
 	struct wl_shm_pool *pool;
 	struct wl_list wl_buffers;

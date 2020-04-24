@@ -20,7 +20,6 @@
  */
 
 #include <time.h>
-#include <assert.h>
 #include <string.h>
 
 #ifndef GL_GLEXT_PROTOTYPES
@@ -309,8 +308,7 @@ tw_egl_env_init_shared(struct tw_egl_env *this, const struct tw_egl_env *another
 					     this->config,
 					     (EGLContext)another->egl_context,
 					     egl_context_attribs);
-	assert(this->egl_context != EGL_NO_CONTEXT);
-	return true;
+	return this->egl_context != NULL;
 }
 
 
