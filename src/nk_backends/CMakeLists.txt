@@ -12,6 +12,7 @@ target_link_libraries(twclient-nkegl PUBLIC
   twclient::twclient
   twclient::icons
   twclient::protos
+  twclient::theme
   Wayland::Client
   Wayland::EGL
   OpenGL::EGL
@@ -52,6 +53,7 @@ target_link_libraries(twclient-nkcairo PUBLIC
   twclient::twclient
   twclient::icons
   twclient::protos
+  twclient::theme
   Cairo::Cairo
   Wayland::Client
   XKBCommon::XKBCommon

@@ -12,8 +12,6 @@ add_library(twclient OBJECT
   #inputs
   keyboard.c
   pointer.c
-  #theme
-  theme.c
   )
 set_target_properties(twclient
   PROPERTIES POSITION_INDEPENDENT_CODE 1
@@ -53,6 +51,31 @@ set_target_properties(twclient-shared
   VERSION ${PROJECT_VERSION}
   OUTPUT_NAME "twclient"
   )
+
+################################################################################
+# twclient-theme
+################################################################################
+
+### theme library is a bit complex, both server and client are using
+### it. nk_backends would need it (to take the theme from fd and convert it
+### nk_style). Server also needs it (to write the theme to fd) for clients.
+
+### we do not install it, it would break the LGPL validity, we link it as a
+### static library to nk_backends so clients would be able to use it.
+
+add_library(twclient-theme STATIC
+  theme.c
+  )
+set_target_properties(twclient-theme
+  PROPERTIES POSITION_INDEPENDENT_CODE 1
+  )
+target_include_directories(twclient-theme
+  PUBLIC "${TWCLIENT_INCLUDE_DIR}"
+  )
+target_link_libraries(twclient-theme
+  ctypes
+  )
+add_library(twclient::theme ALIAS twclient-theme)
 
 ################################################################################
 # twclient-icons

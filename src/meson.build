@@ -39,8 +39,6 @@ src_twclient = [
   #inputs
   'keyboard.c',
   'pointer.c',
-  #theme
-  'theme.c',
 ]
 
 twclient_deps = [
@@ -81,6 +79,22 @@ pkgconfig.generate(
   description: 'Taiwins client utility library',
 )
 
+### twclient-theme #############################################################
+lib_twclient_theme = static_library(
+  'twclient-theme',
+  'theme.c',
+  include_directories : inc_twclient,
+  c_args : twclient_flags,
+  dependencies : [dep_ctypes],
+  pic: true,
+)
+
+dep_twclient_theme = declare_dependency(
+  link_with : lib_twclient_theme,
+  include_directories : inc_twclient,
+  compile_args : twclient_flags,
+  dependencies : [dep_ctypes],
+)
 
 ### twclient-icons ##############################################################
 
@@ -164,6 +178,7 @@ nkcairo_deps = [
   dep_libm,
   dep_twclient,
   dep_twclient_icons,
+  dep_twclient_theme,
 ]
 
 lib_nkcairo = both_libraries(
@@ -197,6 +212,7 @@ nkegl_deps = [
   dep_libm,
   dep_twclient,
   dep_twclient_icons,
+  dep_twclient_theme,
 ] + dep_gls
 
 lib_nkegl = both_libraries(
