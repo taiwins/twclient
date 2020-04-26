@@ -124,22 +124,26 @@ add_subdirectory(nk_backends)
 ################################################################################
 # install
 ################################################################################
-include(GNUInstallDirs)
+if(INSTALL_TWCLIENT)
 
-install(
-  TARGETS
-  twclient-static twclient-shared
-  twclient-icons-static twclient-icons-shared
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
+  include(GNUInstallDirs)
 
-install(DIRECTORY ${TWCLIENT_INCLUDE_DIR}/
-  DESTINATION include/taiwins
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN "nuklear" EXCLUDE
-  PATTERN "stb" EXCLUDE)
+  install(
+    TARGETS
+    twclient-static twclient-shared
+    twclient-icons-static twclient-icons-shared
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
 
-install(FILES ${TWCLIENT_INCLUDE_DIR}/nuklear/nuklear.h
-  DESTINATION include/taiwins/nuklear)
+  install(DIRECTORY ${TWCLIENT_INCLUDE_DIR}/
+    DESTINATION include/taiwins
+    FILES_MATCHING PATTERN "*.h"
+    PATTERN "nuklear" EXCLUDE
+    PATTERN "stb" EXCLUDE)
+
+  install(FILES ${TWCLIENT_INCLUDE_DIR}/nuklear/nuklear.h
+    DESTINATION include/taiwins/nuklear)
+
+endif()
