@@ -82,11 +82,16 @@ set_target_properties(twclient-nkcairo-shared
 ################################################################################
 # install
 ################################################################################
-include(GNUInstallDirs)
-install(TARGETS
-  twclient-nkegl-static twclient-nkegl-shared
-  twclient-nkcairo-static twclient-nkcairo-shared
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  )
+if(INSTALL_TWCLIENT)
+
+  include(GNUInstallDirs)
+
+  install(TARGETS
+    twclient-nkegl-static twclient-nkegl-shared
+    twclient-nkcairo-static twclient-nkcairo-shared
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+
+endif()
