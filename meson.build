@@ -25,11 +25,6 @@ foreach a : global_args_maybe
   endif
 endforeach
 
-if get_option('buildtype') == 'release' and cc.has_argument(a)
-  global_args += '-fvisibility=hidden' #this options hides most
-endif
-
-
 inc_twclient = include_directories('include')
 
 ctypes = subproject('ctypes')
