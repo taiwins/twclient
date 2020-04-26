@@ -196,7 +196,7 @@ image_cache_from_arrays_filtered(const struct wl_array *handle_array,
 	char objname[256];
 	struct image_cache cache = {0};
 	size_t nimages = handle_array->size / (sizeof(off_t));
-	size_t context_height, context_width = 1000;
+	size_t context_height = 0, context_width = 1000;
 	int row_x = 0, row_y = 0;
 	stbrp_rect *rects = malloc(sizeof(stbrp_rect) * nimages);
 	stbrp_node *nodes = malloc(sizeof(stbrp_node) * (context_width + 10));
@@ -227,7 +227,7 @@ image_cache_from_arrays_filtered(const struct wl_array *handle_array,
 			row_y + h : MAX(row_y, h);
 		context_height = row_y + h;
 	}
-	if (row_x == 0 || row_y == 0)
+	if (row_x == 0 || row_y == 0 || context_height == 0)
 		goto out;
 
 	stbrp_init_target(&context, context_width, context_height, nodes,

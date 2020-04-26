@@ -92,12 +92,18 @@ xdg_app_entry_exists(const vector_t *v, const struct xdg_app_entry *app)
 static void
 xdg_app_entry_complete(struct xdg_app_entry *dst, struct xdg_app_entry *src)
 {
-	if (strlen(dst->exec) == 0)
-		strop_ncpy(dst->exec, src->exec, 128);
-	if (strlen(dst->icon) == 0)
-		strop_ncpy(dst->icon, src->icon, 128);
-	if (strlen(dst->path) == 0)
-		strop_ncpy(dst->path, src->path, 128);
+	if (strlen(dst->exec) == 0) {
+		memcpy(dst->exec, src->exec, 128);
+		dst->exec[127] = '\0';
+	}
+	if (strlen(dst->icon) == 0) {
+		memcpy(dst->icon, src->icon, 128);
+		dst->icon[127] = '\0';
+	}
+	if (strlen(dst->path) == 0) {
+		memcpy(dst->path, src->path, 128);
+		dst->icon[127] = '\0';
+	}
 }
 
 bool
