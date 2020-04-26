@@ -119,6 +119,7 @@ nk_wl_free_image(struct nk_image *im)
 #else
 	free(im->handle.ptr);
 #endif
+	free(wl_img);
 }
 
 
