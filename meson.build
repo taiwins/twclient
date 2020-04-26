@@ -6,7 +6,7 @@ project('twclient', 'c',
 	  'werror=true'
 	],
 	meson_version: '>= 0.47',
-	license: 'LGPLv2')
+	license: 'LGPLv2.1+')
 
 #### compile flags
 cc = meson.get_compiler('c')
