@@ -272,7 +272,7 @@ init_opengl_es_context(struct tw_egl_env *env)
 /*******************************************************************************
  *                                egl_env API
  ******************************************************************************/
-bool
+WL_EXPORT bool
 tw_egl_env_init(struct tw_egl_env *env, const struct wl_display *d)
 {
 #ifndef EGL_VERSION_1_5
@@ -298,7 +298,7 @@ tw_egl_env_init(struct tw_egl_env *env, const struct wl_display *d)
 	return ret;
 }
 
-bool
+WL_EXPORT bool
 tw_egl_env_init_shared(struct tw_egl_env *this, const struct tw_egl_env *another)
 {
 	this->wl_display = another->wl_display;
@@ -312,7 +312,7 @@ tw_egl_env_init_shared(struct tw_egl_env *this, const struct tw_egl_env *another
 }
 
 
-void
+WL_EXPORT void
 tw_egl_env_end(struct tw_egl_env *env)
 {
 	eglDestroyContext(env->egl_display, env->egl_context);

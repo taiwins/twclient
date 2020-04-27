@@ -89,7 +89,7 @@ shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
 	}
 }
 
-bool
+WL_EXPORT bool
 is_shm_format_valid(uint32_t format)
 {
 	return format != 0xFFFFFFFF;
@@ -412,7 +412,7 @@ data_write_finished(struct tw_event *event, int fd)
 	return TW_EVENT_DEL;
 }
 
-void
+WL_EXPORT void
 tw_globals_receive_data_offer(struct wl_data_offer *offer,
 			      struct wl_surface *wl_surface,
 			      bool drag_n_drop)
@@ -460,7 +460,7 @@ cancel_receive:
 _Static_assert(sizeof(struct tw_globals) <= 32 * 1024, "tw_globals is too big");
 #endif
 
-void
+WL_EXPORT void
 tw_globals_init(struct tw_globals *globals, struct wl_display *display)
 {
 	//do this first, so all the pointers are null
@@ -473,7 +473,7 @@ tw_globals_init(struct tw_globals *globals, struct wl_display *display)
 	globals->inputs.cursor_size = 32;
 }
 
-void
+WL_EXPORT void
 tw_globals_release(struct tw_globals *globals)
 {
 	wl_data_device_release(globals->inputs.wl_data_device);
@@ -485,7 +485,7 @@ tw_globals_release(struct tw_globals *globals)
 
 //we need to have a global remove function here
 //if we have our own configurator, the tw_globals can be really useful.
-int
+WL_EXPORT int
 tw_globals_announce(struct tw_globals *globals,
 		    struct wl_registry *wl_registry,
 		    uint32_t name,
