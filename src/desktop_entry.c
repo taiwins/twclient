@@ -106,7 +106,7 @@ xdg_app_entry_complete(struct xdg_app_entry *dst, struct xdg_app_entry *src)
 	}
 }
 
-bool
+WL_EXPORT bool
 xdg_app_entry_from_file(const char *path, struct xdg_app_entry *entry)
 {
 	FILE *file = NULL;
@@ -179,7 +179,7 @@ xdg_app_entry_from_file(const char *path, struct xdg_app_entry *entry)
 	return !xdg_app_entry_empty(entry);
 }
 
-struct wl_array
+WL_EXPORT struct wl_array
 xdg_apps_gather(void)
 {
 	struct wl_array ret;

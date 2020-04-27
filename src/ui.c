@@ -26,7 +26,7 @@
 #include <wayland-client.h>
 #include <fontconfig/fontconfig.h>
 
-cairo_format_t
+WL_EXPORT cairo_format_t
 translate_wl_shm_format(enum wl_shm_format format)
 {
 	switch (format) {
@@ -48,7 +48,7 @@ translate_wl_shm_format(enum wl_shm_format format)
 	}
 }
 
-size_t
+WL_EXPORT size_t
 stride_of_wl_shm_format(enum wl_shm_format format)
 {
 	switch(format) {

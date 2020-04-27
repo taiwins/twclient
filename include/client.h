@@ -195,9 +195,6 @@ bool
 is_shm_format_valid(uint32_t format);
 
 void
-tw_globals_get_input_state(const struct tw_globals *globals);
-
-void
 tw_globals_receive_data_offer(struct wl_data_offer *offer,
                               struct wl_surface *surface,
                               bool drag_n_drop);

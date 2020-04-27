@@ -34,13 +34,18 @@ struct nk_context;
 struct nk_style;
 struct tw_egl_env;
 
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_ZERO_COMMAND_MEMORY
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
 #define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_KEYSTATE_BASED_INPUT
 
 #include "nuklear/nuklear.h"
+
 struct xdg_toplevel;
 struct xdg_surface;
 
@@ -51,11 +56,11 @@ typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx,
 /*******************************************************************************
  * shell implementation
  ******************************************************************************/
-NK_API struct xdg_toplevel *
+struct xdg_toplevel *
 nk_wl_impl_xdg_shell_surface(struct tw_appsurf *app,
                              struct xdg_surface *xdg_surface);
 
-NK_API void
+void
 nk_wl_impl_wl_shell_surface(struct tw_appsurf *app,
                             struct wl_shell_surface *protocol);
 
@@ -89,10 +94,10 @@ nk_egl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 const struct tw_egl_env *
 nk_egl_get_current_env(struct nk_wl_backend *b);
 
-NK_API const struct nk_style *
+const struct nk_style *
 nk_wl_get_curr_style(struct nk_wl_backend *bkend);
 
-NK_API void
+void
 nk_wl_test_draw(struct nk_wl_backend *bkend, struct tw_appsurf *app,
 		nk_wl_drawcall_t draw_call);
 
@@ -106,24 +111,24 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct tw_appsurf *app,
  * The pixels need to be This function takes away the pixel content you have.
  * This function does not add to nuklear backend automatically
  */
-NK_API struct nk_image
+struct nk_image
 nk_wl_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
                         unsigned int width, unsigned int height,
                         unsigned int stride, bool take);
 /**
  * @brief adding a image from path to nuklear backend
  */
-NK_API struct nk_image *
+struct nk_image *
 nk_wl_load_image(const char *path, enum wl_shm_format format,
                  struct nk_wl_backend *b);
 /**
  * @brief adding a image to nuklear backend, backend will now take the ownership
  * of the image
  */
-NK_API struct nk_image *
+struct nk_image *
 nk_wl_add_image(struct nk_image img, struct nk_wl_backend *b);
 
-NK_API void
+void
 nk_wl_free_image(struct nk_image *img);
 
 
@@ -153,11 +158,11 @@ struct nk_wl_font_config {
 };
 
 
-NK_API struct nk_user_font *
+struct nk_user_font *
 nk_wl_new_font(struct nk_wl_font_config config,
                struct nk_wl_backend *backend);
 
-NK_API void
+void
 nk_wl_destroy_font(struct nk_user_font *font);
 
 #endif

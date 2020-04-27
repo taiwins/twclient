@@ -40,7 +40,7 @@ struct wl_buffer_node {
 	void (*release)(void *, struct wl_buffer *);
 };
 
-int
+WL_EXPORT int
 tw_shm_pool_init(struct tw_shm_pool *pool, struct wl_shm *shm, size_t size,
 	      enum wl_shm_format format)
 {
@@ -58,7 +58,7 @@ tw_shm_pool_init(struct tw_shm_pool *pool, struct wl_shm *shm, size_t size,
 	return size;
 }
 
-void
+WL_EXPORT void
 tw_shm_pool_release(struct tw_shm_pool *pool)
 {
 	struct wl_buffer_node *v, *n;
@@ -97,7 +97,7 @@ static struct wl_buffer_listener buffer_listener = {
 	.release = wl_buffer_release_notify
 };
 
-void
+WL_EXPORT void
 tw_shm_pool_set_buffer_release_notify(struct wl_buffer *wl_buffer,
 				   void (*cb)(void *, struct wl_buffer *),
 				   void *data)
@@ -109,7 +109,7 @@ tw_shm_pool_set_buffer_release_notify(struct wl_buffer *wl_buffer,
 }
 
 //the solution here should be actually change the width into width * stride
-struct wl_buffer *
+WL_EXPORT struct wl_buffer *
 tw_shm_pool_alloc_buffer(struct tw_shm_pool *pool, size_t width, size_t height)
 {
 	size_t stride = stride_of_wl_shm_format(pool->format);
@@ -138,7 +138,7 @@ tw_shm_pool_alloc_buffer(struct tw_shm_pool *pool, size_t width, size_t height)
 	return wl_buffer;
 }
 
-struct tw_shm_pool *
+WL_EXPORT struct tw_shm_pool *
 tw_shm_pool_buffer_free(struct wl_buffer *wl_buffer)
 {
 	struct wl_buffer_node *node = wl_buffer_get_user_data(wl_buffer);
@@ -152,7 +152,7 @@ tw_shm_pool_buffer_free(struct wl_buffer *wl_buffer)
 	return pool;
 }
 
-bool
+WL_EXPORT bool
 tw_shm_pool_release_if_unused(struct tw_shm_pool *pool)
 {
 	struct wl_buffer_node *node, *tmp;
@@ -170,7 +170,7 @@ tw_shm_pool_release_if_unused(struct tw_shm_pool *pool)
 	return false;
 }
 
-void *
+WL_EXPORT void *
 tw_shm_pool_buffer_access(struct wl_buffer *wl_buffer)
 {
 	struct wl_buffer_node *node = wl_buffer_get_user_data(wl_buffer);
@@ -179,7 +179,7 @@ tw_shm_pool_buffer_access(struct wl_buffer *wl_buffer)
 	return node->addr;
 }
 
-size_t
+WL_EXPORT size_t
 tw_shm_pool_buffer_size(struct wl_buffer *wl_buffer)
 {
 	struct wl_buffer_node *node = wl_buffer_get_user_data(wl_buffer);

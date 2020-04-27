@@ -78,7 +78,7 @@ rgba_to_argb(unsigned char *dst, const unsigned char *src,
 		}
 }
 
-void
+WL_EXPORT void
 image_info(const char *path, int *w, int *h, int *nchannels)
 {
 	//take a wild guess on svgs(since most of cases they are icons)
@@ -88,7 +88,7 @@ image_info(const char *path, int *w, int *h, int *nchannels)
 		stbi_info(path, w, h, nchannels);
 }
 
-unsigned char *
+WL_EXPORT unsigned char *
 image_load(const char *path, int *w, int *h, int *nchannels)
 {
 	unsigned char *imgdata = NULL;
@@ -129,7 +129,7 @@ image_load(const char *path, int *w, int *h, int *nchannels)
 }
 
 
-bool
+WL_EXPORT bool
 image_load_for_buffer(const char *path, enum wl_shm_format format,
                       int width, int height, unsigned char *mem)
 {
@@ -186,7 +186,7 @@ dummy_filter(const char *input, void *data)
 	return true;
 }
 
-struct image_cache
+WL_EXPORT struct image_cache
 image_cache_from_arrays_filtered(const struct wl_array *handle_array,
                                  const struct wl_array *str_array,
                                  void (*convert)(char output[256], const char *input),
@@ -283,7 +283,7 @@ out:
 
 }
 
-struct image_cache
+WL_EXPORT struct image_cache
 image_cache_from_arrays(const struct wl_array *handle_array,
 			const struct wl_array *str_array,
                         void (*convert)(char output[256], const char *input))
@@ -292,7 +292,7 @@ image_cache_from_arrays(const struct wl_array *handle_array,
 	                                        convert, dummy_filter, NULL);
 }
 
-void
+WL_EXPORT void
 image_cache_release(struct image_cache *cache)
 {
 	if (cache->image_boxes.data)
@@ -323,7 +323,7 @@ cairo_read_png(void *closure, unsigned char *data, unsigned int len)
 	return CAIRO_STATUS_SUCCESS;
 }
 
-void
+WL_EXPORT void
 image_cache_to_fd(const struct image_cache *cache, int fd)
 {
 	//we can simply use cairo writing functions
@@ -367,7 +367,7 @@ image_cache_to_fd(const struct image_cache *cache, int fd)
 	fclose(file);
 }
 
-struct image_cache
+WL_EXPORT struct image_cache
 image_cache_from_fd(int fd)
 {
 	ssize_t reading = -1;
