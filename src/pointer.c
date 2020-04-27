@@ -363,7 +363,7 @@ resize_pointer_grab(struct wl_pointer_listener *grab)
 /*******************************************************************************
  * cursor theme
  ******************************************************************************/
-void
+WL_EXPORT void
 tw_globals_change_cursor(struct tw_globals *globals, const char *type)
 {
 	struct wl_cursor *new_cursor = NULL;
@@ -383,7 +383,7 @@ tw_globals_change_cursor(struct tw_globals *globals, const char *type)
         pointer_set_cursor(globals->inputs.wl_pointer);
 }
 
-void
+WL_EXPORT void
 tw_globals_reload_cursor_theme(struct tw_globals *globals)
 {
 	//clean up

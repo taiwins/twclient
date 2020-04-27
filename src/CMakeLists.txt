@@ -34,10 +34,13 @@ target_link_libraries(twclient PUBLIC
 
 add_library(twclient-static STATIC $<TARGET_OBJECTS:twclient>)
 add_library(twclient-shared SHARED $<TARGET_OBJECTS:twclient>)
-add_library(twclient::twclient ALIAS twclient)
+add_library(twclient::twclient ALIAS twclient-static)
 
 target_link_libraries(twclient-static PUBLIC
   $<TARGET_PROPERTY:twclient,INTERFACE_LINK_LIBRARIES>
+  )
+target_include_directories(twclient-static
+  PUBLIC "${TWCLIENT_INCLUDE_DIR}"
   )
 set_target_properties(twclient-static
   PROPERTIES OUTPUT_NAME "twclient"
@@ -45,6 +48,9 @@ set_target_properties(twclient-static
 
 target_link_libraries(twclient-shared PUBLIC
   $<TARGET_PROPERTY:twclient,INTERFACE_LINK_LIBRARIES>
+  )
+target_include_directories(twclient-shared
+  PUBLIC "${TWCLIENT_INCLUDE_DIR}"
   )
 set_target_properties(twclient-shared
   PROPERTIES
@@ -105,6 +111,9 @@ add_library(twclient-icons-static STATIC $<TARGET_OBJECTS:twclient-icons>)
 add_library(twclient-icons-shared SHARED $<TARGET_OBJECTS:twclient-icons>)
 add_library(twclient::icons ALIAS twclient-icons-static)
 
+target_include_directories(twclient-icons-static PUBLIC
+  "${TWCLIENT_INCLUDE_DIR}"
+  )
 target_link_libraries(twclient-icons-static PUBLIC
   $<TARGET_PROPERTY:twclient-icons,INTERFACE_LINK_LIBRARIES>
   )
@@ -112,6 +121,9 @@ set_target_properties(twclient-icons-static
   PROPERTIES OUTPUT_NAME "twclient-icons"
   )
 
+target_include_directories(twclient-icons-shared PUBLIC
+  "${TWCLIENT_INCLUDE_DIR}"
+  )
 target_link_libraries(twclient-icons-shared PUBLIC
   $<TARGET_PROPERTY:twclient-icons,INTERFACE_LINK_LIBRARIES>
   )

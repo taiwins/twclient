@@ -60,7 +60,7 @@ copy_icon_dir(struct icon_dir *dir, const uint32_t size, const char *path)
 }
 
 
-void
+WL_EXPORT void
 icontheme_dir_init(struct icontheme_dir *theme, const char *path)
 {
 	strcpy(theme->theme_dir, path);
@@ -71,7 +71,7 @@ icontheme_dir_init(struct icontheme_dir *theme, const char *path)
 	wl_array_init(&theme->devices);
 }
 
-void
+WL_EXPORT void
 icontheme_dir_release(struct icontheme_dir *theme)
 {
 	wl_array_release(&theme->apps);
@@ -165,7 +165,7 @@ obj_exists(const char *filename,
 	return false;
 }
 
-int
+WL_EXPORT int
 search_icon_imgs_subdir(struct wl_array *handle_pool,
                         struct wl_array *string_pool,
                         const char *dir_path)
@@ -198,7 +198,7 @@ search_icon_imgs_subdir(struct wl_array *handle_pool,
 	return count;
 }
 
-void
+WL_EXPORT void
 search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
 		 const char *themepath, const struct wl_array *icondir)
 {
@@ -216,7 +216,7 @@ search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
 	}
 }
 
-void
+WL_EXPORT void
 search_icon_dirs(struct icontheme_dir *output,
 	const int min_res, const int max_res)
 {
