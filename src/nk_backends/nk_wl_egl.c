@@ -36,10 +36,6 @@
 
 #define NK_EGL_BACKEND
 
-#define NK_ZERO_COMMAND_MEMORY
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define NK_INCLUDE_FONT_BAKING
-
 #define NK_EGL_CMD_SIZE 4096
 #define MAX_VERTEX_BUFFER 512 * 128
 #define MAX_ELEMENT_BUFFER 128 * 128
@@ -360,7 +356,7 @@ nk_wl_free_gpu_image(const struct nk_image *gpu_image)
 	glDeleteTextures(1, &handle);
 }
 
-struct nk_image
+WL_EXPORT struct nk_image
 nk_wl_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
                         unsigned int width, unsigned int height,
                         unsigned int stride, bool take)
@@ -456,7 +452,7 @@ nk_egl_font_cal_ranges(struct nk_wl_egl_font *font,
 	return true;
 }
 
-NK_API struct nk_user_font *
+WL_EXPORT struct nk_user_font *
 nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 {
 	char *font_path;
@@ -506,7 +502,7 @@ err_font:
 	return NULL;
 }
 
-NK_API void
+WL_EXPORT void
 nk_wl_destroy_font(struct nk_user_font *font)
 {
 	struct nk_wl_user_font *wl_font =
@@ -708,7 +704,7 @@ nk_egl_destroy_app_surface(struct tw_appsurf *app)
 }
 
 /********************* exposed APIS *************************/
-void
+WL_EXPORT void
 nk_egl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 			nk_wl_drawcall_t draw_cb, const struct tw_bbox box)
 
@@ -729,7 +725,7 @@ nk_egl_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 	}
 }
 
-struct nk_wl_backend*
+WL_EXPORT struct nk_wl_backend*
 nk_egl_create_backend(const struct wl_display *display)
 {
 	//we do not have any font here,
@@ -751,7 +747,7 @@ nk_egl_create_backend(const struct wl_display *display)
 	return &bkend->base;
 }
 
-void
+WL_EXPORT void
 nk_egl_destroy_backend(struct nk_wl_backend *b)
 {
 	struct nk_egl_backend *bkend =
@@ -763,7 +759,7 @@ nk_egl_destroy_backend(struct nk_wl_backend *b)
 	free(bkend);
 }
 
-const struct tw_egl_env *
+WL_EXPORT const struct tw_egl_env *
 nk_egl_get_current_env(struct nk_wl_backend *b)
 {
 	struct nk_egl_backend *bkend =

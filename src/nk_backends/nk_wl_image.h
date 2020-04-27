@@ -65,7 +65,7 @@ nk_rect_from_bbox(const struct tw_bbox *box)
  * image loaders
  *****************************************************************************/
 
-NK_API struct nk_image *
+WL_EXPORT struct nk_image *
 nk_wl_add_image(struct nk_image img, struct nk_wl_backend *b)
 {
 	struct nk_wl_image *image =
@@ -81,13 +81,13 @@ nk_wl_add_image(struct nk_image img, struct nk_wl_backend *b)
 	return &image->image;
 }
 
-NK_API struct nk_image
+struct nk_image
 nk_wl_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
                         unsigned int width, unsigned int height,
                         unsigned int stride, bool take);
 
 
-NK_API struct nk_image*
+WL_EXPORT struct nk_image*
 nk_wl_load_image(const char *path, enum wl_shm_format format,
                  struct nk_wl_backend *b)
 {
@@ -107,7 +107,7 @@ nk_wl_load_image(const char *path, enum wl_shm_format format,
 	                       b);
 }
 
-NK_API void
+WL_EXPORT void
 nk_wl_free_image(struct nk_image *im)
 {
 	struct nk_wl_image *wl_img =

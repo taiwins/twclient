@@ -105,7 +105,7 @@ tw_event_queue_close(struct tw_event_queue *queue)
 	close(queue->pollfd);
 }
 
-void
+WL_EXPORT void
 tw_event_queue_run(struct tw_event_queue *queue)
 {
 	struct epoll_event events[32];
@@ -152,7 +152,7 @@ tw_event_queue_run(struct tw_event_queue *queue)
 	return;
 }
 
-bool
+WL_EXPORT bool
 tw_event_queue_init(struct tw_event_queue *queue)
 {
 	int fd = epoll_create1(EPOLL_CLOEXEC);
@@ -186,7 +186,7 @@ close_inotify_watch(struct tw_event_source *s)
 	close(s->fd);
 }
 
-int
+WL_EXPORT int
 tw_event_queue_add_file(struct tw_event_queue *queue, const char *path,
 			struct tw_event *e, uint32_t mask)
 {
@@ -219,7 +219,7 @@ close_udev_monitor(struct tw_event_source *src)
 	udev_monitor_unref(mon);
 }
 
-struct udev_device *
+WL_EXPORT struct udev_device *
 tw_event_get_udev_device(struct tw_event_queue *queue, int fd)
 {
 	//this is actually really risky, passing a pointer
@@ -233,7 +233,7 @@ tw_event_get_udev_device(struct tw_event_queue *queue, int fd)
 	//user has the responsibility to unref it
 }
 
-int
+WL_EXPORT int
 tw_event_queue_add_device(struct tw_event_queue *queue, const char *subsystem,
 			  const char *devname, struct tw_event *e)
 {
@@ -263,7 +263,7 @@ tw_event_queue_add_device(struct tw_event_queue *queue, const char *subsystem,
  * general source
  ******************************************************************************/
 
-int
+WL_EXPORT int
 tw_event_queue_add_source(struct tw_event_queue *queue, int fd,
 			  struct tw_event *e, uint32_t mask)
 {
@@ -285,7 +285,7 @@ tw_event_queue_add_source(struct tw_event_queue *queue, int fd,
 	return fd;
 }
 
-bool
+WL_EXPORT bool
 tw_event_queue_remove_source(struct tw_event_queue *queue, int fd)
 {
 	struct tw_event_source *source =
@@ -300,7 +300,7 @@ tw_event_queue_remove_source(struct tw_event_queue *queue, int fd)
 	}
 }
 
-bool
+WL_EXPORT bool
 tw_event_queue_modify_source(struct tw_event_queue *queue, int fd,
                              struct tw_event *e, uint32_t mask)
 {
@@ -331,7 +331,7 @@ read_timer(struct tw_event_source *s)
 	r = read(s->fd, &nhit, 8);
 }
 
-int
+WL_EXPORT int
 tw_event_queue_add_timer(struct tw_event_queue *queue,
 			 const struct itimerspec *spec, struct tw_event *e)
 {
@@ -380,7 +380,7 @@ dispatch_wl_display(struct tw_event *e, int fd)
 	return TW_EVENT_NOOP;
 }
 
-int
+WL_EXPORT int
 tw_event_queue_add_wl_display(struct tw_event_queue *queue, struct wl_display *display)
 {
 	int fd = wl_display_get_fd(display);
@@ -412,7 +412,7 @@ tw_event_queue_add_wl_display(struct tw_event_queue *queue, struct wl_display *d
  * an example of event would be resize event, this event is delegated from
  * a wl_event.
  */
-bool
+WL_EXPORT bool
 tw_event_queue_add_idle(struct tw_event_queue *queue, struct tw_event *event)
 {
 	struct tw_event_source *s = alloc_event_source(event, 0, -1);
