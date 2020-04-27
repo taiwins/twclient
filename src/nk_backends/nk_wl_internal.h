@@ -23,11 +23,6 @@
 #define NK_WL_INTERNAL_H
 
 #define NK_IMPLEMENTATION
-#define NK_ZERO_COMMAND_MEMORY
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_DEFAULT_FONT
 
 /* this file should have contained a an template struct which supposed to be
  * accessible all nuklear_backends here.
@@ -46,6 +41,11 @@
 #include <sequential.h>
 #include <ui.h>
 #include <client.h>
+
+#ifdef NK_API
+#undef NK_API
+#endif
+#define NK_API WL_EXPORT
 
 #ifdef __cplusplus
 extern "C" {
@@ -360,13 +360,13 @@ nk_wl_backend_cleanup(struct nk_wl_backend *bkend)
  * shared API
  ******************************************************************************/
 
-NK_API const struct nk_style *
+WL_EXPORT const struct nk_style *
 nk_wl_get_curr_style(struct nk_wl_backend *bkend)
 {
 	return &bkend->ctx.style;
 }
 
-NK_API void
+WL_EXPORT void
 nk_wl_test_draw(struct nk_wl_backend *bkend, struct tw_appsurf *app, nk_wl_drawcall_t draw_call)
 {
 	//here is how we manage the buffer

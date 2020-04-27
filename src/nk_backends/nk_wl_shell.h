@@ -58,7 +58,7 @@ static struct wl_shell_surface_listener nk_wl_shell_impl = {
 };
 
 
-NK_API void
+WL_EXPORT void
 nk_wl_impl_wl_shell_surface(struct tw_appsurf *app,
 			    struct wl_shell_surface *protocol)
 {
@@ -114,7 +114,7 @@ static struct xdg_surface_listener nk_wl_xdgsurface_impl = {
 	.configure = nk_wl_xdg_surface_handle_configure,
 };
 
-NK_API struct xdg_toplevel *
+WL_EXPORT struct xdg_toplevel *
 nk_wl_impl_xdg_shell_surface(struct tw_appsurf *app,
 			     struct xdg_surface *xdg_surface)
 {

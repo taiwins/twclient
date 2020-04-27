@@ -138,7 +138,7 @@ nk_wl_render_text(cairo_t *cr, const struct nk_vec2 *pos,
 
 }
 
-struct nk_user_font *
+WL_EXPORT struct nk_user_font *
 nk_wl_new_font(struct nk_wl_font_config config, struct nk_wl_backend *b)
 {
 	int error;
@@ -186,7 +186,7 @@ err_lib:
 	return NULL;
 }
 
-void
+WL_EXPORT void
 nk_wl_destroy_font(struct nk_user_font *font)
 {
 	struct nk_wl_cairo_font *cairo_font = font->userdata.ptr;
@@ -201,7 +201,7 @@ nk_wl_destroy_font(struct nk_user_font *font)
 /*******************************************************************************
  * NK_CAIRO_IMAGE
  ******************************************************************************/
-struct nk_image
+WL_EXPORT struct nk_image
 nk_wl_image_from_buffer(unsigned char *pixels, struct nk_wl_backend *b,
                         unsigned int width, unsigned int height,
                         unsigned int stride, bool take)
@@ -741,7 +741,7 @@ nk_cairo_destroy_app_surface(struct tw_appsurf *app)
 	shm_buffer_destroy_app_surface(app);
 }
 
-void
+WL_EXPORT void
 nk_cairo_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 			  nk_wl_drawcall_t draw_cb, struct tw_bbox geo)
 {
@@ -754,7 +754,7 @@ nk_cairo_impl_app_surface(struct tw_appsurf *surf, struct nk_wl_backend *bkend,
 	surf->destroy = nk_cairo_destroy_app_surface;
 }
 
-struct nk_wl_backend *
+WL_EXPORT struct nk_wl_backend *
 nk_cairo_create_backend(void)
 {
 	struct nk_cairo_backend *b = malloc(sizeof(struct nk_cairo_backend));
@@ -767,7 +767,7 @@ nk_cairo_create_backend(void)
 	return &b->base;
 }
 
-void
+WL_EXPORT void
 nk_cairo_destroy_backend(struct nk_wl_backend *bkend)
 {
 	nk_wl_backend_cleanup(bkend);

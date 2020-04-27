@@ -25,7 +25,7 @@
 #include <egl.h>
 #include <shmpool.h>
 
-void
+WL_EXPORT void
 tw_appsurf_init_egl(struct tw_appsurf *surf, struct tw_egl_env *env)
 {
 	surf->egldisplay = env->egl_display;
@@ -43,7 +43,7 @@ tw_appsurf_init_egl(struct tw_appsurf *surf, struct tw_egl_env *env)
 	assert(surf->eglwin);
 }
 
-void
+WL_EXPORT void
 tw_appsurf_clean_egl(struct tw_appsurf *surf, struct tw_egl_env *env)
 {
 	eglMakeCurrent(env->egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE,
@@ -55,7 +55,7 @@ tw_appsurf_clean_egl(struct tw_appsurf *surf, struct tw_egl_env *env)
 	surf->eglsurface = EGL_NO_SURFACE;
 }
 
-void
+WL_EXPORT void
 tw_appsurf_init(struct tw_appsurf *surf, struct wl_surface *wl_surface,
 		 struct tw_globals *globals,
 		 enum tw_appsurf_type type, const uint32_t flags)
@@ -69,14 +69,14 @@ tw_appsurf_init(struct tw_appsurf *surf, struct wl_surface *wl_surface,
 	wl_list_init(&surf->filter_head);
 }
 
-void
+WL_EXPORT void
 tw_appsurf_init_default(struct tw_appsurf *app, struct wl_surface *surf,
 			 struct tw_globals *g)
 {
 	tw_appsurf_init(app, surf, g, TW_APPSURF_APP, 0);
 }
 
-void
+WL_EXPORT void
 tw_appsurf_release(struct tw_appsurf *surf)
 {
 	if (!surf)
@@ -102,7 +102,7 @@ _tw_appsurf_run_frame(struct tw_appsurf *surf, const struct tw_app_event *e)
 	surf->do_frame(surf, e);
 }
 
-void
+WL_EXPORT void
 tw_appsurf_frame(struct tw_appsurf *surf, bool anime)
 {
 	struct tw_globals *g = surf->tw_globals;
@@ -118,7 +118,7 @@ tw_appsurf_frame(struct tw_appsurf *surf, bool anime)
 }
 
 
-void
+WL_EXPORT void
 tw_appsurf_resize(struct tw_appsurf *surf,
 		   uint32_t nw, uint32_t nh,
 		   uint32_t ns)
@@ -161,7 +161,7 @@ static struct wl_callback_listener tw_appsurf_wl_frame_impl = {
 	.done = tw_appsurf_frame_done,
 };
 
-void
+WL_EXPORT void
 tw_appsurf_request_frame(struct tw_appsurf *surf)
 {
 	surf->need_animation = true;
@@ -199,7 +199,7 @@ shm_wl_buffer_release(void *data, struct wl_buffer *wl_buffer)
 
 /* setup the pool and buffer, destroy the previous pool if there is
  */
-void
+WL_EXPORT void
 shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo)
 {
 	if (surf->pool && tw_shm_pool_release_if_unused(surf->pool))
@@ -237,7 +237,7 @@ shm_pool_resize_idle(struct tw_event *e, int fd)
 }
 
 
-void
+WL_EXPORT void
 shm_buffer_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	surf->pending_allocation.w = e->resize.nw;
@@ -301,7 +301,7 @@ shm_buffer_surface_swap(struct tw_appsurf *surf, const struct tw_app_event *e)
 	*dirty = false;
 }
 
-void
+WL_EXPORT void
 shm_buffer_destroy_app_surface(struct tw_appsurf *surf)
 {
 	for (int i = 0; i < 2; i++) {
@@ -315,7 +315,7 @@ shm_buffer_destroy_app_surface(struct tw_appsurf *surf)
 	surf->user_data = NULL;
 }
 
-void
+WL_EXPORT void
 shm_buffer_impl_app_surface(struct tw_appsurf *surf, shm_buffer_draw_t draw_call,
 			    const struct tw_bbox geo)
 {
@@ -350,7 +350,7 @@ embeded_app_unhook(struct tw_appsurf *surf)
 	surf->pending_allocation = (struct tw_bbox){0};
 }
 
-void
+WL_EXPORT void
 embeded_impl_app_surface(struct tw_appsurf *surf, struct tw_appsurf *parent,
                          const struct tw_bbox geo)
 

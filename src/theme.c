@@ -169,7 +169,7 @@ tw_make_trans_edit(struct tw_style_edit *edit, tw_rgba_t bg_color,
  ******************************************************************************/
 
 /* used in clients */
-void
+WL_EXPORT void
 tw_theme_init_from_fd(struct tw_theme *theme, int fd, size_t size)
 {
 	void *addr = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
@@ -197,7 +197,7 @@ tw_theme_init_from_fd(struct tw_theme *theme, int fd, size_t size)
 }
 
 /* used in server */
-int
+WL_EXPORT int
 tw_theme_to_fd(struct tw_theme *theme)
 {
 	void *mapped, *ummaped;
@@ -224,7 +224,7 @@ tw_theme_to_fd(struct tw_theme *theme)
 	return fd;
 }
 
-void
+WL_EXPORT void
 tw_theme_init_default(struct tw_theme *theme)
 {
 	struct tw_style_text *text;
@@ -548,7 +548,7 @@ tw_theme_init_default(struct tw_theme *theme)
 	window->tooltip_padding = padding;
 }
 
-void
+WL_EXPORT void
 tw_theme_fini(struct tw_theme *theme)
 {
 	if (theme->handle_pool.data)
