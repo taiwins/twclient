@@ -153,13 +153,19 @@ obj_exists(const char *filename,
            const struct wl_array *string_pool)
 {
 	off_t *off;
+	size_t len;
+	const char *ptr;
 	char namecpy[strlen(filename)+1];
+
 	strcpy(namecpy, filename);
 	*strrchr(namecpy, '.') = '\0';
-	const char *ptr = string_pool->data;
+	len = strlen(namecpy);
+	ptr = string_pool->data;
+
 	wl_array_for_each(off, handle_pool) {
 		const char *path = ptr + *off;
-		if (strstr(path, namecpy))
+		if (strstr(path, namecpy) + len ==
+		    strrchr(path, '.'))
 			return true;
 	}
 	return false;
