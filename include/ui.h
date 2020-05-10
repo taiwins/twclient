@@ -40,10 +40,9 @@
 extern "C" {
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////Application style definition/////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-struct tw_shm_pool;
+/*******************************************************************************
+ * client style
+ ******************************************************************************/
 
 static inline int
 tw_font_pt2px(int pt_size, int ppi)
@@ -61,9 +60,9 @@ tw_font_px2pt(int px_size, int ppi)
 	return (int) (72.0 * px_size / ppi);
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////geometry definition////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
+/*******************************************************************************
+ * taiwins geometry
+ ******************************************************************************/
 struct tw_point2d {
 	unsigned int x;
 	unsigned int y;
@@ -114,12 +113,13 @@ tw_make_bbox_origin(uint16_t w, uint16_t h, uint16_t s)
 	return (struct tw_bbox){0, 0, w, h, s};
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////APPSURFACE/////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
+/*******************************************************************************
+ * app surface
+ ******************************************************************************/
 struct tw_globals;
 struct tw_appsurf;
 struct tw_egl_env;
+struct tw_shm_pool;
 
 enum tw_appsurf_type {
 	TW_APPSURF_BACKGROUND,
@@ -155,16 +155,13 @@ enum tw_appsurf_mime_type {
 
 typedef const char * app_mime[TW_MIME_TYPE_MAX];
 
-
 typedef void (*frame_t)(struct tw_appsurf *, const struct tw_app_event *e);
-
 
 struct tw_app_event_filter {
 	struct wl_list link;
 	enum tw_app_event_type type;
 	bool (*intercept)(struct tw_appsurf *, const struct tw_app_event *e);
 };
-
 
 /**
  * /brief Abstract wl_surface container
@@ -227,23 +224,19 @@ struct tw_appsurf {
 	void *user_data;
 };
 
-/** TODO
- * new APIs for the appsurface
- */
-
 /**
  * @brief clean start a new appsurface
  */
-void tw_appsurf_init(struct tw_appsurf *app, struct wl_surface *surf,
-		      struct tw_globals *g,
-		      enum tw_appsurf_type type, const uint32_t flags);
-
+void
+tw_appsurf_init(struct tw_appsurf *app, struct wl_surface *surf,
+                struct tw_globals *g,
+                enum tw_appsurf_type type, const uint32_t flags);
 /**
  * @breif create a default desktop like application
  */
-void tw_appsurf_init_default(struct tw_appsurf *, struct wl_surface *,
-			      struct tw_globals *g);
-
+void
+tw_appsurf_init_default(struct tw_appsurf *, struct wl_surface *,
+                        struct tw_globals *g);
 /**
  * @brief the universal release function
  *
@@ -253,9 +246,8 @@ void tw_appsurf_init_default(struct tw_appsurf *, struct wl_surface *,
 void
 tw_appsurf_release(struct tw_appsurf *surf);
 
-
 /**
- * /brief request a frame for the appsurface
+ * @brief request a frame for the appsurface
  *
  *  You can use this callback to start the animation sequence for the surface,
  *  so frame the next draw call, the app will be in animation. You can stop the
@@ -263,20 +255,24 @@ tw_appsurf_release(struct tw_appsurf *surf);
  *  intentioned to be used directly in the `frame_callback` kick start the
  *  animation.
  */
-void tw_appsurf_request_frame(struct tw_appsurf *surf);
+void
+tw_appsurf_request_frame(struct tw_appsurf *surf);
 
 /**
- * /brief kick off the drawing for the surface
+ * @brief kick off the drawing for the surface
  *
  * user call this function to start drawing. It triggers the frames untils
  * tw_appsurf_release is called.
  */
-void tw_appsurf_frame(struct tw_appsurf *surf, bool anime);
+void
+tw_appsurf_frame(struct tw_appsurf *surf, bool anime);
 
 /**
  * @brief start the resize of app surface.
  */
-void tw_appsurf_resize(struct tw_appsurf *surf, uint32_t nw, uint32_t nh, uint32_t ns);
+void
+tw_appsurf_resize(struct tw_appsurf *surf, uint32_t nw, uint32_t nh,
+                  uint32_t ns);
 
 static inline void
 tw_appsurf_end_frame_request(struct tw_appsurf *surf)
@@ -284,29 +280,24 @@ tw_appsurf_end_frame_request(struct tw_appsurf *surf)
 	surf->need_animation = false;
 }
 
-/**
- * /brief a helper function if you have egl_env
- *
- * I do not want to include this but there is a fixed way to allocate
- * `wl_egl_window` and `EGLSurface`, even with nuklear
- */
-void tw_appsurf_init_egl(struct tw_appsurf *surf, struct tw_egl_env *env);
-
-void tw_appsurf_clean_egl(struct tw_appsurf *surf, struct tw_egl_env *env);
-
-cairo_format_t
-translate_wl_shm_format(enum wl_shm_format format);
-
-size_t
-stride_of_wl_shm_format(enum wl_shm_format format);
-
-
 static inline struct tw_appsurf *
 tw_appsurf_from_wl_surface(struct wl_surface *s)
 {
 	return s ? (struct tw_appsurf *)wl_surface_get_user_data(s) :
 		NULL;
 }
+
+/**
+ * @brief a helper function if you have egl_env
+ *
+ * I do not want to include this but there is a fixed way to allocate
+ * `wl_egl_window` and `EGLSurface`, even with nuklear
+ */
+void
+tw_appsurf_init_egl(struct tw_appsurf *surf, struct tw_egl_env *env);
+
+void
+tw_appsurf_clean_egl(struct tw_appsurf *surf, struct tw_egl_env *env);
 
 
 /**
@@ -328,17 +319,67 @@ shm_buffer_impl_app_surface(struct tw_appsurf *surf, shm_buffer_draw_t draw_call
  * @brief we can expose part of shm_buffer implementation for any shm_pool
  * double buffer based implementation
  */
-void shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo);
+void
+shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo);
 
-void shm_buffer_resize(struct tw_appsurf *surf, const struct tw_app_event *e);
+void
+shm_buffer_resize(struct tw_appsurf *surf, const struct tw_app_event *e);
 
-void shm_buffer_destroy_app_surface(struct tw_appsurf *surf);
+void
+shm_buffer_destroy_app_surface(struct tw_appsurf *surf);
 
 /**
  * /brief second implementation we provide here is the parent surface
  */
-void embeded_impl_app_surface(struct tw_appsurf *surf, struct tw_appsurf *parent,
-			      const struct tw_bbox geo);
+void
+embeded_impl_app_surface(struct tw_appsurf *surf, struct tw_appsurf *parent,
+                         const struct tw_bbox geo);
+
+static inline cairo_format_t
+translate_wl_shm_format(enum wl_shm_format format)
+{
+	switch (format) {
+	case WL_SHM_FORMAT_ARGB8888:
+		return CAIRO_FORMAT_ARGB32;
+		break;
+	case WL_SHM_FORMAT_XRGB8888:
+		//based on doc, xrgb8888 does not include alpha
+		return CAIRO_FORMAT_RGB24;
+		break;
+	case WL_SHM_FORMAT_RGB565:
+		return CAIRO_FORMAT_RGB16_565;
+		break;
+	case WL_SHM_FORMAT_RGBA8888:
+		return CAIRO_FORMAT_INVALID;
+		break;
+	default:
+		return CAIRO_FORMAT_INVALID;
+	}
+}
+
+static inline size_t
+stride_of_wl_shm_format(enum wl_shm_format format)
+{
+	switch(format) {
+	case WL_SHM_FORMAT_ARGB8888:
+		return 4;
+		break;
+	case WL_SHM_FORMAT_RGB888:
+		return 3;
+		break;
+	case WL_SHM_FORMAT_RGB565:
+		return 2;
+		break;
+	case WL_SHM_FORMAT_RGBA8888:
+		return 4;
+		break;
+	case WL_SHM_FORMAT_ABGR1555:
+		return 2;
+	default:
+		return 0;
+	}
+}
+
 
 #ifdef __cplusplus
 }
