@@ -5,7 +5,6 @@
 add_library(twclient OBJECT
   client.c
   appsurf.c
-  ui.c
   egl.c
   buffer.c
   event_queue.c

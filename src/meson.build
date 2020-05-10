@@ -32,7 +32,6 @@ pkgconfig = import('pkgconfig')
 src_twclient = [
   'client.c',
   'appsurf.c',
-  'ui.c',
   'egl.c',
   'buffer.c',
   'event_queue.c',
