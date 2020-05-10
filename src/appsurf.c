@@ -30,14 +30,15 @@ tw_appsurf_init_egl(struct tw_appsurf *surf, struct tw_egl_env *env)
 {
 	surf->egldisplay = env->egl_display;
 	surf->eglwin = wl_egl_window_create(surf->wl_surface,
-					    surf->allocation.w * surf->allocation.s,
-					    surf->allocation.h * surf->allocation.s);
-
+	                                    surf->allocation.w *
+	                                    surf->allocation.s,
+	                                    surf->allocation.h *
+	                                    surf->allocation.s);
 	surf->eglsurface =
 		eglCreateWindowSurface(env->egl_display,
-				       env->config,
-				       (EGLNativeWindowType)surf->eglwin,
-				       NULL);
+		                       env->config,
+		                       (EGLNativeWindowType)surf->eglwin,
+		                       NULL);
 	//this should not happen in action
 	assert(surf->eglsurface);
 	assert(surf->eglwin);
@@ -71,7 +72,7 @@ tw_appsurf_init(struct tw_appsurf *surf, struct wl_surface *wl_surface,
 
 WL_EXPORT void
 tw_appsurf_init_default(struct tw_appsurf *app, struct wl_surface *surf,
-			 struct tw_globals *g)
+                        struct tw_globals *g)
 {
 	tw_appsurf_init(app, surf, g, TW_APPSURF_APP, 0);
 }
@@ -171,11 +172,17 @@ tw_appsurf_request_frame(struct tw_appsurf *surf)
 
 
 
-/**********************************************************
- *                shm_buffer_impl_surface                 *
- **********************************************************/
-/* now the method needs to smartly release the buffer, I may have nk_wl_cairo
- * use this interface as well
+/*******************************************************************************
+ * shm_buffer_impl_surface
+ ******************************************************************************/
+/**
+ * @brief smartly release the buffer and pool.
+ *
+ * We are waiting for compositor to return all the buffers. There could be cases
+ * where we switched to new pool before compositor returns the buffers from
+ * previous pool. In that case the previous pool becomes a wild pointer. The
+ * pool will eventually be freed here if `compositor` finally returns the buffer
+ * back to us.
  */
 static void
 shm_wl_buffer_release(void *data, struct wl_buffer *wl_buffer)
@@ -217,7 +224,6 @@ shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo)
 	}
 }
 
-
 static int
 shm_pool_resize_idle(struct tw_event *e, int fd)
 {
@@ -235,7 +241,6 @@ shm_pool_resize_idle(struct tw_event *e, int fd)
 	tw_appsurf_frame(surf, surf->need_animation);
 	return TW_EVENT_DEL;
 }
-
 
 WL_EXPORT void
 shm_buffer_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
@@ -316,8 +321,9 @@ shm_buffer_destroy_app_surface(struct tw_appsurf *surf)
 }
 
 WL_EXPORT void
-shm_buffer_impl_app_surface(struct tw_appsurf *surf, shm_buffer_draw_t draw_call,
-			    const struct tw_bbox geo)
+shm_buffer_impl_app_surface(struct tw_appsurf *surf,
+                            shm_buffer_draw_t draw_call,
+                            const struct tw_bbox geo)
 {
 	surf->do_frame = shm_buffer_surface_swap;
 	surf->user_data = draw_call;
@@ -329,12 +335,13 @@ shm_buffer_impl_app_surface(struct tw_appsurf *surf, shm_buffer_draw_t draw_call
 	shm_buffer_reallocate(surf, &geo);
 }
 
-/**********************************************************
- *              embeded_buffer_impl_surface               *
- **********************************************************/
+/*******************************************************************************
+ * embeded_buffer_impl_surface
+ ******************************************************************************/
 
 static void
-embeded_app_surface_do_frame(struct tw_appsurf *surf, const struct tw_app_event *e)
+embeded_app_surface_do_frame(struct tw_appsurf *surf,
+                             const struct tw_app_event *e)
 {
 	if (!surf->parent)
 		return;

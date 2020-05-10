@@ -19,6 +19,7 @@
  *
  */
 
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <stdint.h>
@@ -38,7 +39,6 @@
 /*******************************************************************************
  * image operations
  ******************************************************************************/
-
 static void
 copy_subimage(unsigned char *dst, const unsigned char *src,
 	      const uint32_t dst_width, const stbrp_rect *rect)
@@ -52,13 +52,20 @@ copy_subimage(unsigned char *dst, const unsigned char *src,
 	}
 }
 
-//cairo has argb in uin32_t, which is bgra in byte order
+/*
+ * why do we need to do format transform here? Well, the image loader reads data
+ * in exactly r,g,b,a order, stored in bytes! cairo on the other hand, uses
+ * argb. Stores them in uint32_t, in byte order, it would become bgra (byte
+ * order of cairo format is not that important, unless you upload them to OpenGL).
+ */
 static void
-rgba_to_argb(unsigned char *dst, const unsigned char *src,
+rgba_to_argb(unsigned char *dst, const unsigned char  *src,
              const int w, const int h)
 {
 	union argb {
-		//byte order readed
+		//this is the rgba byte order in small endian, cairo on the
+		//other hand, uses argb in integer, it would be bgra in byte
+		//order
 		struct {
 			uint8_t r, g, b, a;
 		} data;
@@ -169,8 +176,17 @@ image_load_for_buffer(const char *path, enum wl_shm_format format,
 	cairo_surface_destroy(src_surf);
 
 	return true;
-err_format:
 err_load:
+	image_surf = cairo_image_surface_create_for_data(
+		(unsigned char *)mem, cairo_format,
+		width, height,
+		cairo_format_stride_for_width(cairo_format, width));
+	cr = cairo_create(image_surf);
+	cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
+	cairo_paint(cr);
+	cairo_destroy(cr);
+	cairo_surface_destroy(image_surf);
+err_format:
 	return false;
 }
 
