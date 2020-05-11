@@ -1,4 +1,3 @@
-#include "vector.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -21,7 +20,7 @@
 #pragma clang diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
-#include <sequential.h>
+#include <ctypes/sequential.h>
 
 #define NK_IMPLEMENTATION
 #define NK_INCLUDE_FIXED_TYPES

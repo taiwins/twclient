@@ -1,13 +1,13 @@
 #include <stdlib.h>
-#include <client.h>
-#include <ui.h>
-#include <nk_backends.h>
+#include <twclient/client.h>
+#include <twclient/ui.h>
+#include <twclient/nk_backends.h>
 
 
 static struct application {
 	struct wl_shell *shell;
-	struct wl_globals global;
-	struct app_surface surface;
+	struct tw_globals global;
+	struct tw_appsurf surface;
 	struct nk_wl_backend *bkend;
 	struct wl_shell_surface *shell_surface;
 	bool done;
@@ -22,7 +22,7 @@ global_registry_handler(void *data,
 		App.shell = wl_registry_bind(registry, id, &wl_shell_interface, version);
 		fprintf(stdout, "wl_shell %d announced\n", id);
 	} else
-		wl_globals_announce(&App.global, registry, id, interface, version);
+		tw_globals_announce(&App.global, registry, id, interface, version);
 }
 
 
@@ -88,8 +88,7 @@ int main(int argc, char *argv[])
 	struct wl_display *wl_display = wl_display_connect(NULL);
 	if (!wl_display)
 		fprintf(stderr, "okay, I don't even have wayland display\n");
-	wl_globals_init(&App.global, wl_display);
-	App.global.theme = taiwins_dark_theme;
+	tw_globals_init(&App.global, wl_display);
 
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);
@@ -100,13 +99,14 @@ int main(int argc, char *argv[])
 
 	struct wl_surface *wl_surface = wl_compositor_create_surface(App.global.compositor);
 	struct wl_shell_surface *shell_surface = wl_shell_get_shell_surface(App.shell, wl_surface);
-	app_surface_init(&App.surface, wl_surface,
+	tw_app_surface_init(&App.surface, wl_surface,
 			 &App.global);
 
 	struct nk_wl_backend *backend = nk_vulkan_backend_create();
-	nk_vulkan_impl_app_surface(&App.surface, backend, sample_widget, make_bbox_origin(200, 200, 1));
+	nk_vulkan_impl_app_surface(&App.surface, backend, sample_widget,
+	                           tw_make_bbox_origin(200, 200, 1));
 	wl_shell_surface_destroy(shell_surface);
-	app_surface_release(&App.surface);
+	tw_appsurf_release(&App.surface);
 	nk_vulkan_backend_destroy(backend);
 
 	free(backend);

@@ -24,12 +24,12 @@
 #include <dirent.h>
 
 #include <string.h>
-#include <strops.h>
-#include <helpers.h>
-#include <os/file.h>
-#include <desktop_entry.h>
 #include <wayland-util.h>
-#include <vector.h>
+#include <ctypes/strops.h>
+#include <ctypes/helpers.h>
+#include <ctypes/os/file.h>
+#include <ctypes/vector.h>
+#include <twclient/desktop_entry.h>
 
 #define MAX_ENTRY_LEN 128
 

@@ -31,12 +31,12 @@
 
 #include <linux/input.h>
 
-#include <sequential.h>
-#include <os/buffer.h>
-#include <os/file.h>
+#include <ctypes/sequential.h>
+#include <ctypes/os/buffer.h>
+#include <ctypes/os/file.h>
 
-#include <client.h>
-#include <ui.h>
+#include <twclient/client.h>
+#include <twclient/ui.h>
 
 
 /*******************************************************************************

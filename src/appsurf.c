@@ -20,10 +20,10 @@
  */
 #include <stdlib.h>
 #include <assert.h>
-#include <client.h>
-#include <ui.h>
-#include <egl.h>
-#include <shmpool.h>
+#include <twclient/client.h>
+#include <twclient/ui.h>
+#include <twclient/egl.h>
+#include <twclient/shmpool.h>
 
 WL_EXPORT void
 tw_appsurf_init_egl(struct tw_appsurf *surf, struct tw_egl_env *env)

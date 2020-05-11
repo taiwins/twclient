@@ -35,9 +35,9 @@
 #include <wayland-egl.h>
 #include <stdbool.h>
 #include <cairo/cairo.h>
-#include <client.h>
-#include <egl.h>
-#include <helpers.h>
+#include <twclient/client.h>
+#include <twclient/egl.h>
+#include <ctypes/helpers.h>
 
 /*******************************************************************************
  *                          EGL environment

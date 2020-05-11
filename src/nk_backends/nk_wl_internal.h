@@ -38,9 +38,9 @@
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <wayland-client.h>
 
-#include <sequential.h>
-#include <ui.h>
-#include <client.h>
+#include <ctypes/sequential.h>
+#include <twclient/ui.h>
+#include <twclient/client.h>
 
 #ifdef NK_API
 #undef NK_API
@@ -63,7 +63,7 @@ extern "C" {
 #pragma clang diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
-#include <nk_backends.h>
+#include <twclient/nk_backends.h>
 
 #ifndef NK_MAX_CMD_SIZE
 #define NK_MAX_CMD_SIZE (sizeof (union {	\
