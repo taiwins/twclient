@@ -28,7 +28,7 @@ extern "C" {
 
 #include <string.h>
 #include <cairo/cairo.h>
-#include <helpers.h>
+#include <ctypes/helpers.h>
 
 #include <twclient/theme.h>
 #include <twclient/image_cache.h>

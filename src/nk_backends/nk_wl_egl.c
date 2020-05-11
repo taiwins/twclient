@@ -42,7 +42,7 @@
 
 #include <twclient/egl.h>
 #include "nk_wl_internal.h"
-#include <helpers.h>
+#include <ctypes/helpers.h>
 
 //vao layout
 //I could probably use more compat format, and we need float32_t

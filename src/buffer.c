@@ -23,7 +23,7 @@
 
 #include <twclient/client.h>
 #include <twclient/shmpool.h>
-#include <os/buffer.h>
+#include <ctypes/os/buffer.h>
 
 struct wl_buffer_node {
 	struct wl_list link;

@@ -1,5 +1,3 @@
-#include "helpers.h"
-#include "vector.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <dirent.h>
@@ -8,9 +6,9 @@
 #include <strings.h>
 #include <wayland-util.h>
 
-#include <strops.h>
-#include <sequential.h>
-#include <os/file.h>
+#include <ctypes/strops.h>
+#include <ctypes/sequential.h>
+#include <ctypes/os/file.h>
 #include <twclient/image_cache.h>
 
 #define MAX_DIR_LEN 32
