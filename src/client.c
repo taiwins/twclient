@@ -41,8 +41,8 @@
 #include <os/file.h>
 #include <strops.h>
 
-#include <client.h>
-#include <ui.h>
+#include <twclient/client.h>
+#include <twclient/ui.h>
 
 
 /*******************************************************************************

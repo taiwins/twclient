@@ -11,7 +11,7 @@
 #include <strops.h>
 #include <sequential.h>
 #include <os/file.h>
-#include <image_cache.h>
+#include <twclient/image_cache.h>
 
 #define MAX_DIR_LEN 32
 struct icon_dir {

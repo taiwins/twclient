@@ -33,8 +33,8 @@
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 
-#include <ui.h>
-#include <client.h>
+#include <twclient/ui.h>
+#include <twclient/client.h>
 
 //////////////////////////////////////////////////////////////////////////
 /////////////////////////////Pointer listeners////////////////////////////

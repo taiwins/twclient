@@ -1,7 +1,7 @@
-#include <client.h>
-#include <ui.h>
-#include <nk_backends.h>
-#include <theme.h>
+#include <twclient/client.h>
+#include <twclient/ui.h>
+#include <twclient/nk_backends.h>
+#include <twclient/theme.h>
 
 struct nk_wl_bkend;
 struct nk_context;

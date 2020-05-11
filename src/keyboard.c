@@ -32,8 +32,8 @@
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <wayland-client.h>
 
-#include <ui.h>
-#include <client.h>
+#include <twclient/ui.h>
+#include <twclient/client.h>
 #include <helpers.h>
 
 extern void _tw_appsurf_run_frame(struct tw_appsurf *surf, const struct tw_app_event *e);

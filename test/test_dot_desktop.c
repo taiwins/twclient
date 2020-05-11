@@ -9,7 +9,7 @@
 #include <vector.h>
 #include <helpers.h>
 #include <os/file.h>
-#include <desktop_entry.h>
+#include <twclient/desktop_entry.h>
 
 
 int main(int argc, char *argv[])

@@ -26,10 +26,10 @@
 #include <stdlib.h>
 #include <wayland-client.h>
 #include <cairo/cairo.h>
-#include <image_cache.h>
 #include <wayland-util.h>
 #include "nk_wl_internal.h"
-#include "ui.h"
+#include <twclient/ui.h>
+#include <twclient/image_cache.h>
 //hack for now
 /* #include <stb/stb_image.h> */
 

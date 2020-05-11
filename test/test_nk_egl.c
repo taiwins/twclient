@@ -7,11 +7,11 @@
 #include <string.h>
 #include <fcntl.h>
 
-#include <ui.h>
-#include <egl.h>
-#include <client.h>
-#include <nk_backends.h>
-#include <theme.h>
+#include <twclient/ui.h>
+#include <twclient/egl.h>
+#include <twclient/client.h>
+#include <twclient/nk_backends.h>
+#include <twclient/theme.h>
 /* #define STB_IMAGE_IMPLEMENTATION */
 /* #include "stb_image.h" */
 
