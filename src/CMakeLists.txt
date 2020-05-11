@@ -148,13 +148,13 @@ if(INSTALL_TWCLIENT)
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 
-  install(DIRECTORY ${TWCLIENT_INCLUDE_DIR}/
-    DESTINATION include/taiwins
+  install(DIRECTORY ${TWCLIENT_INCLUDE_DIR}/twclient
+    DESTINATION include
     FILES_MATCHING PATTERN "*.h"
     PATTERN "nuklear" EXCLUDE
     PATTERN "stb" EXCLUDE)
 
-  install(FILES ${TWCLIENT_INCLUDE_DIR}/nuklear/nuklear.h
-    DESTINATION include/taiwins/nuklear)
+  install(FILES ${TWCLIENT_INCLUDE_DIR}/twclient/nuklear/nuklear.h
+    DESTINATION include/twclient/nuklear)
 
 endif()

@@ -33,7 +33,7 @@
 #include <sequential.h>
 #include <os/buffer.h>
 #include <os/file.h>
-#include <client.h>
+#include <twclient/client.h>
 
 /*******************************************************************************
  * event queue implemnetaiton

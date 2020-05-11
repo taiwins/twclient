@@ -27,7 +27,7 @@
 #include <os/os-compatibility.h>
 #include <os/buffer.h>
 
-#include <theme.h>
+#include <twclient/theme.h>
 #include <wayland-util.h>
 
 #ifndef _GNU_SOURCE

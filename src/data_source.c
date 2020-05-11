@@ -35,8 +35,8 @@
 #include <os/buffer.h>
 #include <os/file.h>
 
-#include <client.h>
-#include <ui.h>
+#include <twclient/client.h>
+#include <twclient/ui.h>
 
 
 /*******************************************************************************

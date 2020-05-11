@@ -16,21 +16,21 @@ dep_stb = declare_dependency(
 
 #TODO, change it to twclient
 install_headers(
-  ['client.h',
-   'desktop_entry.h',
-   'egl.h',
-   'event_queue.h',
-   'image_cache.h',
-   'nk_backends.h',
-   'theme.h',
-   'twclient.h',
-   'ui_event.h',
-   'ui.h'
+  ['twclient/client.h',
+   'twclient/desktop_entry.h',
+   'twclient/egl.h',
+   'twclient/event_queue.h',
+   'twclient/image_cache.h',
+   'twclient/nk_backends.h',
+   'twclient/theme.h',
+   'twclient/twclient.h',
+   'twclient/ui_event.h',
+   'twclient/ui.h'
   ],
-  subdir: 'taiwins'
+  subdir: 'twclient'
 )
 
 install_headers(
-  'nuklear/nuklear.h',
-  subdir: 'taiwins/nuklear'
+  'twclient/nuklear/nuklear.h',
+  subdir: 'twclient/nuklear'
 )

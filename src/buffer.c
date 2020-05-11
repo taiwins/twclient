@@ -21,8 +21,8 @@
 
 #include <sys/mman.h>
 
-#include <client.h>
-#include <shmpool.h>
+#include <twclient/client.h>
+#include <twclient/shmpool.h>
 #include <os/buffer.h>
 
 struct wl_buffer_node {

@@ -4,7 +4,7 @@
 #include <sys/epoll.h>
 #include <poll.h>
 
-#include <event_queue.h>
+#include <twclient/event_queue.h>
 
 static int counter = 0;
 

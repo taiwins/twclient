@@ -30,9 +30,8 @@ extern "C" {
 #include <cairo/cairo.h>
 #include <helpers.h>
 
-#include <theme.h>
-//include itself
-#include <image_cache.h>
+#include <twclient/theme.h>
+#include <twclient/image_cache.h>
 #include "nk_wl_internal.h"
 
 

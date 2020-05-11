@@ -40,7 +40,7 @@
 #define MAX_VERTEX_BUFFER 512 * 128
 #define MAX_ELEMENT_BUFFER 128 * 128
 
-#include <egl.h>
+#include <twclient/egl.h>
 #include "nk_wl_internal.h"
 #include <helpers.h>
 
