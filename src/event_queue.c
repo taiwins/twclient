@@ -30,9 +30,9 @@
 #include <wayland-client.h>
 #include <wayland-util.h>
 
-#include <sequential.h>
-#include <os/buffer.h>
-#include <os/file.h>
+#include <ctypes/sequential.h>
+#include <ctypes/os/buffer.h>
+#include <ctypes/os/file.h>
 #include <twclient/client.h>
 
 /*******************************************************************************
