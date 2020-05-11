@@ -38,7 +38,7 @@
 #define NK_CAIRO_BACKEND
 
 #include "nk_wl_internal.h"
-#include <shmpool.h>
+#include <twclient/shmpool.h>
 
 /*******************************************************************************
  * NK_CAIRO_FONT

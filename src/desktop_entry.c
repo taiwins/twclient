@@ -27,7 +27,7 @@
 #include <strops.h>
 #include <helpers.h>
 #include <os/file.h>
-#include <desktop_entry.h>
+#include <twclient/desktop_entry.h>
 #include <wayland-util.h>
 #include <vector.h>
 
