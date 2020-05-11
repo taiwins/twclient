@@ -37,7 +37,7 @@
 #include <cairo/cairo.h>
 #include <twclient/client.h>
 #include <twclient/egl.h>
-#include <helpers.h>
+#include <ctypes/helpers.h>
 
 /*******************************************************************************
  *                          EGL environment

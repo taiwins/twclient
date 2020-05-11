@@ -38,7 +38,7 @@
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include <wayland-client.h>
 
-#include <sequential.h>
+#include <ctypes/sequential.h>
 #include <twclient/ui.h>
 #include <twclient/client.h>
 

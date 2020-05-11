@@ -6,9 +6,9 @@
 #include <dirent.h>
 
 #include <unistd.h>
-#include <vector.h>
-#include <helpers.h>
-#include <os/file.h>
+#include <ctypes/vector.h>
+#include <ctypes/helpers.h>
+#include <ctypes/os/file.h>
 #include <twclient/desktop_entry.h>
 
 

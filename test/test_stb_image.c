@@ -8,9 +8,9 @@
 #include <sys/types.h>
 
 #include <twclient/image_cache.h>
-#include <sequential.h>
-#include <strops.h>
-#include <os/file.h>
+#include <ctypes/sequential.h>
+#include <ctypes/strops.h>
+#include <ctypes/os/file.h>
 
 
 static int filter_image(const struct dirent *file)
