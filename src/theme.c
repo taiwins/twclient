@@ -25,7 +25,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <ctypes/os/buffer.h>
-
+#include <ctypes/os/os-compatibility.h>
 #include <twclient/theme.h>
 #include <wayland-util.h>
 
@@ -33,7 +33,6 @@
 #define _GNU_SOURCE
 #endif
 
-extern int os_create_anonymous_file(off_t size);
 /*******************************************************************************
  * tw_theme_color
  ******************************************************************************/
