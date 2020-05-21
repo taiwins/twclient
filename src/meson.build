@@ -158,7 +158,7 @@ foreach proto: protocols
     target = custom_target(
       '@0@-@1@'.format(base_file, type),
       command : [ prog_scanner, type, '@INPUT@', '@OUTPUT@'],
-      input: xml_path,
+      input: files(xml_path),
       output: output_file,
     )
     var_name = output_file.underscorify()
@@ -200,6 +200,13 @@ pkgconfig.generate(
   description: 'nuklear GUI library with Cairo backend for twclient',
 )
 
+dep_nkcairo = declare_dependency(
+  link_with : lib_nkcairo,
+  compile_args : twclient_flags,
+  include_directories : inc_twclient,
+  dependencies : nkcairo_deps,
+)
+
 nkegl_deps = [
   dep_wayland_client,
   dep_wayland_egl,
@@ -232,4 +239,11 @@ pkgconfig.generate(
   name: 'twclient-nkegl',
   version: meson.project_version(),
   description: 'nuklear GUI library with EGL backend for twclient',
+)
+
+dep_nkegl = declare_dependency(
+  link_with : lib_nkegl,
+  compile_args : twclient_flags,
+  include_directories : inc_twclient,
+  dependencies : nkegl_deps,
 )
