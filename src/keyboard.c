@@ -137,8 +137,12 @@ handle_key(void *data,
 	xkb_keysym_t keysym = xkb_state_key_get_one_sym(globals->inputs.kstate,
 	                                                keycode);
 	bool pressed = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
+	bool unchanged = (keysym == globals->inputs.keysym &&
+	                  keycode == globals->inputs.keycode &&
+	                  pressed == globals->inputs.key_pressed);
 
-	if (is_modifier_key(keysym) || !appsurf || !appsurf->do_frame)
+	if (unchanged || is_modifier_key(keysym) ||
+	    !appsurf || !appsurf->do_frame)
 		return;
 
 	globals->inputs.millisec = millisec;
