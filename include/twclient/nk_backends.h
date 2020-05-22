@@ -56,10 +56,10 @@ typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx,
 /*******************************************************************************
  * shell implementation
  ******************************************************************************/
-struct xdg_toplevel *
-nk_wl_impl_xdg_shell_surface(struct tw_appsurf *app,
-                             struct xdg_surface *xdg_surface);
 
+void
+nk_wl_impl_xdg_toplevel(struct tw_appsurf *app,
+                        struct xdg_toplevel *toplevel);
 void
 nk_wl_impl_wl_shell_surface(struct tw_appsurf *app,
                             struct wl_shell_surface *protocol);

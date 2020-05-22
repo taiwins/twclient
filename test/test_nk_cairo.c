@@ -2,6 +2,10 @@
 #include <twclient/ui.h>
 #include <twclient/nk_backends.h>
 #include <twclient/theme.h>
+#include <wayland-client-core.h>
+#include <wayland-client-protocol.h>
+#include <wayland-util.h>
+#include <wayland-xdg-shell-client-protocol.h>
 
 struct nk_wl_bkend;
 struct nk_context;
@@ -14,41 +18,19 @@ typedef void (*nk_wl_drawcall_t)(struct nk_context *ctx,
 
 static struct application {
 	struct wl_shell *shell;
+	struct xdg_wm_base *base;
 	struct tw_globals global;
 	struct tw_appsurf surface;
 	struct nk_wl_backend *bkend;
 	struct wl_shell_surface *shell_surface;
+	struct xdg_surface *xdg_surface;
+	struct xdg_toplevel *toplevel;
+	bool configured;
 	bool done;
 	struct nk_image image;
 	struct nk_user_font *user_font;
 	struct tw_theme theme;
 } App;
-
-static void
-global_registry_handler(void *data,
-			struct wl_registry *registry, uint32_t id,
-			const char *interface, uint32_t version)
-{
-	if (strcmp(interface, wl_shell_interface.name) == 0) {
-		App.shell = wl_registry_bind(registry, id, &wl_shell_interface, version);
-		fprintf(stdout, "wl_shell %d announced\n", id);
-	} else
-		tw_globals_announce(&App.global, registry, id, interface, version);
-}
-
-
-static void
-global_registry_removal(void *data, struct wl_registry *registry, uint32_t id)
-{
-	fprintf(stdout, "wl_registry removes global! %d\n", id);
-}
-
-
-static struct wl_registry_listener registry_listener = {
-	.global = global_registry_handler,
-	.global_remove = global_registry_removal,
-};
-
 
 void
 sample_widget(struct nk_context *ctx, float width, float height, struct tw_appsurf *data)
@@ -150,6 +132,72 @@ single_widget(struct nk_context *ctx, float width, float height, struct tw_appsu
 	}
 }
 
+static void
+xdg_surface_configure(void *data, struct xdg_surface *xdg_surface,
+                      uint32_t serial)
+{
+	struct application *_app =
+		wl_container_of(data, _app, surface);
+	struct tw_appsurf *app = data;
+	app->tw_globals->inputs.serial = serial;
+	xdg_surface_ack_configure(xdg_surface, serial);
+
+	if (!_app->configured)
+		_app->configured = true;
+}
+
+static struct xdg_surface_listener xdg_impl = {
+	.configure = xdg_surface_configure,
+};
+
+static void
+xdg_wm_ping(void *data,
+            struct xdg_wm_base *xdg_wm_base,
+            uint32_t serial)
+{
+	struct application *app = data;
+	xdg_wm_base_pong(app->base, serial);
+}
+
+
+static struct xdg_wm_base_listener xdg_wm_impl = {
+	.ping = xdg_wm_ping,
+};
+
+
+static void
+global_registry_handler(void *data,
+			struct wl_registry *registry, uint32_t id,
+			const char *interface, uint32_t version)
+{
+	if (strcmp(interface, wl_shell_interface.name) == 0) {
+		App.shell = wl_registry_bind(registry, id, &wl_shell_interface, version);
+		fprintf(stdout, "wl_shell %d announced\n", id);
+	} else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
+		App.base = wl_registry_bind(registry, id, &xdg_wm_base_interface,
+		                            version);
+		xdg_wm_base_add_listener(App.base, &xdg_wm_impl, &App);
+		fprintf(stdout, "xdg_wm_base %d is now available\n", id);
+	} else {
+		tw_globals_announce(&App.global, registry, id, interface, version);
+	}
+}
+
+
+static void
+global_registry_removal(void *data, struct wl_registry *registry, uint32_t id)
+{
+	fprintf(stdout, "wl_registry removes global! %d\n", id);
+}
+
+
+static struct wl_registry_listener registry_listener = {
+	.global = global_registry_handler,
+	.global_remove = global_registry_removal,
+};
+
+
+
 
 int main(int argc, char *argv[])
 {
@@ -173,19 +221,26 @@ int main(int argc, char *argv[])
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);
 	App.done = false;
+	App.configured = false;
 
 	wl_display_dispatch(wl_display);
 	wl_display_roundtrip(wl_display);
 
 	struct wl_surface *wl_surface = wl_compositor_create_surface(App.global.compositor);
-	struct wl_shell_surface *shell_surface = wl_shell_get_shell_surface(App.shell, wl_surface);
+	struct xdg_surface *xdg_surface = xdg_wm_base_get_xdg_surface(App.base, wl_surface);
+	struct xdg_toplevel *toplevel = xdg_surface_get_toplevel(xdg_surface);
+
 	tw_appsurf_init(&App.surface, wl_surface,
 			 &App.global, TW_APPSURF_APP,
 			 TW_APPSURF_COMPOSITE);
+	App.xdg_surface = xdg_surface;
+	App.toplevel = toplevel;
+	xdg_surface_add_listener(xdg_surface, &xdg_impl, &App.surface);
+	nk_wl_impl_xdg_toplevel(&App.surface, toplevel);
 
-	nk_wl_impl_wl_shell_surface(&App.surface, shell_surface);
-	wl_shell_surface_set_toplevel(shell_surface);
-	App.shell_surface = shell_surface;
+	xdg_toplevel_set_title(toplevel, "nuklear cairo test");
+	xdg_toplevel_set_app_id(toplevel, "nuklear cairo test");
+
 	App.surface.known_mimes[TW_MIME_TYPE_TEXT] = "text/";
 	App.bkend = nk_cairo_create_backend();
 	App.user_font = nk_wl_new_font(config, App.bkend);
@@ -193,10 +248,18 @@ int main(int argc, char *argv[])
 	nk_cairo_impl_app_surface(&App.surface, App.bkend, sample_widget,
 				  tw_make_bbox_origin(200, 400, 2));
 
+	// wait until configure is done
+	wl_surface_commit(wl_surface);
+	wl_display_flush(wl_display);
+	while (!App.configured)
+		wl_display_dispatch(wl_display);
+
+	//we shall wait until we got the configure event.
 	tw_appsurf_frame(&App.surface, false);
 
 	tw_globals_dispatch_event_queue(&App.global);
-	wl_shell_surface_destroy(shell_surface);
+	xdg_toplevel_destroy(toplevel);
+	xdg_surface_destroy(xdg_surface);
 	tw_appsurf_release(&App.surface);
 	nk_cairo_destroy_backend(App.bkend);
 
