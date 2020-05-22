@@ -73,14 +73,11 @@ nk_wl_impl_xdg_configure(void *data,
 			 int32_t height,
 			 struct wl_array *states)
 {
+	struct tw_appsurf *app = data;
 
-	struct xdg_surface *xdg_surface = data;
-	struct tw_appsurf *app =
-		xdg_surface_get_user_data(xdg_surface);
+	if (!width || !height)
+		return;
 	tw_appsurf_resize(app, width, height, app->allocation.s);
-	/* xdg_top */
-	xdg_surface_ack_configure(xdg_surface,
-				  app->tw_globals->inputs.serial);
 }
 
 static void
@@ -96,35 +93,18 @@ nk_wl_xdg_toplevel_close(void *data,
 	tw_appsurf_release(app);
 }
 
-static void
-nk_wl_xdg_surface_handle_configure(void *data,
-				   struct xdg_surface *xdg_surface,
-				   uint32_t serial)
-{
-	struct tw_appsurf *app = data;
-	app->tw_globals->inputs.serial = serial;
-}
-
 static struct xdg_toplevel_listener nk_wl_xdgtoplevel_impl =  {
 	.configure = nk_wl_impl_xdg_configure,
 	.close = nk_wl_xdg_toplevel_close,
 };
 
-static struct xdg_surface_listener nk_wl_xdgsurface_impl = {
-	.configure = nk_wl_xdg_surface_handle_configure,
-};
 
-WL_EXPORT struct xdg_toplevel *
-nk_wl_impl_xdg_shell_surface(struct tw_appsurf *app,
-			     struct xdg_surface *xdg_surface)
+WL_EXPORT void
+nk_wl_impl_xdg_toplevel(struct tw_appsurf *app,
+                        struct xdg_toplevel *toplevel)
 {
-	struct xdg_toplevel *toplevel = xdg_surface_get_toplevel(
-		xdg_surface);
-	xdg_surface_add_listener(xdg_surface,
-				 &nk_wl_xdgsurface_impl, app);
 	xdg_toplevel_add_listener(toplevel, &nk_wl_xdgtoplevel_impl,
-				  xdg_surface);
-	return toplevel;
+	                          app);
 }
 
 #ifdef __cplusplus
