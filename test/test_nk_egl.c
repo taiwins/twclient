@@ -12,6 +12,8 @@
 #include <twclient/client.h>
 #include <twclient/nk_backends.h>
 #include <twclient/theme.h>
+#include <wayland-xdg-shell-client-protocol.h>
+
 /* #define STB_IMAGE_IMPLEMENTATION */
 /* #include "stb_image.h" */
 
@@ -23,63 +25,16 @@ static struct application {
 	struct tw_globals global;
 	struct tw_appsurf surface;
 	struct nk_wl_backend *bkend;
+	struct xdg_wm_base *base;
+	struct xdg_surface *xdg_surface;
+	struct xdg_toplevel *toplevel;
 	struct wl_shell_surface *shell_surface;
 	bool done;
+	bool configured;
 	struct nk_image image;
 	struct nk_user_font *user_font;
 	struct tw_theme theme;
 } App;
-
-static void
-global_registry_handler(void *data,
-			struct wl_registry *registry, uint32_t id,
-			const char *interface, uint32_t version)
-{
-	if (strcmp(interface, wl_shell_interface.name) == 0) {
-		App.shell = wl_registry_bind(registry, id, &wl_shell_interface, version);
-		fprintf(stdout, "wl_shell %d announced\n", id);
-	} else
-		tw_globals_announce(&App.global, registry, id, interface, version);
-}
-
-
-static void
-global_registry_removal(void *data, struct wl_registry *registry, uint32_t id)
-{
-	fprintf(stdout, "wl_registry removes global! %d\n", id);
-}
-
-
-static struct wl_registry_listener registry_listener = {
-	.global = global_registry_handler,
-	.global_remove = global_registry_removal,
-};
-
-/*
-static struct nk_image
-load_texture(const char *filename)
-{
-    int x,y,n;
-    GLuint tex;
-    unsigned char *data = stbi_load(filename, &x, &y, &n, 0);
-    if (!data) {
-	    fprintf(stderr, "[SDL]: failed to load image: %s\n", filename);
-	    exit(-1);
-    }
-
-    glGenTextures(1, &tex);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, x, y, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-
-    stbi_image_free(data);
-    return nk_image_id((int)tex);
-}
-*/
 
 static void
 sample_widget(struct nk_context *ctx, float width, float height, struct tw_appsurf *data)
@@ -133,17 +88,71 @@ sample_widget(struct nk_context *ctx, float width, float height, struct tw_appsu
 	}
 }
 
+static void
+xdg_surface_configure(void *data, struct xdg_surface *xdg_surface,
+                      uint32_t serial)
+{
+	struct application *_app =
+		wl_container_of(data, _app, surface);
+	struct tw_appsurf *app = data;
+	app->tw_globals->inputs.serial = serial;
+	xdg_surface_ack_configure(xdg_surface, serial);
+
+	if (!_app->configured)
+		_app->configured = true;
+}
+
+static struct xdg_surface_listener xdg_impl = {
+	.configure = xdg_surface_configure,
+};
+
+static void
+xdg_wm_ping(void *data,
+            struct xdg_wm_base *xdg_wm_base,
+            uint32_t serial)
+{
+	struct application *app = data;
+	xdg_wm_base_pong(app->base, serial);
+}
+
+static struct xdg_wm_base_listener xdg_wm_impl = {
+	.ping = xdg_wm_ping,
+};
+
+static void
+global_registry_handler(void *data,
+			struct wl_registry *registry, uint32_t id,
+			const char *interface, uint32_t version)
+{
+	if (strcmp(interface, wl_shell_interface.name) == 0) {
+		App.shell = wl_registry_bind(registry, id, &wl_shell_interface, version);
+		fprintf(stdout, "wl_shell %d announced\n", id);
+	} else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
+		App.base = wl_registry_bind(registry, id, &xdg_wm_base_interface,
+		                            version);
+		xdg_wm_base_add_listener(App.base, &xdg_wm_impl, &App);
+		fprintf(stdout, "xdg_wm_base %d is now available\n", id);
+	} else {
+		tw_globals_announce(&App.global, registry, id, interface, version);
+	}
+}
+
+static void
+global_registry_removal(void *data, struct wl_registry *registry, uint32_t id)
+{
+	fprintf(stdout, "wl_registry removes global! %d\n", id);
+}
+
+
+static struct wl_registry_listener registry_listener = {
+	.global = global_registry_handler,
+	.global_remove = global_registry_removal,
+};
+
+
 
 int main(int argc, char *argv[])
 {
-	/* const char *wayland_socket = getenv("WAYLAND_SOCKET"); */
-	/* const int fd = atoi(wayland_socket); */
-	/* FILE *log = fopen("/tmp/client-log", "w"); */
-	/* if (!log) */
-	/*	return -1; */
-	/* fprintf(log, "%d\n", fd); */
-	/* fflush(log); */
-	/* fclose(log); */
 	const nk_rune basic_range[] = {0x0020, 0x00ff, 0};
 	const nk_rune pua_range[] = {0xe000, 0xf8ff, 0};
 	const nk_rune *ranges[] = {
@@ -176,24 +185,35 @@ int main(int argc, char *argv[])
 	wl_display_roundtrip(wl_display);
 
 	struct wl_surface *wl_surface = wl_compositor_create_surface(App.global.compositor);
-	struct wl_shell_surface *shell_surface = wl_shell_get_shell_surface(App.shell, wl_surface);
+	struct xdg_surface *xdg_surface = xdg_wm_base_get_xdg_surface(App.base, wl_surface);
+	struct xdg_toplevel *toplevel = xdg_surface_get_toplevel(xdg_surface);
 	tw_appsurf_init_default(&App.surface, wl_surface,
 			 &App.global);
 
-	nk_wl_impl_wl_shell_surface(&App.surface, shell_surface);
-	wl_shell_surface_set_toplevel(shell_surface);
-	App.shell_surface = shell_surface;
+	xdg_surface_add_listener(xdg_surface, &xdg_impl, &App.surface);
+	nk_wl_impl_xdg_toplevel(&App.surface, toplevel);
+	App.xdg_surface = xdg_surface;
+	App.toplevel = toplevel;
 
 	App.bkend = nk_egl_create_backend(wl_display);
 	App.user_font = nk_wl_new_font(config, App.bkend);
 
-	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget, tw_make_bbox_origin(200, 400, 2));
+	nk_egl_impl_app_surface(&App.surface, App.bkend, sample_widget,
+	                        tw_make_bbox_origin(200, 400, 2));
+
+	// wait until configure is done
+	// the configure here is important for us to trigger configure events.
+	wl_surface_commit(wl_surface);
+	wl_display_flush(wl_display);
+	while (!App.configured)
+		wl_display_dispatch(wl_display);
 
 	tw_appsurf_frame(&App.surface, false);
 
 	tw_globals_dispatch_event_queue(&App.global);
 
-	wl_shell_surface_destroy(shell_surface);
+	xdg_toplevel_destroy(toplevel);
+	xdg_surface_destroy(xdg_surface);
 	tw_appsurf_release(&App.surface);
 	nk_egl_destroy_backend(App.bkend);
 	tw_globals_release(&App.global);
