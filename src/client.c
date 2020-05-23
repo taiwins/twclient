@@ -117,19 +117,39 @@ seat_capabilities(void *data,
 		       uint32_t capabilities)
 {
 	struct tw_globals *globals = (struct tw_globals *)data;
-	if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
+	if ((capabilities & WL_SEAT_CAPABILITY_KEYBOARD) &&
+	    !globals->inputs.wl_keyboard) {
 		fprintf(stderr, "got a keyboard\n");
 		globals->inputs.wl_keyboard = wl_seat_get_keyboard(wl_seat);
 		tw_keyboard_init(globals->inputs.wl_keyboard, globals);
+	} else if (!(capabilities& WL_SEAT_CAPABILITY_KEYBOARD) &&
+	           globals->inputs.wl_keyboard) {
+		tw_keyboard_destroy(globals->inputs.wl_keyboard);
+		globals->inputs.wl_keyboard = NULL;
+		fprintf(stderr, "lost a keyboard\n");
 	}
-	if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
+
+	if ((capabilities & WL_SEAT_CAPABILITY_POINTER) &&
+	    !globals->inputs.wl_pointer) {
 		globals->inputs.wl_pointer = wl_seat_get_pointer(wl_seat);
 		tw_pointer_init(globals->inputs.wl_pointer, globals);
-		fprintf(stderr, "got a mouse\n");
+		fprintf(stderr, "got a pointer\n");
+	} else if (!(capabilities& WL_SEAT_CAPABILITY_POINTER) &&
+	           globals->inputs.wl_pointer) {
+		tw_pointer_destroy(globals->inputs.wl_pointer);
+		globals->inputs.wl_pointer = NULL;
+		fprintf(stderr, "lost a pointer\n");
 	}
-	if (capabilities & WL_SEAT_CAPABILITY_TOUCH) {
+
+	if ((capabilities & WL_SEAT_CAPABILITY_TOUCH) &&
+	    !globals->inputs.wl_touch) {
 		globals->inputs.wl_touch = wl_seat_get_touch(wl_seat);
 		fprintf(stderr, "got a touchpad\n");
+	} else if (!(capabilities& WL_SEAT_CAPABILITY_TOUCH) &&
+	           globals->inputs.wl_touch) {
+		tw_touch_destroy(globals->inputs.wl_touch);
+		globals->inputs.wl_touch = NULL;
+		fprintf(stderr, "lost a touchpad\n");
 	}
 }
 
