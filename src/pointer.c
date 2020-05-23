@@ -108,6 +108,7 @@ pointer_enter(void *data,
 {
 	struct tw_globals *globals = data;
 	struct tw_appsurf *app = tw_appsurf_from_wl_surface(surface);
+
 	globals->inputs.pointer_focused = surface;
 	globals->inputs.enter_serial = serial;
 	globals->inputs.serial = serial;
@@ -130,6 +131,7 @@ pointer_leave(void *data,
 	      struct wl_surface *surface)
 {
 	struct tw_globals *globals = data;
+
 	globals->inputs.serial = serial;
 	globals->inputs.pointer_focused = NULL;
 	globals->inputs.pointer_events = POINTER_LEAVE;
@@ -144,6 +146,9 @@ pointer_motion(void *data,
 	       wl_fixed_t y)
 {
 	struct tw_globals *globals = data;
+
+	if (wl_pointer != globals->inputs.wl_pointer)
+		return;
 	globals->inputs.serial = serial;
 	globals->inputs.dx = wl_fixed_to_int(x) - globals->inputs.sx;
 	globals->inputs.dy = wl_fixed_to_int(y) - globals->inputs.sy;
@@ -184,7 +189,7 @@ pointer_button(void *data,
 	struct tw_appsurf *app =
 		pointer_button_meta(globals, serial, time, button,
 				    state);
-	if (!app)
+	if (wl_pointer != globals->inputs.wl_pointer || !app)
 		return;
 
 	//test if at right cornor,
@@ -206,6 +211,9 @@ pointer_axis(void *data,
 	     wl_fixed_t value)
 {
 	struct tw_globals *globals = data;
+
+	if (wl_pointer != globals->inputs.wl_pointer)
+		return;
 	globals->inputs.millisec = time;
 
 	globals->inputs.dx_axis += (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) ?
@@ -228,6 +236,9 @@ pointer_axis_stop(void *data,
 		  uint32_t time, uint32_t axis)
 {
 	struct tw_globals *globals = data;
+
+	if (wl_pointer != globals->inputs.wl_pointer)
+		return;
 	globals->inputs.millisec = time;
 	//we do not implement kinect scrolling
 }
@@ -262,14 +273,16 @@ pointer_frame(void *data,
 	      struct wl_pointer *wl_pointer)
 {
 	//we need somehow generate a timestamp
+	struct tw_app_event e;
+	uint32_t event;
 	struct tw_globals *globals = data;
 	struct tw_appsurf *appsurf = pointer_frame_meta(globals);
-	if (!appsurf)
+
+        if (wl_pointer != globals->inputs.wl_pointer || !appsurf)
 		return;
 
-	struct tw_app_event e;
 	e.time = globals->inputs.millisec;
-	uint32_t event = globals->inputs.pointer_events;
+	event = globals->inputs.pointer_events;
 	if (event & POINTER_AXIS) {
 		e.type = TW_POINTER_AXIS;
 		e.axis.mod = globals->inputs.modifiers;
@@ -323,6 +336,9 @@ resize_pointer_button(void *data,
 {
 	//this is the ugly part we have to copy them again
 	struct tw_globals *globals = data;
+        if (wl_pointer != globals->inputs.wl_pointer)
+		return;
+
 	pointer_button_meta(globals, serial, time, button, state);
 
 	/* struct tw_globals *globals = data; */
@@ -338,11 +354,12 @@ resize_pointer_frame(void *data,
 {
 	//we need somehow generate a timestamp
 	struct tw_globals *globals = data;
+	uint32_t event = globals->inputs.pointer_events;
 	struct tw_appsurf *app = pointer_frame_meta(globals);
-	if (!app)
+
+	if (wl_pointer != globals->inputs.wl_pointer || !app)
 		return;
 
-	uint32_t event = globals->inputs.pointer_events;
 	//REPEAT CODE
 	if (event & POINTER_MOTION)
 		tw_appsurf_resize(app,
@@ -441,8 +458,17 @@ void
 tw_pointer_destroy(struct wl_pointer *wl_pointer)
 {
 	struct tw_globals *globals = wl_pointer_get_user_data(wl_pointer);
-	wl_cursor_theme_destroy(globals->inputs.cursor_theme);
-	wl_surface_destroy(globals->inputs.cursor_surface);
+
+        if (globals->inputs.cursor_theme) {
+		wl_cursor_theme_destroy(globals->inputs.cursor_theme);
+		globals->inputs.cursor = NULL;
+		globals->inputs.cursor_buffer = NULL;
+		globals->inputs.cursor_theme = NULL;
+	}
+	if (globals->inputs.cursor_surface) {
+		wl_surface_destroy(globals->inputs.cursor_surface);
+		globals->inputs.cursor_surface = NULL;
+	}
 
 	wl_pointer_destroy(wl_pointer);
 }
