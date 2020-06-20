@@ -18,6 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
+#include "twclient/ui_event.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <twclient/client.h>
@@ -265,6 +266,9 @@ shm_buffer_surface_swap(struct tw_appsurf *surf, const struct tw_app_event *e)
 	case TW_FRAME_START:
 		ret = false;
 		break;
+	case TW_TIMER:
+		ret = false;
+		break;
 	case TW_RESIZE:
 		ret = true;
 		shm_buffer_resize(surf, e);
@@ -293,8 +297,6 @@ shm_buffer_surface_swap(struct tw_appsurf *surf, const struct tw_app_event *e)
 		return;
 	*dirty = true;
 	//also, we should have frame callback here.
-	if (surf->need_animation)
-		tw_appsurf_request_frame(surf);
 	wl_surface_attach(surf->wl_surface, free_buffer, 0, 0);
 	draw_cb(surf, free_buffer, &damage);
 	wl_surface_damage(surf->wl_surface,
