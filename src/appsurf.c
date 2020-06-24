@@ -18,13 +18,14 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
-#include "twclient/ui_event.h"
+
 #include <stdlib.h>
 #include <assert.h>
 #include <twclient/client.h>
 #include <twclient/ui.h>
 #include <twclient/egl.h>
 #include <twclient/shmpool.h>
+#include <wayland-client-protocol.h>
 
 WL_EXPORT void
 tw_appsurf_init_egl(struct tw_appsurf *surf, struct tw_egl_env *env)
@@ -159,7 +160,7 @@ tw_appsurf_frame_done(void *user_data, struct wl_callback *cb, uint32_t data)
 	surf->last_serial = data;
 }
 
-static struct wl_callback_listener tw_appsurf_wl_frame_impl = {
+static const struct wl_callback_listener tw_appsurf_wl_frame_impl = {
 	.done = tw_appsurf_frame_done,
 };
 
@@ -171,7 +172,45 @@ tw_appsurf_request_frame(struct tw_appsurf *surf)
 	wl_callback_add_listener(callback, &tw_appsurf_wl_frame_impl, surf);
 }
 
+struct tw_app_event_container {
+	struct tw_appsurf *surf;
+	struct tw_app_event event;
+};
 
+static void
+tw_appsurf_run_frame_event(void *user_data, struct wl_callback *cb,
+                           uint32_t data)
+{
+	struct tw_app_event_container *c = user_data;
+	struct tw_appsurf *surf = c->surf;
+	if (cb)
+		wl_callback_destroy(cb);
+	surf->last_serial = data;
+	c->event.resize.serial = data;
+	_tw_appsurf_run_frame(surf, &c->event);
+	free(c);
+}
+
+static const struct wl_callback_listener tw_appsurf_frame_event_impl = {
+	.done = tw_appsurf_run_frame_event,
+};
+
+WL_EXPORT void
+tw_appsurf_request_frame_event(struct tw_appsurf *surf,
+                               struct tw_app_event *e)
+{
+	struct wl_callback *callback;
+	struct tw_app_event_container *container =
+		calloc(1, sizeof(struct tw_app_event_container));
+
+        if (!container)
+		return;
+        container->surf = surf;
+        container->event = *e;
+	callback = wl_surface_frame(surf->wl_surface);
+	wl_callback_add_listener(callback, &tw_appsurf_frame_event_impl,
+	                         container);
+}
 
 /*******************************************************************************
  * shm_buffer_impl_surface
@@ -207,14 +246,16 @@ shm_wl_buffer_release(void *data, struct wl_buffer *wl_buffer)
 
 /* setup the pool and buffer, destroy the previous pool if there is
  */
-WL_EXPORT void
+WL_EXPORT bool
 shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo)
 {
 	if (surf->pool && tw_shm_pool_release_if_unused(surf->pool))
 		free(surf->pool);
 	surf->pool = calloc(1, sizeof(struct tw_shm_pool));
-	tw_shm_pool_init(surf->pool, surf->tw_globals->shm, tw_bbox_area(geo) * 2,
-		      surf->tw_globals->buffer_format);
+	if (!tw_shm_pool_init(surf->pool, surf->tw_globals->shm,
+	                      tw_bbox_area(geo) * 2,
+	                      surf->tw_globals->buffer_format))
+		return false;
 	for (int i = 0; i < 2; i++) {
 		surf->wl_buffer[i] = tw_shm_pool_alloc_buffer(
 			surf->pool, geo->w * geo->s, geo->h * geo->s);
@@ -223,6 +264,7 @@ shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo)
 		tw_shm_pool_set_buffer_release_notify(surf->wl_buffer[i],
 						   shm_wl_buffer_release, surf);
 	}
+	return true;
 }
 
 static int
@@ -236,7 +278,8 @@ shm_pool_resize_idle(struct tw_event *e, int fd)
 	    surf->pending_allocation.s == surf->allocation.s)
 		return TW_EVENT_DEL;
 
-	shm_buffer_reallocate(surf, geo);
+	if (!shm_buffer_reallocate(surf, geo))
+		return TW_EVENT_DEL;
 	surf->allocation = surf->pending_allocation;
 
 	tw_appsurf_frame(surf, surf->need_animation);
@@ -277,8 +320,7 @@ shm_buffer_surface_swap(struct tw_appsurf *surf, const struct tw_app_event *e)
 		ret = true;
 		break;
 	}
-	if (ret)
-		return;
+	if (ret) return;
 
 	struct wl_buffer *free_buffer = NULL;
 	struct tw_bbox damage;
