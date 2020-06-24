@@ -136,8 +136,6 @@ tw_appsurf_resize(struct tw_appsurf *surf,
 	e.resize.ns = ns;
 	e.resize.edge = WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT;
 	e.resize.serial = surf->tw_globals->inputs.serial;
-	if (surf->allocation.s != ns)
-		wl_surface_set_buffer_scale(surf->wl_surface, ns);
 	_tw_appsurf_run_frame(surf, &e);
 }
 
@@ -280,6 +278,9 @@ shm_pool_resize_idle(struct tw_event *e, int fd)
 
 	if (!shm_buffer_reallocate(surf, geo))
 		return TW_EVENT_DEL;
+	if (surf->allocation.s != surf->pending_allocation.s)
+		wl_surface_set_buffer_scale(surf->wl_surface,
+		                            surf->pending_allocation.s);
 	surf->allocation = surf->pending_allocation;
 
 	tw_appsurf_frame(surf, surf->need_animation);
