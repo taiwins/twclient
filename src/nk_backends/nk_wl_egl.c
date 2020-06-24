@@ -614,14 +614,16 @@ static int
 nk_egl_resize(struct tw_event *e, int fd)
 {
 	struct tw_appsurf *surf = e->data;
-	if (surf->pending_allocation.w == surf->allocation.w &&
-	    surf->pending_allocation.h == surf->allocation.h &&
-	    surf->pending_allocation.s == surf->allocation.s)
+	uint32_t nw = surf->pending_allocation.w;
+	uint32_t nh = surf->pending_allocation.h;
+	uint32_t ns = surf->pending_allocation.s;
+
+	if (nw == surf->allocation.w && nh == surf->allocation.h &&
+	    ns == surf->allocation.s)
 		return TW_EVENT_DEL;
-	wl_egl_window_resize(surf->eglwin,
-			     surf->pending_allocation.w * surf->pending_allocation.s,
-			     surf->pending_allocation.h * surf->pending_allocation.s,
-			     0, 0);
+	wl_egl_window_resize(surf->eglwin, nw * ns, nh * ns, 0, 0);
+	if (surf->allocation.s != ns)
+		wl_surface_set_buffer_scale(surf->wl_surface, ns);
 	surf->allocation = surf->pending_allocation;
 	return TW_EVENT_DEL;
 }
