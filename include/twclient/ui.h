@@ -259,6 +259,16 @@ void
 tw_appsurf_request_frame(struct tw_appsurf *surf);
 
 /**
+ * @brief request a event to run at next frame.
+ *
+ * as compared to idle events, this callback could help reducing the amount of
+ * unecessary requests.
+ */
+void
+tw_appsurf_request_frame_event(struct tw_appsurf *surf,
+                               struct tw_app_event *event);
+
+/**
  * @brief kick off the drawing for the surface
  *
  * user call this function to start drawing. It triggers the frames untils
@@ -319,7 +329,7 @@ shm_buffer_impl_app_surface(struct tw_appsurf *surf, shm_buffer_draw_t draw_call
  * @brief we can expose part of shm_buffer implementation for any shm_pool
  * double buffer based implementation
  */
-void
+bool
 shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo);
 
 void
