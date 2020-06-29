@@ -24,13 +24,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include <linux/input.h>
-#ifndef GL_GLEXT_PROTOTYPES
-#define GL_GLEXT_PROTOTYPES
-#endif
 #include <time.h>
 #include <stdbool.h>
-#include <EGL/egl.h>
-#include <GL/gl.h>
 #include <wayland-egl.h>
 #include <wayland-client.h>
 
@@ -41,6 +36,7 @@
 #define MAX_ELEMENT_BUFFER 128 * 128
 
 #include <twclient/egl.h>
+#include <twclient/glhelper.h>
 #include "nk_wl_internal.h"
 #include <ctypes/helpers.h>
 
@@ -94,7 +90,7 @@ struct nk_egl_backend {
 	struct {
 		struct tw_egl_env env;
 		bool compiled;
-		GLuint glprog, vs, fs;
+		GLuint glprog;
 		GLuint vao, vbo, ebo;
 		GLuint font_tex;
 		GLint attrib_pos;
@@ -206,23 +202,6 @@ is_opengl_context(struct tw_egl_env *env)
 	return value == EGL_OPENGL_API;
 }
 
-static inline void
-diagnose_shader(GLuint shader, const char *type)
-{
-	GLint status, loglen;
-
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &loglen);
-
-	if (status != GL_TRUE) {
-		char log_error[loglen+1];
-		glGetShaderInfoLog(shader, loglen+1, &loglen, log_error);
-		fprintf(stderr, "%s shader compiled error: %s\n",
-		        type, log_error);
-	}
-	assert(status == GL_TRUE);
-}
-
 static bool
 compile_backend(struct nk_egl_backend *bkend, EGLSurface eglsurface)
 {
@@ -230,7 +209,6 @@ compile_backend(struct nk_egl_backend *bkend, EGLSurface eglsurface)
 		return true;
 	const GLchar *vertex_shader, *fragment_shader;
 
-	GLint status;
 	GLsizei stride;
 
 	make_current(bkend, eglsurface);
@@ -238,23 +216,11 @@ compile_backend(struct nk_egl_backend *bkend, EGLSurface eglsurface)
 	vertex_shader = is_opengl_context(&bkend->env) ? glsl_vs : gles_vs;
 	fragment_shader = is_opengl_context(&bkend->env) ? glsl_fs : gles_fs;
 
-	bkend->glprog = glCreateProgram();
-	bkend->vs = glCreateShader(GL_VERTEX_SHADER);
-	bkend->fs = glCreateShader(GL_FRAGMENT_SHADER);
+	bkend->glprog = tw_gl_create_program(vertex_shader, fragment_shader,
+	                                     NULL, NULL, NULL);
 	assert(glGetError() == GL_NO_ERROR);
+	assert(bkend->glprog);
 
-	glShaderSource(bkend->vs, 1, &vertex_shader, 0);
-	glCompileShader(bkend->vs);
-	diagnose_shader(bkend->vs, "vertex");
-	glShaderSource(bkend->fs, 1, &fragment_shader, 0);
-	glCompileShader(bkend->fs);
-	diagnose_shader(bkend->fs, "fragment");
-
-	glAttachShader(bkend->glprog, bkend->vs);
-	glAttachShader(bkend->glprog, bkend->fs);
-	glLinkProgram(bkend->glprog);
-	glGetProgramiv(bkend->glprog, GL_LINK_STATUS, &status);
-	assert(status == GL_TRUE);
 	/// part 2) uploading resource
 	glUseProgram(bkend->glprog);
 	bkend->uniform_tex = glGetUniformLocation(bkend->glprog, "Texture");
@@ -310,10 +276,6 @@ release_backend(struct nk_egl_backend *bkend)
 		glDeleteBuffers(1, &bkend->vbo);
 		glDeleteBuffers(1, &bkend->ebo);
 		glDeleteVertexArrays(1, &bkend->vao);
-		glDetachShader(GL_VERTEX_SHADER, bkend->vs);
-		glDeleteShader(bkend->vs);
-		glDetachShader(GL_FRAGMENT_SHADER, bkend->fs);
-		glDeleteShader(bkend->fs);
 		glDeleteProgram(bkend->glprog);
 		//nuklear resource
 		//egl free context
@@ -610,36 +572,10 @@ _nk_egl_draw_end(struct nk_egl_backend *bkend)
 	//nk_buffer_clear(&bkend->cmds);
 }
 
-static int
-nk_egl_resize(struct tw_event *e, int fd)
-{
-	struct tw_appsurf *surf = e->data;
-	uint32_t nw = surf->pending_allocation.w;
-	uint32_t nh = surf->pending_allocation.h;
-	uint32_t ns = surf->pending_allocation.s;
-
-	if (nw == surf->allocation.w && nh == surf->allocation.h &&
-	    ns == surf->allocation.s)
-		return TW_EVENT_DEL;
-	wl_egl_window_resize(surf->eglwin, nw * ns, nh * ns, 0, 0);
-	if (surf->allocation.s != ns)
-		wl_surface_set_buffer_scale(surf->wl_surface, ns);
-	surf->allocation = surf->pending_allocation;
-	return TW_EVENT_DEL;
-}
-
 void
 nk_wl_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
-	surf->pending_allocation.w = e->resize.nw;
-	surf->pending_allocation.h = e->resize.nh;
-	surf->pending_allocation.s = e->resize.ns;
-
-	struct tw_event re = {
-		.data = surf,
-		.cb = nk_egl_resize,
-	};
-	tw_event_queue_add_idle(&surf->tw_globals->event_queue, &re);
+	eglwin_resize(surf, e);
 }
 
 static void
