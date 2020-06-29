@@ -23,9 +23,12 @@
 #define TW_EGL_IFACE_H
 
 #include <EGL/egl.h>
-#include <GL/gl.h>
+#include <EGL/eglext.h>
+
 #include <wayland-egl.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 
@@ -40,9 +43,14 @@ struct tw_egl_env {
 	EGLConfig config;
 };
 
-bool tw_egl_env_init(struct tw_egl_env *env, const struct wl_display *disp);
-bool tw_egl_env_init_shared(struct tw_egl_env *this, const struct tw_egl_env *another);
-void tw_egl_env_end(struct tw_egl_env *env);
+bool
+tw_egl_env_init(struct tw_egl_env *env, const struct wl_display *disp);
+
+bool
+tw_egl_env_init_shared(struct tw_egl_env *this,
+                       const struct tw_egl_env *another);
+void
+tw_egl_env_end(struct tw_egl_env *env);
 
 #ifdef __cplusplus
 }

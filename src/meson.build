@@ -14,15 +14,18 @@ dep_rsvg = dependency('librsvg-2.0')
 
 #this can go into nkegl
 dep_egl = dependency('egl')
+dep_gl = dependency('gl', required: false )
+dep_gles = dependency('glesv2', required: false)
 dep_gls = []
-foreach name : ['gl', 'glesv2']
-  d = dependency(name, required: false)
-  if d.found()
-    dep_gls += d
-  endif
-endforeach
-if dep_gls.length() == 0
-  error('GL not found, required by nkegl\n')
+
+if dep_gl.found()
+  dep_gls += dep_gl
+  global_args += '-D_TW_USE_GL'
+elif dep_gles.found()
+  dep_gls += dep_gles
+  global_args += '-D_TW_USE_GLES'
+else
+  error('no GL runtime found, required by twclient\n')
 endif
 
 pkgconfig = import('pkgconfig')
@@ -33,6 +36,7 @@ src_twclient = [
   'client.c',
   'appsurf.c',
   'egl.c',
+  'glhelper.c',
   'buffer.c',
   'event_queue.c',
   #inputs

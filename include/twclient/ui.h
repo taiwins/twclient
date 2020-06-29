@@ -205,6 +205,7 @@ struct tw_appsurf {
 		struct {
 			/* we do not necessary need it but when it comes to
 			 * surface destroy you will need it */
+			EGLContext eglcontext;
 			EGLDisplay egldisplay;
 			struct wl_egl_window *eglwin;
 			EGLSurface eglsurface;
@@ -337,6 +338,16 @@ shm_buffer_resize(struct tw_appsurf *surf, const struct tw_app_event *e);
 
 void
 shm_buffer_destroy_app_surface(struct tw_appsurf *surf);
+
+
+typedef void (*eglwin_draw_t)(struct tw_appsurf *surf, struct tw_bbox *geo);
+
+void
+eglwin_impl_app_surface(struct tw_appsurf *surf, eglwin_draw_t draw_call,
+                        const struct tw_bbox geo, struct tw_egl_env *env);
+
+void
+eglwin_resize(struct tw_appsurf *surf, const struct tw_app_event *e);
 
 /**
  * /brief second implementation we provide here is the parent surface

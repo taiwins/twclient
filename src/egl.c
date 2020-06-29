@@ -21,20 +21,8 @@
 
 #include <time.h>
 #include <string.h>
-
-#ifndef GL_GLEXT_PROTOTYPES
-#define GL_GLEXT_PROTOTYPES
-#endif
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
 #include <dlfcn.h>
-
-
-#include <GL/gl.h>
-#include <GL/glext.h>
 #include <wayland-egl.h>
-#include <stdbool.h>
-#include <cairo/cairo.h>
 #include <twclient/client.h>
 #include <twclient/egl.h>
 #include <ctypes/helpers.h>
@@ -103,6 +91,8 @@ extern EGLBoolean loadEGLExternalPlatform(int major, int minor,
  *                          EGL OpenGL environment
  ******************************************************************************/
 
+#if defined (_TW_USE_GL)
+
 static const EGLint gl_config_attribs[] = {
 	EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
 	EGL_RED_SIZE, 8,
@@ -169,9 +159,11 @@ init_opengl_context(struct tw_egl_env *env)
 	return true;
 }
 
+#endif
 /*******************************************************************************
  *                          EGL OpenGL ES environment
  ******************************************************************************/
+#if defined (_TW_USE_GLES)
 
 static const EGLint gles3_config_attribs[] = {
 	EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -269,6 +261,8 @@ init_opengl_es_context(struct tw_egl_env *env)
 	return true;
 }
 
+#endif
+
 /*******************************************************************************
  *                                egl_env API
  ******************************************************************************/
@@ -290,10 +284,11 @@ tw_egl_env_init(struct tw_egl_env *env, const struct wl_display *d)
 	ASSERT(eglInitialize(env->egl_display, &major, &minor) == EGL_TRUE);
 
 	eglGetConfigs(env->egl_display, NULL, 0, &n);
-	if (init_opengl_context(env))
-		ret = true;
-	else if (init_opengl_es_context(env))
-		ret = true;
+#if defined (_TW_USE_GL)
+	ret = init_opengl_context(env);
+#elif defined (_TW_USE_GLES)
+	ret = init_opengl_es_context(env);
+#endif
 	debug_egl_config_attribs(env);
 	return ret;
 }

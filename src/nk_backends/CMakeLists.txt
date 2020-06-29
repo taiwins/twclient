@@ -8,6 +8,8 @@ add_library(twclient-nkegl OBJECT
 set_target_properties(twclient-nkegl
   PROPERTIES POSITION_INDEPENDENT_CODE 1
   )
+target_compile_definitions(twclient-nkegl
+  PUBLIC "-D_TW_USE_GL")
 target_link_libraries(twclient-nkegl PUBLIC
   twclient::twclient
   twclient::icons
