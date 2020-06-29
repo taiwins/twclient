@@ -6,6 +6,7 @@ add_library(twclient OBJECT
   client.c
   appsurf.c
   egl.c
+  glhelper.c
   buffer.c
   event_queue.c
   #inputs
@@ -18,6 +19,8 @@ set_target_properties(twclient
 target_include_directories(twclient
   PUBLIC "${TWCLIENT_INCLUDE_DIR}"
   )
+target_compile_definitions(twclient
+  PUBLIC "-D_TW_USE_GL")
 target_link_libraries(twclient PUBLIC
   m
   ctypes

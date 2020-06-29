@@ -31,6 +31,7 @@ WL_EXPORT void
 tw_appsurf_init_egl(struct tw_appsurf *surf, struct tw_egl_env *env)
 {
 	surf->egldisplay = env->egl_display;
+	surf->eglcontext = env->egl_context;
 	surf->eglwin = wl_egl_window_create(surf->wl_surface,
 	                                    surf->allocation.w *
 	                                    surf->allocation.s,
@@ -416,4 +417,91 @@ embeded_impl_app_surface(struct tw_appsurf *surf, struct tw_appsurf *parent,
 	surf->pending_allocation = geo;
 	surf->destroy = embeded_app_unhook;
 	wl_list_init(&surf->filter_head);
+}
+
+/*******************************************************************************
+ * EGL window implemenation
+ ******************************************************************************/
+static void
+eglwin_surf_swap_buffer(struct tw_appsurf *surf, const struct tw_app_event *e)
+{
+	eglwin_draw_t draw_call = surf->user_data;
+	bool ret = true;
+	switch (e->type) {
+	case TW_FRAME_START:
+	case TW_TIMER:
+		ret = false;
+		break;
+	case TW_RESIZE:
+		ret = true;
+		eglwin_resize(surf, e);
+		break;
+	default:
+		ret = true;
+		break;
+	}
+	if (ret) return;
+
+	eglMakeCurrent(surf->egldisplay, surf->eglsurface, surf->eglsurface,
+	               surf->eglcontext);
+	draw_call(surf, &surf->allocation);
+	eglSwapBuffers(surf->egldisplay, surf->eglsurface);
+}
+
+static void
+eglwin_destroy_app_surface(struct tw_appsurf *surf)
+{
+	//hopefully current context exists
+	eglMakeCurrent(surf->egldisplay, EGL_NO_SURFACE, EGL_NO_SURFACE,
+		       surf->eglcontext);
+	eglDestroySurface(surf->egldisplay, surf->eglsurface);
+	wl_egl_window_destroy(surf->eglwin);
+	surf->eglwin = NULL;
+	surf->egldisplay = EGL_NO_DISPLAY;
+	surf->eglsurface = EGL_NO_SURFACE;
+	surf->eglcontext = EGL_NO_CONTEXT;
+}
+
+static int
+eglwin_resize_idle(struct tw_event *e, int fd)
+{
+	struct tw_appsurf *surf = e->data;
+	uint32_t nw = surf->pending_allocation.w;
+	uint32_t nh = surf->pending_allocation.h;
+	uint32_t ns = surf->pending_allocation.s;
+
+	if (nw == surf->allocation.w && nh == surf->allocation.h &&
+	    ns == surf->allocation.s)
+		return TW_EVENT_DEL;
+	wl_egl_window_resize(surf->eglwin, nw * ns, nh * ns, 0, 0);
+	if (surf->allocation.s != ns)
+		wl_surface_set_buffer_scale(surf->wl_surface, ns);
+	surf->allocation = surf->pending_allocation;
+	return TW_EVENT_DEL;
+}
+
+void
+eglwin_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
+{
+	surf->pending_allocation.w = e->resize.nw;
+	surf->pending_allocation.h = e->resize.nh;
+	surf->pending_allocation.s = e->resize.ns;
+
+	struct tw_event re = {
+		.data = surf,
+		.cb = eglwin_resize_idle,
+	};
+	tw_event_queue_add_idle(&surf->tw_globals->event_queue, &re);
+}
+
+void
+eglwin_impl_app_surface(struct tw_appsurf *surf, eglwin_draw_t draw_call,
+                        const struct tw_bbox geo, struct tw_egl_env *env)
+{
+	surf->do_frame = eglwin_surf_swap_buffer;
+	surf->user_data = draw_call;
+	surf->destroy = eglwin_destroy_app_surface;
+	surf->allocation = geo;
+	tw_appsurf_init_egl(surf, env);
+	wl_surface_set_buffer_scale(surf->wl_surface, geo.s);
 }
