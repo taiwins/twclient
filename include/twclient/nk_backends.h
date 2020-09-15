@@ -44,7 +44,23 @@ struct tw_egl_env;
 #define NK_INCLUDE_FONT_BAKING
 #define NK_KEYSTATE_BASED_INPUT
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-compare"
+#pragma clang diagnostic ignored "-Wunused-variable"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
+
 #include "nuklear/nuklear.h"
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 struct xdg_toplevel;
 struct xdg_surface;

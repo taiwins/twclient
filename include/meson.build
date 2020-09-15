@@ -1,17 +1,24 @@
 cc = meson.get_compiler('c')
-if cc.has_argument('-Wno-type-limits')
-  cflags_maybe = ['-Wno-type-limits']
-else
-  cflags_maybe = []
-endif
+
+stb_cflags=cc.get_supported_arguments(
+  ['-Wno-type-limits',
+   '-Wno-sign-compare',
+   '-Wno-unused-but-set-variable']
+)
+nk_cflags=cc.get_supported_arguments(
+  ['-Wno-unused-but-set-variable',
+   '-Wno-unused-function',
+   '-Wno-maybe-uninitialized']
+)
 
 dep_nuklear = declare_dependency(
   include_directories : include_directories('.'),
+  compile_args :nk_cflags,
 )
 
 dep_stb = declare_dependency(
   include_directories : include_directories('.'),
-  compile_args : cflags_maybe,
+  compile_args : stb_cflags,
 )
 
 #TODO, change it to twclient
