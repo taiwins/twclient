@@ -17,13 +17,14 @@ dep_egl = dependency('egl')
 dep_gl = dependency('gl', required: false )
 dep_gles = dependency('glesv2', required: false)
 dep_gls = []
+twclient_flags = ['-D_GNU_SOURCE']
 
 if dep_gl.found()
   dep_gls += dep_gl
-  global_args += '-D_TW_USE_GL'
+  twclient_flags += '-D_TW_USE_GL'
 elif dep_gles.found()
   dep_gls += dep_gles
-  global_args += '-D_TW_USE_GLES'
+  twclient_flags += '-D_TW_USE_GLES'
 else
   error('no GL runtime found, required by twclient\n')
 endif
@@ -53,7 +54,6 @@ twclient_deps = [
   dep_egl,
   dep_ctypes,
 ] + dep_gls
-twclient_flags = global_args + ['-D_GNU_SOURCE']
 
 # deal with version later
 lib_twclient = both_libraries(
@@ -182,6 +182,7 @@ nkcairo_deps = [
   dep_twclient,
   dep_twclient_icons,
   dep_twclient_theme,
+  dep_nuklear,
 ]
 
 lib_nkcairo = both_libraries(
@@ -206,7 +207,7 @@ pkgconfig.generate(
 
 dep_nkcairo = declare_dependency(
   link_with : lib_nkcairo,
-  compile_args : twclient_flags,
+  compile_args : twclient_flags + nk_cflags,
   include_directories : inc_twclient,
   dependencies : nkcairo_deps,
 )
@@ -223,6 +224,7 @@ nkegl_deps = [
   dep_twclient,
   dep_twclient_icons,
   dep_twclient_theme,
+  dep_nuklear,
 ] + dep_gls
 
 lib_nkegl = both_libraries(
@@ -247,7 +249,7 @@ pkgconfig.generate(
 
 dep_nkegl = declare_dependency(
   link_with : lib_nkegl,
-  compile_args : twclient_flags,
+  compile_args : twclient_flags + nk_cflags,
   include_directories : inc_twclient,
   dependencies : nkegl_deps,
 )

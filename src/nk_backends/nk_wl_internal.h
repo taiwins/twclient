@@ -51,18 +51,6 @@
 extern "C" {
 #endif
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#pragma GCC diagnostic ignored "-Wunused-function"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#elif defined (__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-but-set-variable"
-#pragma clang diagnostic ignored "-Wunused-function"
-#pragma clang diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-
 #include <twclient/nk_backends.h>
 
 #ifndef NK_MAX_CMD_SIZE
@@ -382,12 +370,6 @@ nk_wl_test_draw(struct nk_wl_backend *bkend, struct tw_appsurf *app, nk_wl_drawc
 	bkend->ckey = XKB_KEY_NoSymbol;
 	bkend->cbtn = -1;
 }
-
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#elif defined (__clang__)
-#pragma clang diagnostic pop
-#endif
 
 #ifdef __cplusplus
 }

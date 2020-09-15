@@ -17,13 +17,10 @@ global_args_maybe = [
 	'-Wno-pedantic',
 
 ]
-global_args = []
-
-foreach a : global_args_maybe
-  if cc.has_argument(a)
-    global_args += a
-  endif
-endforeach
+add_project_arguments(
+  cc.get_supported_arguments(global_args_maybe),
+  language : 'c'
+)
 
 inc_twclient = include_directories('include')
 
