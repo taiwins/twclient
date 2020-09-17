@@ -192,8 +192,8 @@ search_icon_imgs_subdir(struct wl_array *handle_pool,
 			continue;
 		if (strlen(entry->d_name) + strlen(dir_path) + 1 >= 1024)
 			continue;
-		strcpy(filepath, dir_path);
-		path_concat(filepath, 1024, 1, entry->d_name);
+		path_join(filepath, 1024, 2, dir_path, entry->d_name);
+
 		char *tocpy = wl_array_add(string_pool, strlen(filepath)+1);
 		*(off_t *)wl_array_add(handle_pool, sizeof(off_t)) =
 			(tocpy - (char *)string_pool->data);
@@ -216,8 +216,7 @@ search_icon_imgs(struct wl_array *handles, struct wl_array *strings,
 	if (strlen(themepath) + MAX_DIR_LEN + 2 >= 1024)
 		return;
 	wl_array_for_each(icons, icondir) {
-		strcpy(absdir, themepath);
-		path_concat(absdir, sizeof(absdir), 1, icons->dir);
+		path_join(absdir, sizeof(absdir), 2, themepath, icons->dir);
 		count += search_icon_imgs_subdir(handles, strings, absdir);
 	}
 }
@@ -235,8 +234,7 @@ search_icon_dirs(struct icontheme_dir *output,
 		return;
 
 	char *rawline = malloc(1000);
-	strcpy(theme_file, output->theme_dir);
-	path_concat(theme_file, 999, 1, "index.theme");
+	path_join(theme_file, 1000, 2, output->theme_dir, "index.theme");
 	if (!is_file_exist(theme_file))
 		goto out;
 
