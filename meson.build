@@ -15,7 +15,7 @@ global_args_maybe = [
 	'-Wno-unused-parameter',
 	'-Wno-missing-field-initializers',
 	'-Wno-pedantic',
-
+	'-Wno-unused-result',
 ]
 add_project_arguments(
   cc.get_supported_arguments(global_args_maybe),
