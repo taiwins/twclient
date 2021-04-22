@@ -237,7 +237,7 @@ data_offer_source_actions(void *data,
 	if (source_actions == WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE)
 		wl_data_offer_accept(wl_data_offer, offer_data->serial,
 				     NULL);
-	else
+	else if (offer_data->dnd)
 		wl_data_offer_set_actions(wl_data_offer,
 					  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
 					  WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE,
@@ -371,12 +371,6 @@ data_selection(void *data,
 		data_offer_create(id, globals);
 	}
 	data_offer_match_mimes(id, globals->inputs.keyboard_focused);
-	wl_data_offer_set_actions(globals->inputs.wl_data_offer,
-				  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
-				  WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE,
-				  WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
-	//for selection purpose, you need probably just
-	//data_offered is done here
 }
 
 static struct wl_data_device_listener data_device_listener = {
