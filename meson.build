@@ -11,16 +11,22 @@ project('twclient', 'c',
 #### compile flags
 cc = meson.get_compiler('c')
 
+global_args = []
 global_args_maybe = [
 	'-Wno-unused-parameter',
 	'-Wno-missing-field-initializers',
 	'-Wno-pedantic',
 	'-Wno-unused-result',
 ]
-add_project_arguments(
-  cc.get_supported_arguments(global_args_maybe),
-  language : 'c'
-)
+foreach a : global_args_maybe
+  if cc.has_argument(a)
+    global_args += a
+  endif
+endforeach
+
+if get_option('buildtype') == 'release' and cc.has_argument('-fvisibility=hidden')
+  global_args += '-fvisibility=hidden' #this hides our bindings
+endif
 
 inc_twclient = include_directories('include')
 

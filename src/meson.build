@@ -1,4 +1,4 @@
-### packages ###################################################################
+### packages ##################################################################
 dep_xkbcommon = dependency('xkbcommon', version: '>= 0.3.0')
 dep_wayland_client = dependency('wayland-client', version: '>= 1.17.0')
 dep_wayland_egl = dependency('wayland-egl', version: '>= 1.17.0')
@@ -17,7 +17,7 @@ dep_egl = dependency('egl')
 dep_gl = dependency('gl', required: false )
 dep_gles = dependency('glesv2', required: false)
 dep_gls = []
-twclient_flags = ['-D_GNU_SOURCE']
+twclient_flags = ['-D_GNU_SOURCE'] + global_args
 
 if dep_gl.found()
   dep_gls += dep_gl
@@ -31,7 +31,7 @@ endif
 
 pkgconfig = import('pkgconfig')
 
-### twclient ###################################################################
+### twclient ##################################################################
 
 src_twclient = [
   'client.c',
@@ -82,7 +82,7 @@ pkgconfig.generate(
   description: 'Taiwins client utility library',
 )
 
-### twclient-theme #############################################################
+### twclient-theme ############################################################
 lib_twclient_theme = static_library(
   'twclient-theme',
   'theme.c',
@@ -99,7 +99,7 @@ dep_twclient_theme = declare_dependency(
   dependencies : [dep_ctypes],
 )
 
-### twclient-icons ##############################################################
+### twclient-icons ############################################################
 
 src_twclient_icons = [
   'image_cache.c',
@@ -143,7 +143,7 @@ pkgconfig.generate(
   requires_private: [ dep_wayland_client, dep_cairo, dep_rsvg, ],
 )
 
-### wayland-protocols ###########################################################
+### wayland-protocols #########################################################
 dep_scanner = dependency('wayland-scanner', native: true)
 prog_scanner = find_program(dep_scanner.get_pkgconfig_variable('wayland_scanner'))
 dep_wp = dependency('wayland-protocols', version: '>= 1.18')
@@ -170,7 +170,7 @@ foreach proto: protocols
   endforeach
 endforeach
 
-### twclient-nkbackends #########################################################
+### twclient-nkbackends #######################################################
 nkcairo_deps = [
   dep_wayland_client,
   dep_cairo,
