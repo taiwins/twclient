@@ -50,7 +50,7 @@ compile_shader(GLenum type, const GLchar *src)
 	return shader;
 }
 
-uint32_t
+WL_EXPORT uint32_t
 tw_gl_create_program(const char *vs_src, const char *fs_src,
                      const char *gs_src,
                      const char *tcs_src, const char *tes_src)
@@ -109,7 +109,7 @@ err_gs:
 	return 0;
 }
 
-void
+WL_EXPORT void
 tw_gl_stage_begin(struct tw_gl_stage *stage, const float clear_color[4],
                   float clear_depth, int clear_stencil)
 {
@@ -135,14 +135,14 @@ tw_gl_stage_begin(struct tw_gl_stage *stage, const float clear_color[4],
 	}
 }
 
-void
+WL_EXPORT void
 tw_gl_stage_end(struct tw_gl_stage *stage)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 
-bool
+WL_EXPORT bool
 tw_gl_stage_init(struct tw_gl_stage *stage, struct tw_gl_texture *depth,
                  struct tw_gl_texture *stencil, uint32_t ubuffers, ...)
 {
@@ -216,7 +216,7 @@ err:
 	return false;
 }
 
-void
+WL_EXPORT void
 tw_gl_stage_fini(struct tw_gl_stage *stage)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

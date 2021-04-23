@@ -480,7 +480,7 @@ eglwin_resize_idle(struct tw_event *e, int fd)
 	return TW_EVENT_DEL;
 }
 
-void
+WL_EXPORT void
 eglwin_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	surf->pending_allocation.w = e->resize.nw;
@@ -494,7 +494,7 @@ eglwin_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 	tw_event_queue_add_idle(&surf->tw_globals->event_queue, &re);
 }
 
-void
+WL_EXPORT void
 eglwin_impl_app_surface(struct tw_appsurf *surf, eglwin_draw_t draw_call,
                         const struct tw_bbox geo, struct tw_egl_env *env)
 {
