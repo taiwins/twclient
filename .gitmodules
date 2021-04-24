@@ -1,9 +1,6 @@
 [submodule "ctypes"]
 	path = subprojects/ctypes
 	url = https://github.com/xeechou/ctypes
-[submodule "nk_backends/nuklear"]
-	path = include/twclient/nuklear
-	url = https://github.com/Immediate-Mode-UI/Nuklear
 [submodule "include/stb"]
 	path = include/twclient/stb
 	url = https://github.com/nothings/stb
