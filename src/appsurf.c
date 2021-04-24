@@ -1,21 +1,21 @@
 /*
  * appsurf.c - taiwins client app surface functions
  *
- * Copyright (c) 2019-2020 Xichen Zhou
+ * Copyright (c) 2019-2021 Xichen Zhou
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version.
+ * This library is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation; either version 2.1 of the License, or (at your
+ * option) any later version.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * along with this library; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
 
@@ -211,17 +211,17 @@ tw_appsurf_request_frame_event(struct tw_appsurf *surf,
 	                         container);
 }
 
-/*******************************************************************************
+/******************************************************************************
  * shm_buffer_impl_surface
- ******************************************************************************/
+ *****************************************************************************/
 /**
  * @brief smartly release the buffer and pool.
  *
- * We are waiting for compositor to return all the buffers. There could be cases
- * where we switched to new pool before compositor returns the buffers from
- * previous pool. In that case the previous pool becomes a wild pointer. The
- * pool will eventually be freed here if `compositor` finally returns the buffer
- * back to us.
+ * We are waiting for compositor to return all the buffers. There could be
+ * cases where we switched to new pool before compositor returns the buffers
+ * from previous pool. In that case the previous pool becomes a wild
+ * pointer. The pool will eventually be freed here if `compositor` finally
+ * returns the buffer back to us.
  */
 static void
 shm_wl_buffer_release(void *data, struct wl_buffer *wl_buffer)
@@ -246,7 +246,7 @@ shm_wl_buffer_release(void *data, struct wl_buffer *wl_buffer)
 /* setup the pool and buffer, destroy the previous pool if there is
  */
 WL_EXPORT bool
-shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo)
+tw_shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo)
 {
 	if (surf->pool && tw_shm_pool_release_if_unused(surf->pool))
 		free(surf->pool);
@@ -277,7 +277,7 @@ shm_pool_resize_idle(struct tw_event *e, int fd)
 	    surf->pending_allocation.s == surf->allocation.s)
 		return TW_EVENT_DEL;
 
-	if (!shm_buffer_reallocate(surf, geo))
+	if (!tw_shm_buffer_reallocate(surf, geo))
 		return TW_EVENT_DEL;
 	if (surf->allocation.s != surf->pending_allocation.s)
 		wl_surface_set_buffer_scale(surf->wl_surface,
@@ -289,7 +289,7 @@ shm_pool_resize_idle(struct tw_event *e, int fd)
 }
 
 WL_EXPORT void
-shm_buffer_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
+tw_shm_buffer_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	surf->pending_allocation.w = e->resize.nw;
 	surf->pending_allocation.h = e->resize.nh;
@@ -316,7 +316,7 @@ shm_buffer_surface_swap(struct tw_appsurf *surf, const struct tw_app_event *e)
 		break;
 	case TW_RESIZE:
 		ret = true;
-		shm_buffer_resize(surf, e);
+		tw_shm_buffer_resize(surf, e);
 		break;
 	default:
 		ret = true;
@@ -326,7 +326,7 @@ shm_buffer_surface_swap(struct tw_appsurf *surf, const struct tw_app_event *e)
 
 	struct wl_buffer *free_buffer = NULL;
 	struct tw_bbox damage;
-	shm_buffer_draw_t draw_cb = surf->user_data;
+	tw_shm_buffer_draw_t draw_cb = surf->user_data;
 	bool *committed; bool *dirty;
 
 	for (int i = 0; i < 2; i++) {
@@ -353,7 +353,7 @@ shm_buffer_surface_swap(struct tw_appsurf *surf, const struct tw_app_event *e)
 }
 
 WL_EXPORT void
-shm_buffer_destroy_app_surface(struct tw_appsurf *surf)
+tw_shm_buffer_destroy_app_surface(struct tw_appsurf *surf)
 {
 	for (int i = 0; i < 2; i++) {
 		tw_shm_pool_buffer_free(surf->wl_buffer[i]);
@@ -367,23 +367,23 @@ shm_buffer_destroy_app_surface(struct tw_appsurf *surf)
 }
 
 WL_EXPORT void
-shm_buffer_impl_app_surface(struct tw_appsurf *surf,
-                            shm_buffer_draw_t draw_call,
-                            const struct tw_bbox geo)
+tw_shm_buffer_impl_app_surface(struct tw_appsurf *surf,
+                               tw_shm_buffer_draw_t draw_call,
+                               const struct tw_bbox geo)
 {
 	surf->do_frame = shm_buffer_surface_swap;
 	surf->user_data = draw_call;
-	surf->destroy = shm_buffer_destroy_app_surface;
+	surf->destroy = tw_shm_buffer_destroy_app_surface;
 	surf->pool = NULL;
 	surf->allocation = geo;
 	surf->pending_allocation = geo;
 	wl_surface_set_buffer_scale(surf->wl_surface, geo.s);
-	shm_buffer_reallocate(surf, &geo);
+	tw_shm_buffer_reallocate(surf, &geo);
 }
 
-/*******************************************************************************
+/******************************************************************************
  * embeded_buffer_impl_surface
- ******************************************************************************/
+ *****************************************************************************/
 
 static void
 embeded_app_surface_do_frame(struct tw_appsurf *surf,
@@ -404,8 +404,8 @@ embeded_app_unhook(struct tw_appsurf *surf)
 }
 
 WL_EXPORT void
-embeded_impl_app_surface(struct tw_appsurf *surf, struct tw_appsurf *parent,
-                         const struct tw_bbox geo)
+tw_embeded_impl_app_surface(struct tw_appsurf *surf, struct tw_appsurf *parent,
+                            const struct tw_bbox geo)
 
 {
 	surf->wl_surface = NULL;
@@ -419,13 +419,13 @@ embeded_impl_app_surface(struct tw_appsurf *surf, struct tw_appsurf *parent,
 	wl_list_init(&surf->filter_head);
 }
 
-/*******************************************************************************
+/******************************************************************************
  * EGL window implemenation
- ******************************************************************************/
+ *****************************************************************************/
 static void
 eglwin_surf_swap_buffer(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
-	eglwin_draw_t draw_call = surf->user_data;
+	tw_eglwin_draw_t draw_call = surf->user_data;
 	bool ret = true;
 	switch (e->type) {
 	case TW_FRAME_START:
@@ -434,7 +434,7 @@ eglwin_surf_swap_buffer(struct tw_appsurf *surf, const struct tw_app_event *e)
 		break;
 	case TW_RESIZE:
 		ret = true;
-		eglwin_resize(surf, e);
+		tw_eglwin_resize(surf, e);
 		break;
 	default:
 		ret = true;
@@ -481,7 +481,7 @@ eglwin_resize_idle(struct tw_event *e, int fd)
 }
 
 WL_EXPORT void
-eglwin_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
+tw_eglwin_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 {
 	surf->pending_allocation.w = e->resize.nw;
 	surf->pending_allocation.h = e->resize.nh;
@@ -495,8 +495,8 @@ eglwin_resize(struct tw_appsurf *surf, const struct tw_app_event *e)
 }
 
 WL_EXPORT void
-eglwin_impl_app_surface(struct tw_appsurf *surf, eglwin_draw_t draw_call,
-                        const struct tw_bbox geo, struct tw_egl_env *env)
+tw_eglwin_impl_app_surface(struct tw_appsurf *surf, tw_eglwin_draw_t draw_call,
+                           const struct tw_bbox geo, struct tw_egl_env *env)
 {
 	surf->do_frame = eglwin_surf_swap_buffer;
 	surf->user_data = draw_call;
@@ -504,4 +504,49 @@ eglwin_impl_app_surface(struct tw_appsurf *surf, eglwin_draw_t draw_call,
 	surf->allocation = geo;
 	tw_appsurf_init_egl(surf, env);
 	wl_surface_set_buffer_scale(surf->wl_surface, geo.s);
+}
+
+WL_EXPORT cairo_format_t
+tw_translate_wl_shm_format(enum wl_shm_format format)
+{
+	switch (format) {
+	case WL_SHM_FORMAT_ARGB8888:
+		return CAIRO_FORMAT_ARGB32;
+		break;
+	case WL_SHM_FORMAT_XRGB8888:
+		//based on doc, xrgb8888 does not include alpha
+		return CAIRO_FORMAT_RGB24;
+		break;
+	case WL_SHM_FORMAT_RGB565:
+		return CAIRO_FORMAT_RGB16_565;
+		break;
+	case WL_SHM_FORMAT_RGBA8888:
+		return CAIRO_FORMAT_INVALID;
+		break;
+	default:
+		return CAIRO_FORMAT_INVALID;
+	}
+}
+
+WL_EXPORT size_t
+tw_stride_of_wl_shm_format(enum wl_shm_format format)
+{
+	switch(format) {
+	case WL_SHM_FORMAT_ARGB8888:
+		return 4;
+		break;
+	case WL_SHM_FORMAT_RGB888:
+		return 3;
+		break;
+	case WL_SHM_FORMAT_RGB565:
+		return 2;
+		break;
+	case WL_SHM_FORMAT_RGBA8888:
+		return 4;
+		break;
+	case WL_SHM_FORMAT_ABGR1555:
+		return 2;
+	default:
+		return 0;
+	}
 }

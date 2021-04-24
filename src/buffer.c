@@ -1,21 +1,21 @@
 /*
  * buffer.c - taiwins client buffer management functions
  *
- * Copyright (c) 2019-2020 Xichen Zhou
+ * Copyright (c) 2019-2021 Xichen Zhou
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version.
+ * This library is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation; either version 2.1 of the License, or (at your
+ * option) any later version.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * along with this library; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
 
@@ -112,7 +112,7 @@ tw_shm_pool_set_buffer_release_notify(struct wl_buffer *wl_buffer,
 WL_EXPORT struct wl_buffer *
 tw_shm_pool_alloc_buffer(struct tw_shm_pool *pool, size_t width, size_t height)
 {
-	size_t stride = stride_of_wl_shm_format(pool->format);
+	size_t stride = tw_stride_of_wl_shm_format(pool->format);
 	size_t size = stride * height * width;
 
 	int origin_size = pool->file->size;
@@ -183,6 +183,6 @@ WL_EXPORT size_t
 tw_shm_pool_buffer_size(struct wl_buffer *wl_buffer)
 {
 	struct wl_buffer_node *node = wl_buffer_get_user_data(wl_buffer);
-	size_t stride = stride_of_wl_shm_format(node->pool->format);
+	size_t stride = tw_stride_of_wl_shm_format(node->pool->format);
 	return node->width * node->height * stride;
 }

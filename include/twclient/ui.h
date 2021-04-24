@@ -1,21 +1,21 @@
 /*
  * ui.h - taiwins client gui header
  *
- * Copyright (c) 2019-2020 Xichen Zhou
+ * Copyright (c) 2019-2021 Xichen Zhou
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version.
+ * This library is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation; either version 2.1 of the License, or (at your
+ * option) any later version.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * along with this library; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
 
@@ -319,87 +319,50 @@ tw_appsurf_clean_egl(struct tw_appsurf *surf, struct tw_egl_env *env);
  * user_data, expecting to embend tw_appsurf in another data structure.
  *
  */
-typedef void (*shm_buffer_draw_t)(struct tw_appsurf *surf, struct wl_buffer *buffer,
-				  struct tw_bbox *geo);
+typedef void (*tw_shm_buffer_draw_t)(struct tw_appsurf *surf,
+                                     struct wl_buffer *buffer,
+                                     struct tw_bbox *geo);
 
 void
-shm_buffer_impl_app_surface(struct tw_appsurf *surf, shm_buffer_draw_t draw_call,
-                            const struct tw_bbox geo);
+tw_shm_buffer_impl_app_surface(struct tw_appsurf *surf,
+                               tw_shm_buffer_draw_t draw_call,
+                               const struct tw_bbox geo);
 
 /**
  * @brief we can expose part of shm_buffer implementation for any shm_pool
  * double buffer based implementation
  */
 bool
-shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo);
+tw_shm_buffer_reallocate(struct tw_appsurf *surf, const struct tw_bbox *geo);
 
 void
-shm_buffer_resize(struct tw_appsurf *surf, const struct tw_app_event *e);
+tw_shm_buffer_resize(struct tw_appsurf *surf, const struct tw_app_event *e);
 
 void
-shm_buffer_destroy_app_surface(struct tw_appsurf *surf);
+tw_shm_buffer_destroy_app_surface(struct tw_appsurf *surf);
 
 
-typedef void (*eglwin_draw_t)(struct tw_appsurf *surf, struct tw_bbox *geo);
-
-void
-eglwin_impl_app_surface(struct tw_appsurf *surf, eglwin_draw_t draw_call,
-                        const struct tw_bbox geo, struct tw_egl_env *env);
+typedef void (*tw_eglwin_draw_t)(struct tw_appsurf *surf, struct tw_bbox *geo);
 
 void
-eglwin_resize(struct tw_appsurf *surf, const struct tw_app_event *e);
+tw_eglwin_impl_app_surface(struct tw_appsurf *surf, tw_eglwin_draw_t draw_call,
+                           const struct tw_bbox geo, struct tw_egl_env *env);
+
+void
+tw_eglwin_resize(struct tw_appsurf *surf, const struct tw_app_event *e);
 
 /**
  * /brief second implementation we provide here is the parent surface
  */
 void
-embeded_impl_app_surface(struct tw_appsurf *surf, struct tw_appsurf *parent,
-                         const struct tw_bbox geo);
+tw_embeded_impl_app_surface(struct tw_appsurf *surf, struct tw_appsurf *parent,
+                            const struct tw_bbox geo);
 
-static inline cairo_format_t
-translate_wl_shm_format(enum wl_shm_format format)
-{
-	switch (format) {
-	case WL_SHM_FORMAT_ARGB8888:
-		return CAIRO_FORMAT_ARGB32;
-		break;
-	case WL_SHM_FORMAT_XRGB8888:
-		//based on doc, xrgb8888 does not include alpha
-		return CAIRO_FORMAT_RGB24;
-		break;
-	case WL_SHM_FORMAT_RGB565:
-		return CAIRO_FORMAT_RGB16_565;
-		break;
-	case WL_SHM_FORMAT_RGBA8888:
-		return CAIRO_FORMAT_INVALID;
-		break;
-	default:
-		return CAIRO_FORMAT_INVALID;
-	}
-}
+cairo_format_t
+tw_translate_wl_shm_format(enum wl_shm_format format);
 
-static inline size_t
-stride_of_wl_shm_format(enum wl_shm_format format)
-{
-	switch(format) {
-	case WL_SHM_FORMAT_ARGB8888:
-		return 4;
-		break;
-	case WL_SHM_FORMAT_RGB888:
-		return 3;
-		break;
-	case WL_SHM_FORMAT_RGB565:
-		return 2;
-		break;
-	case WL_SHM_FORMAT_RGBA8888:
-		return 4;
-		break;
-	case WL_SHM_FORMAT_ABGR1555:
-		return 2;
-	default:
-		return 0;
-	}
-}
+size_t
+tw_stride_of_wl_shm_format(enum wl_shm_format format);
 
 
 #ifdef __cplusplus
