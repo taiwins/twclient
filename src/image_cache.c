@@ -33,12 +33,12 @@
 #include <twclient/image_cache.h>
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
-#include <twclient/stb/stb_image.h>
-#include <twclient/stb/stb_rect_pack.h>
+#include <stb/stb_image.h>
+#include <stb/stb_rect_pack.h>
 
-/*******************************************************************************
+/******************************************************************************
  * image operations
- ******************************************************************************/
+ *****************************************************************************/
 static void
 copy_subimage(unsigned char *dst, const unsigned char *src,
 	      const uint32_t dst_width, const stbrp_rect *rect)

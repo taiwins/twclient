@@ -2,5 +2,5 @@
 	path = subprojects/ctypes
 	url = https://github.com/xeechou/ctypes
 [submodule "include/stb"]
-	path = include/twclient/stb
+	path = include/stb
 	url = https://github.com/nothings/stb
