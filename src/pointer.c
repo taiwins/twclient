@@ -1,21 +1,21 @@
 /*
  * pointer.c - taiwins client pointer handling functions
  *
- * Copyright (c) 2019-2020 Xichen Zhou
+ * Copyright (c) 2019-2021 Xichen Zhou
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version.
+ * This library is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation; either version 2.1 of the License, or (at your
+ * option) any later version.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * along with this library; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
 
@@ -36,15 +36,15 @@
 #include <twclient/ui.h>
 #include <twclient/client.h>
 
-//////////////////////////////////////////////////////////////////////////
-/////////////////////////////Pointer listeners////////////////////////////
-//////////////////////////////////////////////////////////////////////////
-//This is the default grab for wl_pointer, we need to modify this struct based on needs
+/******************************************************************************
+ * pointer listeners
+ *****************************************************************************/
+
 static struct wl_pointer_listener pointer_listener = {0};
 static void default_pointer_grab(struct wl_pointer_listener *);
 static void resize_pointer_grab(struct wl_pointer_listener *);
-extern void _tw_appsurf_run_frame(struct tw_appsurf *surf, const struct tw_app_event *e);
-
+extern void _tw_appsurf_run_frame(struct tw_appsurf *surf,
+                                  const struct tw_app_event *e);
 
 enum POINTER_EVENT_CODE {
   // focus, unfocus
@@ -75,7 +75,6 @@ pointer_cursor_done(void *data, struct wl_callback *callback,
 	wl_callback_destroy(callback);
 }
 
-
 static void
 pointer_set_cursor(struct wl_pointer *wl_pointer)
 {
@@ -97,7 +96,6 @@ pointer_set_cursor(struct wl_pointer *wl_pointer)
 	                      0, 0);
 }
 
-
 static void
 pointer_enter(void *data,
 	      struct wl_pointer *wl_pointer,
@@ -108,19 +106,25 @@ pointer_enter(void *data,
 {
 	struct tw_globals *globals = data;
 	struct tw_appsurf *app = tw_appsurf_from_wl_surface(surface);
+	struct tw_app_event e = {
+		.type = TW_FOCUS,
+		.ptr.x = wl_fixed_to_double(surface_x),
+		.ptr.y = wl_fixed_to_double(surface_y),
+		.ptr.mod = globals->inputs.modifiers,
+	};
 
 	globals->inputs.pointer_focused = surface;
+	globals->inputs.pointer_events = POINTER_ENTER;
 	globals->inputs.enter_serial = serial;
 	globals->inputs.serial = serial;
-	if (app)
-		app->tw_globals = globals;
-
-	globals->inputs.pointer_events = POINTER_ENTER;
-
 	//setting cursor at enter maynot be the best time though
 	if (!globals->inputs.cursor_set) {
 		pointer_set_cursor(wl_pointer);
 		globals->inputs.cursor_set = true;
+	}
+	if (app) {
+		app->tw_globals = globals;
+		_tw_appsurf_run_frame(app, &e);
 	}
 }
 
@@ -131,11 +135,19 @@ pointer_leave(void *data,
 	      struct wl_surface *surface)
 {
 	struct tw_globals *globals = data;
+	struct tw_appsurf *app = tw_appsurf_from_wl_surface(surface);
+	struct tw_app_event e = {
+		.type = TW_UNFOCUS,
+	};
 
 	globals->inputs.serial = serial;
 	globals->inputs.pointer_focused = NULL;
 	globals->inputs.pointer_events = POINTER_LEAVE;
 	globals->inputs.cursor_set = false;
+	if (app) {
+		app->tw_globals = globals;
+		_tw_appsurf_run_frame(app, &e);
+	}
 }
 
 static void
@@ -184,7 +196,6 @@ pointer_button(void *data,
 	       uint32_t button,
 	       uint32_t state)
 {
-
 	struct tw_globals *globals = data;
 	struct tw_appsurf *app =
 		pointer_button_meta(globals, serial, time, button,
@@ -216,7 +227,8 @@ pointer_axis(void *data,
 		return;
 	globals->inputs.millisec = time;
 
-	globals->inputs.dx_axis += (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) ?
+	globals->inputs.dx_axis +=
+		(axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) ?
 		wl_fixed_to_int(value) : 0;
 	globals->inputs.dy_axis += (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) ?
 		wl_fixed_to_int(value) : 0;
@@ -247,14 +259,15 @@ static void
 pointer_axis_discrete(void *data, struct wl_pointer *wl_pointer,
 		     uint32_t axis, int32_t discrete)
 {
-	//the discrete representation of the axis event, for example(a travel of
-	//102 pixel represent) 2 times of wheel scrolling, the axis event is
+	//the discrete representation of the axis event, for example(a travel
+	//of 102 pixel represent) 2 times of wheel scrolling, the axis event is
 	//more useful.
 }
 
-//once a frame event generate, we need to accumelate all previous pointer events
-//and then send them all. Call frame on them, all though you should not receive
-//more than one type of pointer event
+/* once a frame event generate, we need to accumelate all previous pointer
+ * events and then send them all. Call frame on them, all though you should not
+ * receive mo re than one type of pointer event
+ */
 static inline struct tw_appsurf *
 pointer_frame_meta(struct tw_globals *globals)
 {
@@ -322,9 +335,9 @@ default_pointer_grab(struct wl_pointer_listener *grab)
 	grab->axis_discrete = pointer_axis_discrete;
 }
 
-/*******************************************************************************
+/******************************************************************************
  * resize grab
- ******************************************************************************/
+ *****************************************************************************/
 
 static void
 resize_pointer_button(void *data,
@@ -377,9 +390,9 @@ resize_pointer_grab(struct wl_pointer_listener *grab)
 	grab->frame = resize_pointer_frame;
 }
 
-/*******************************************************************************
+/******************************************************************************
  * cursor theme
- ******************************************************************************/
+ *****************************************************************************/
 WL_EXPORT void
 tw_globals_change_cursor(struct tw_globals *globals, const char *type)
 {
@@ -436,9 +449,9 @@ tw_globals_reload_cursor_theme(struct tw_globals *globals)
 		wl_cursor_image_get_buffer(globals->inputs.cursor->images[0]);
 }
 
-/*******************************************************************************
+/******************************************************************************
  * constructor/destructor
- ******************************************************************************/
+ *****************************************************************************/
 
 void
 tw_pointer_init(struct wl_pointer *wl_pointer, struct tw_globals *globals)
@@ -474,10 +487,9 @@ tw_pointer_destroy(struct wl_pointer *wl_pointer)
 }
 
 
-/*******************************************************************************
+/******************************************************************************
  * touch impl
- ******************************************************************************/
-
+ *****************************************************************************/
 
 static void
 handle_touch_down(void *data,
@@ -537,7 +549,6 @@ handle_touch_motion(void *data,
 	pointer_motion(data, g->inputs.wl_pointer, time, x, y);
 }
 
-
 static void
 handle_touch_cancel(void *data,
 		    struct wl_touch *wl_touch)
@@ -547,7 +558,6 @@ handle_touch_cancel(void *data,
 		return;
 	pointer_event_clean(g);
 }
-
 
 static void
 handle_touch_frame(void *data,
