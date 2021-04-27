@@ -217,11 +217,12 @@ struct tw_appsurf {
 		struct tw_appsurf *parent;
 	};
 	struct wl_list filter_head;
-	frame_t do_frame;
+	frame_t do_frame; /**< note that the callback is called mutiple times
+	                   * during one page filp */
 
 	//destructor
 	void (*destroy)(struct tw_appsurf *);
-	//XXX this user_data is controlled by implementation, do not set it!!!
+	/** this user_data is controlled by implementation, do not set it */
 	void *user_data;
 };
 
