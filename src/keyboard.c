@@ -1,21 +1,21 @@
 /*
  * keyboard.c - taiwins client keyboard handling functions
  *
- * Copyright (c) 2019-2020 Xichen Zhou
+ * Copyright (c) 2019-2021 Xichen Zhou
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version.
+ * This library is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation; either version 2.1 of the License, or (at your
+ * option) any later version.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * along with this library; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
 
@@ -36,7 +36,8 @@
 #include <twclient/client.h>
 #include <ctypes/helpers.h>
 
-extern void _tw_appsurf_run_frame(struct tw_appsurf *surf, const struct tw_app_event *e);
+extern void _tw_appsurf_run_frame(struct tw_appsurf *surf,
+                                  const struct tw_app_event *e);
 
 static inline uint32_t
 tw_mod_mask_from_xkb_state(struct xkb_state *state)
@@ -65,10 +66,11 @@ handle_key_repeat(struct tw_event *e, int fd)
 {
 	struct tw_appsurf *surf = e->data;
 	struct tw_globals *globals = surf->tw_globals;
+	bool repeating = globals && surf->do_frame &&
+		globals->inputs.key_pressed &&
+		e->arg.u == globals->inputs.keysym;
 
-	if (globals && surf->do_frame &&
-	    globals->inputs.key_pressed &&
-	    e->arg.u == globals->inputs.keysym) {
+	if (repeating) {
 		//there are two ways to generate press and release
 
 		//1) giving two do_frame event, but in this way we may get
@@ -181,14 +183,14 @@ handle_key(void *data,
 	_tw_appsurf_run_frame(appsurf, &e);
 }
 
-static
-void handle_modifiers(void *data,
-		      struct wl_keyboard *wl_keyboard,
-		      uint32_t serial,
-		      uint32_t mods_depressed, //which key
-		      uint32_t mods_latched,
-		      uint32_t mods_locked,
-		      uint32_t group)
+static void
+handle_modifiers(void *data,
+                 struct wl_keyboard *wl_keyboard,
+                 uint32_t serial,
+                 uint32_t mods_depressed, //which key
+                 uint32_t mods_latched,
+                 uint32_t mods_locked,
+                 uint32_t group)
 {
 	struct tw_globals *globals = (struct tw_globals *)data;
 
@@ -267,7 +269,6 @@ handle_keyboard_enter(void *data,
 
 	if (app)
 		app->tw_globals = globals;
-	fprintf(stderr, "keyboard has focus\n");
 }
 
 static void
@@ -281,7 +282,6 @@ handle_keyboard_leave(void *data,
 	if (wl_keyboard != globals->inputs.wl_keyboard)
 		return;
 	globals->inputs.keyboard_focused = NULL;
-	fprintf(stderr, "keyboard lost focus\n");
 }
 
 static
