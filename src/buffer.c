@@ -22,6 +22,7 @@
 #include <sys/mman.h>
 
 #include <twclient/client.h>
+#include <twclient/ui.h>
 #include <twclient/shmpool.h>
 #include <ctypes/os/buffer.h>
 

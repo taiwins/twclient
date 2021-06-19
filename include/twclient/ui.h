@@ -35,83 +35,11 @@
 #include <cairo/cairo.h>
 #include <wayland-client.h>
 #include "ui_event.h"
+#include "util.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*******************************************************************************
- * client style
- ******************************************************************************/
-
-static inline int
-tw_font_pt2px(int pt_size, int ppi)
-{
-	if (ppi < 0)
-		ppi = 96;
-	return (int) (ppi / 72.0 * pt_size);
-}
-
-static inline int
-tw_font_px2pt(int px_size, int ppi)
-{
-	if (ppi < 0)
-		ppi = 96;
-	return (int) (72.0 * px_size / ppi);
-}
-
-/*******************************************************************************
- * taiwins geometry
- ******************************************************************************/
-struct tw_point2d {
-	unsigned int x;
-	unsigned int y;
-};
-
-/**
- * @brief a rectangle area that supports scales.
- */
-struct tw_bbox {
-	uint16_t x; uint16_t y;
-	uint16_t w; uint16_t h;
-	uint8_t s;
-};
-
-static inline bool
-tw_bbox_contain_point(const struct tw_bbox *box, unsigned int x, unsigned int y)
-{
-	return ((x >= box->x) &&
-	        (x < (unsigned)(box->x + box->w * box->s)) &&
-		(y >= box->y) &&
-	        (y < (unsigned)(box->y + box->h * box->s)));
-}
-
-static inline bool
-tw_bboxs_intersect(const struct tw_bbox *ba, const struct tw_bbox *bb)
-{
-	return (ba->x < bb->x + bb->w*bb->s) &&
-		(ba->x + ba->w*ba->s > bb->x) &&
-		(ba->y < bb->y + bb->h*bb->s) &&
-		(ba->y + ba->h*ba->s > bb->y);
-}
-
-static inline unsigned long
-tw_bbox_area(const struct tw_bbox *box)
-{
-	return box->w * box->s * box->h * box->s;
-}
-
-static inline struct tw_bbox
-tw_make_bbox(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t s)
-{
-	return (struct tw_bbox){x, y, w, h, s};
-}
-
-static inline struct tw_bbox
-tw_make_bbox_origin(uint16_t w, uint16_t h, uint16_t s)
-{
-	return (struct tw_bbox){0, 0, w, h, s};
-}
 
 /*******************************************************************************
  * app surface
