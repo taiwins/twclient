@@ -24,14 +24,29 @@
 #include <stdbool.h>
 #include <wayland-client.h>
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct tw_global_link {
+
+typedef void (*tw_global_func_t)(struct wl_proxy *);
+
+struct tw_global {
 	struct wl_list link; /* tw_globals:globals */
 	struct wl_proxy *object; /* correspond to a global object */
+	tw_global_func_t global_remove;
 };
+
+
+static inline void
+tw_global_init(struct tw_global *global, struct wl_proxy *proxy,
+               tw_global_func_t global_remove)
+{
+	wl_list_init(&global->link);
+	global->object = proxy;
+}
+
 
 /**
  * @brief classic observer pattern,

@@ -1,7 +1,7 @@
 /*
  * client.c - taiwins client functions
  *
- * Copyright (c) 2019-2020 Xichen Zhou
+ * Copyright (c) 2019-2021 Xichen Zhou
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -42,6 +42,7 @@
 #include <ctypes/strops.h>
 
 #include <twclient/client.h>
+#include <twclient/output.h>
 #include <twclient/ui.h>
 
 
@@ -481,6 +482,7 @@ tw_globals_init(struct tw_globals *globals, struct wl_display *display)
 	globals->display = display;
 	globals->buffer_format = 0xFFFFFFFF;
 	tw_event_queue_init(&globals->event_queue);
+	wl_list_init(&globals->globals);
 	globals->event_queue.quit =
 		!tw_event_queue_add_wl_display(&globals->event_queue, display);
 	globals->inputs.cursor_size = 32;
@@ -554,9 +556,33 @@ tw_globals_announce(struct tw_globals *globals,
 				globals);
 		}
 
+	} else if (strcmp(interface, wl_output_interface.name) == 0) {
+		struct wl_output *wl_output =
+			wl_registry_bind(wl_registry, name,
+			                 &wl_output_interface, version);
+		struct tw_output *output =
+			tw_output_create(wl_output);
+		wl_list_insert(globals->globals.prev, &output->proxy.link);
+
 	} else {
 		fprintf(stderr, "announcing global %s\n", interface);
 		return 0;
 	}
 	return 1;
+}
+
+WL_EXPORT void
+tw_globals_announce_remove(struct tw_globals *globals,
+                           struct wl_registry *registry, uint32_t name)
+{
+	struct tw_global *object, *tmp;
+
+	wl_list_for_each_safe(object, tmp, &globals->globals, link) {
+		if (wl_proxy_get_id(object->object) == name) {
+			wl_list_remove(&object->link);
+			if (object->global_remove)
+				object->global_remove(object->object);
+		}
+	}
+
 }

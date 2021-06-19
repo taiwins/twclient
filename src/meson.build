@@ -32,6 +32,7 @@ pkgconfig = import('pkgconfig')
 
 src_twclient = [
   'client.c',
+  'output.c',
   'appsurf.c',
   'egl.c',
   'glhelper.c',

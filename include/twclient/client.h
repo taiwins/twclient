@@ -32,7 +32,6 @@
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-names.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
-#include <wayland-util.h>
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 
@@ -129,6 +128,9 @@ tw_globals_announce(struct tw_globals *globals,
                     uint32_t name,
                     const char *interface,
                     uint32_t version);
+void
+tw_globals_announce_remove(struct tw_globals *globals,
+                           struct wl_registry *registry, uint32_t name);
 void
 tw_globals_init(struct tw_globals *globals, struct wl_display *display);
 
