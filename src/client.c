@@ -45,10 +45,9 @@
 #include <twclient/ui.h>
 
 
-/*******************************************************************************
+/******************************************************************************
  * externs
- ******************************************************************************/
-extern void tw_event_queue_close(struct tw_event_queue *queue);
+ *****************************************************************************/
 extern void tw_keyboard_init(struct wl_keyboard *, struct tw_globals *);
 extern void tw_keyboard_destroy(struct wl_keyboard *);
 
@@ -60,9 +59,9 @@ extern void tw_touch_destroy(struct wl_touch *);
 extern void _tw_appsurf_run_frame(struct tw_appsurf *surf,
 				   const struct tw_app_event *e);
 
-/*******************************************************************************
+/******************************************************************************
  * wl_shm
- ******************************************************************************/
+ *****************************************************************************/
 
 static void
 shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
