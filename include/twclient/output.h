@@ -39,7 +39,6 @@ struct tw_output {
 	enum wl_output_transform transform;
 
 	struct {
-		struct tw_signal create;
 		struct tw_signal remove;
 		struct tw_signal info;
 	} signals;

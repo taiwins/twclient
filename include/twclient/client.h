@@ -108,6 +108,10 @@ struct tw_globals {
 
 	struct wl_list globals; /* for now we include only wl_output */
 
+	struct {
+		struct tw_signal new_output;
+	} signals;
+
 	//application theme settings
 	const struct tw_theme *theme;
 	struct tw_event_queue event_queue;

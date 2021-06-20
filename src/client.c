@@ -482,6 +482,7 @@ tw_globals_init(struct tw_globals *globals, struct wl_display *display)
 	globals->display = display;
 	globals->buffer_format = 0xFFFFFFFF;
 	tw_event_queue_init(&globals->event_queue);
+	tw_signal_init(&globals->signals.new_output);
 	wl_list_init(&globals->globals);
 	globals->event_queue.quit =
 		!tw_event_queue_add_wl_display(&globals->event_queue, display);
@@ -572,6 +573,7 @@ tw_globals_announce(struct tw_globals *globals,
 		struct tw_output *output =
 			tw_output_create(wl_output);
 		wl_list_insert(globals->globals.prev, &output->proxy.link);
+		tw_signal_emit(&globals->signals.new_output, output);
 
 	} else {
 		fprintf(stderr, "announcing global %s\n", interface);

@@ -101,13 +101,11 @@ tw_output_create(struct wl_output *wl_output)
 	output->wl_output = wl_output;
 	tw_global_init(&output->proxy, (struct wl_proxy *)wl_output,
 	               handle_wl_output_remove);
-	tw_signal_init(&output->signals.create);
 	tw_signal_init(&output->signals.remove);
 	tw_signal_init(&output->signals.info);
 
 	wl_output_add_listener(wl_output, &wl_output_listener, output);
 
-	tw_signal_emit(&output->signals.create, output);
         return output;
 }
 
