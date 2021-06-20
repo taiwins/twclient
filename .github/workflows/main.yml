@@ -25,5 +25,9 @@ jobs:
       working-directory: './taiwins-ubuntu/'
       run: |
         export PATH=~/.local/bin:$PATH
-        export PKG_CONFIG_PATH=/usr/local/lib:${PKG_CONFIG_PATH}      
+        export PKG_CONFIG_PATH=/usr/local/lib:${PKG_CONFIG_PATH}
         meson -Dbuildtype=release build && ninja -C build
+    - name: build
+      working-directory: './taiwins-ubuntu/'
+      run: |
+        ninja -C build test
