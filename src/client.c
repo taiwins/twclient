@@ -3,19 +3,19 @@
  *
  * Copyright (c) 2019-2021 Xichen Zhou
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version.
+ * This library is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation; either version 2.1 of the License, or (at your
+ * option) any later version.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * along with this library; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
 
@@ -491,6 +491,15 @@ tw_globals_init(struct tw_globals *globals, struct wl_display *display)
 WL_EXPORT void
 tw_globals_release(struct tw_globals *globals)
 {
+	struct tw_global *global, *tmp;
+
+	wl_list_for_each_safe(global, tmp, &globals->globals, link) {
+		wl_list_remove(&global->link);
+		if (global->global_remove)
+			global->global_remove(global->object);
+	}
+
+	//TODO: make them into globals
 	wl_data_device_release(globals->inputs.wl_data_device);
 	seat_destroy(globals->inputs.wl_seat, globals);
 	wl_shm_destroy(globals->shm);
