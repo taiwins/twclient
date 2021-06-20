@@ -27,74 +27,22 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <poll.h>
-
-#include <wayland-client.h>
 #include <sys/timerfd.h>
-
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-names.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
-#include <wayland-util.h>
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 
 #include "event_queue.h"
-#include "ui.h"
+#include "util.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct tw_theme;
-
-
-/**
- * @brief classic observer pattern,
- *
- * much like wl_signal wl_listener, but not available for wayland clients
- */
-struct tw_signal {
-	struct wl_list head;
-};
-
-/**
- * @brief classic observer pattern,
- *
- * much like wl_signal wl_listener, but not available for wayland clients
- */
-struct tw_observer {
-	struct wl_list link;
-	void (*update)(struct tw_observer *listener, void *data);
-};
-
-static inline void
-tw_signal_init(struct tw_signal *signal)
-{
-	wl_list_init(&signal->head);
-}
-
-static inline void
-tw_observer_init(struct tw_observer *observer,
-                 void (*notify)(struct tw_observer *observer, void *data))
-{
-	wl_list_init(&observer->link);
-	observer->update = notify;
-}
-
-static inline void
-tw_observer_add(struct tw_signal *signal, struct tw_observer *observer)
-{
-	wl_list_insert(&signal->head, &observer->link);
-}
-
-static inline void
-tw_signal_emit(struct tw_signal *signal, void *data)
-{
-	struct tw_observer *observer;
-	wl_list_for_each(observer, &signal->head, link)
-		observer->update(observer, data);
-}
 
 /**
  * global context for one application (can be shared with multiple surface)
@@ -158,6 +106,12 @@ struct tw_globals {
 
 	} inputs;
 
+	struct wl_list globals; /* for now we include only wl_output */
+
+	struct {
+		struct tw_signal new_output;
+	} signals;
+
 	//application theme settings
 	const struct tw_theme *theme;
 	struct tw_event_queue event_queue;
@@ -178,6 +132,9 @@ tw_globals_announce(struct tw_globals *globals,
                     uint32_t name,
                     const char *interface,
                     uint32_t version);
+void
+tw_globals_announce_remove(struct tw_globals *globals,
+                           struct wl_registry *registry, uint32_t name);
 void
 tw_globals_init(struct tw_globals *globals, struct wl_display *display);
 

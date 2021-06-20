@@ -20,10 +20,10 @@
 #ifndef TWCLIENT_H
 #define TWCLIENT_H
 
+#include "ui.h"
 #include "client.h"
 #include "shmpool.h"
 #include "egl.h"
-#include "nk_backends.h"
 #include "theme.h"
 
 //auxiliary headers

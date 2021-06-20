@@ -1,21 +1,21 @@
 /*
  * client.c - taiwins client functions
  *
- * Copyright (c) 2019-2020 Xichen Zhou
+ * Copyright (c) 2019-2021 Xichen Zhou
  *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version.
+ * This library is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation; either version 2.1 of the License, or (at your
+ * option) any later version.
  *
  * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * along with this library; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
 
@@ -42,13 +42,13 @@
 #include <ctypes/strops.h>
 
 #include <twclient/client.h>
+#include <twclient/output.h>
 #include <twclient/ui.h>
 
 
-/*******************************************************************************
+/******************************************************************************
  * externs
- ******************************************************************************/
-extern void tw_event_queue_close(struct tw_event_queue *queue);
+ *****************************************************************************/
 extern void tw_keyboard_init(struct wl_keyboard *, struct tw_globals *);
 extern void tw_keyboard_destroy(struct wl_keyboard *);
 
@@ -60,9 +60,9 @@ extern void tw_touch_destroy(struct wl_touch *);
 extern void _tw_appsurf_run_frame(struct tw_appsurf *surf,
 				   const struct tw_app_event *e);
 
-/*******************************************************************************
+/******************************************************************************
  * wl_shm
- ******************************************************************************/
+ *****************************************************************************/
 
 static void
 shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
@@ -482,6 +482,8 @@ tw_globals_init(struct tw_globals *globals, struct wl_display *display)
 	globals->display = display;
 	globals->buffer_format = 0xFFFFFFFF;
 	tw_event_queue_init(&globals->event_queue);
+	tw_signal_init(&globals->signals.new_output);
+	wl_list_init(&globals->globals);
 	globals->event_queue.quit =
 		!tw_event_queue_add_wl_display(&globals->event_queue, display);
 	globals->inputs.cursor_size = 32;
@@ -490,6 +492,15 @@ tw_globals_init(struct tw_globals *globals, struct wl_display *display)
 WL_EXPORT void
 tw_globals_release(struct tw_globals *globals)
 {
+	struct tw_global *global, *tmp;
+
+	wl_list_for_each_safe(global, tmp, &globals->globals, link) {
+		wl_list_remove(&global->link);
+		if (global->global_remove)
+			global->global_remove(global->object);
+	}
+
+	//TODO: make them into globals
 	wl_data_device_release(globals->inputs.wl_data_device);
 	seat_destroy(globals->inputs.wl_seat, globals);
 	wl_shm_destroy(globals->shm);
@@ -555,9 +566,34 @@ tw_globals_announce(struct tw_globals *globals,
 				globals);
 		}
 
+	} else if (strcmp(interface, wl_output_interface.name) == 0) {
+		struct wl_output *wl_output =
+			wl_registry_bind(wl_registry, name,
+			                 &wl_output_interface, version);
+		struct tw_output *output =
+			tw_output_create(wl_output);
+		wl_list_insert(globals->globals.prev, &output->proxy.link);
+		tw_signal_emit(&globals->signals.new_output, output);
+
 	} else {
 		fprintf(stderr, "announcing global %s\n", interface);
 		return 0;
 	}
 	return 1;
+}
+
+WL_EXPORT void
+tw_globals_announce_remove(struct tw_globals *globals,
+                           struct wl_registry *registry, uint32_t name)
+{
+	struct tw_global *object, *tmp;
+
+	wl_list_for_each_safe(object, tmp, &globals->globals, link) {
+		if (wl_proxy_get_id(object->object) == name) {
+			wl_list_remove(&object->link);
+			if (object->global_remove)
+				object->global_remove(object->object);
+		}
+	}
+
 }

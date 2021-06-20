@@ -53,16 +53,25 @@ struct tw_event_queue {
 	struct wl_list head;
 	struct wl_list idle_tasks;
 	bool quit;
-
-
 };
 
-void
-tw_event_queue_run(struct tw_event_queue *queue);
 
 bool
 tw_event_queue_init(struct tw_event_queue *queue);
 
+/**
+ * @brief close the event queue early
+ */
+void
+tw_event_queue_close(struct tw_event_queue *queue);
+
+/**
+ * @brief run the event queue until it releases
+ *
+ * Dispatching wl_display and other sources until the wl_display is closed
+ */
+void
+tw_event_queue_run(struct tw_event_queue *queue);
 
 /**
  * @brief add directly a epoll fd to event queue

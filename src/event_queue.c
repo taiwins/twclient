@@ -94,7 +94,7 @@ event_source_from_fd(struct tw_event_queue *queue, int fd)
 	return NULL;
 }
 
-void
+WL_EXPORT void
 tw_event_queue_close(struct tw_event_queue *queue)
 {
 	struct tw_event_source *event_source, *next;
