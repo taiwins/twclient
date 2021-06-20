@@ -3,15 +3,27 @@ name: CI
 on: [push]
 
 jobs:
-  build:
-
+  ubuntu-ci:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        path: 'taiwins-ubuntu'
     - name: submodule
       run: git submodule update --init --recursive
-    - name: run with docker env
-      uses: docker://archlinux/base:latest
-      with:
-        entrypoint: ./.github/actions/entrypoint.sh
+      working-directory: './taiwins-ubuntu'
+    - name: install dependencies for ubuntu
+      run: |
+        chmod +x ./.github/actions/ubuntu-deps.sh
+        .github/actions/ubuntu-deps.sh
+      working-directory: './taiwins-ubuntu'
+    - name: clean build
+      working-directory: './taiwins-ubuntu'
+      run: rm -rf build && mkdir -p build
+    - name: build
+      working-directory: './taiwins-ubuntu/'
+      run: |
+        export PATH=~/.local/bin:$PATH
+        export PKG_CONFIG_PATH=/usr/local/lib:${PKG_CONFIG_PATH}      
+        meson -Dbuildtype=release build && ninja -C build
