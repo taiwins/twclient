@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <twclient/output.h>
+#include <twclient/client.h>
 #include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
 #include <wayland-util.h>
@@ -131,4 +132,16 @@ tw_output_get_bbox(struct tw_output *output)
 	h /= output->s;
 
 	return tw_make_bbox(output->x, output->y, w, h, output->s);
+}
+
+WL_EXPORT void
+tw_output_for_each(struct tw_globals *globals,
+                   tw_global_iterator_func_t iterator, void *user_data)
+{
+	struct tw_global *output, *tmp;
+
+	wl_list_for_each_safe(output, tmp, &globals->globals, link) {
+		if (tw_global_is_tw_output(output))
+			iterator(output, user_data);
+	}
 }

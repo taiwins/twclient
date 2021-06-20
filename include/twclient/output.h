@@ -53,6 +53,9 @@ tw_output_get_bbox(struct tw_output *output);
 bool
 tw_global_is_tw_output(struct tw_global *global);
 
+void
+tw_output_for_each(struct tw_globals *globals,
+                   tw_global_iterator_func_t iterator, void *user_data);
 
 #ifdef __cplusplus
 }

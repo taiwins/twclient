@@ -29,8 +29,11 @@
 extern "C" {
 #endif
 
+struct tw_global;
 
 typedef void (*tw_global_func_t)(struct wl_proxy *);
+
+typedef void (*tw_global_iterator_func_t)(struct tw_global *, void *user_data);
 
 struct tw_global {
 	struct wl_list link; /* tw_globals:globals */
